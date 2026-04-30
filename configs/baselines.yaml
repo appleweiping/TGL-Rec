@@ -1,0 +1,253 @@
+# Baseline configuration refreshed on 2026-04-29.
+
+baseline_sources:
+  recbole:
+    url: "https://github.com/RUCAIBox/RecBole"
+    docs: "https://recbole.io/docs/user_guide/model_intro.html"
+    license: MIT
+    access_date: "2026-04-29"
+
+baselines:
+  popularity:
+    category: sanity
+    required: true
+    implementation: local
+    needs_gpu: false
+    needs_api: false
+    module_0_1_cpu_light: true
+    uses_text: false
+    uses_timestamps: false
+    uses_graph: false
+    status: completed_cpu_sanity_2026_04_29
+
+  item_knn:
+    category: sanity
+    required: true
+    implementation: local
+    needs_gpu: false
+    needs_api: false
+    module_0_1_cpu_light: true
+    uses_text: false
+    uses_timestamps: false
+    uses_graph: false
+    status: completed_cpu_sanity_2026_04_29
+
+  bpr_mf:
+    category: classic_cf
+    required: true
+    implementation: local_or_recbole
+    source_url: "https://arxiv.org/abs/1205.2618"
+    needs_gpu: false
+    needs_api: false
+    module_0_1_cpu_light: true
+    uses_text: false
+    uses_timestamps: false
+    uses_graph: false
+    status: module_2_next
+
+  tdig_transition_counts:
+    category: temporal_graph_retrieval
+    required: true
+    implementation: local
+    source_url: local
+    license: project
+    needs_gpu: false
+    needs_api: false
+    module_0_1_cpu_light: true
+    uses_text: false
+    uses_timestamps: true
+    uses_graph: true
+    status: module_4_planned
+    notes: "Training-only directed item-item transition counts, probability, lift/PMI, and time-bucket histograms."
+
+  recbole_pop:
+    category: sanity
+    required: false
+    implementation: recbole
+    source_url: "https://recbole.io/docs/user_guide/model_intro.html"
+    license: MIT
+    needs_gpu: false
+    needs_api: false
+    module_0_1_cpu_light: true
+    status: recommended_integration_smoke
+
+  recbole_itemknn:
+    category: sanity
+    required: false
+    implementation: recbole
+    source_url: "https://recbole.io/docs/user_guide/model_intro.html"
+    license: MIT
+    needs_gpu: false
+    needs_api: false
+    module_0_1_cpu_light: true
+    status: recommended_integration_smoke
+
+  lightgcn:
+    category: graph_cf
+    required: true
+    implementation: recbole_or_official
+    source_url: "https://arxiv.org/abs/2002.02126"
+    code_url: "https://github.com/kuandeng/LightGCN"
+    license: "no LICENSE found in official repo on 2026-04-29; MIT if using RecBole"
+    needs_gpu: true
+    needs_api: false
+    module_0_1_cpu_light: false
+    uses_text: false
+    uses_timestamps: false
+    uses_graph: true
+    status: module_2_required
+
+  gru4rec:
+    category: sequential
+    required: true
+    implementation: recbole_or_official
+    code_url: "https://github.com/hidasib/GRU4Rec"
+    license: check
+    needs_gpu: true
+    needs_api: false
+    module_0_1_cpu_light: false
+    uses_text: false
+    uses_timestamps: false
+    uses_graph: false
+    status: module_2_required
+
+  sasrec:
+    category: sequential
+    required: true
+    implementation: recbole_or_official
+    source_url: "https://arxiv.org/abs/1808.09781"
+    code_url: "https://github.com/kang205/SASRec"
+    license: "Apache-2.0 official; MIT if using RecBole"
+    needs_gpu: true
+    needs_api: false
+    module_0_1_cpu_light: false
+    uses_text: false
+    uses_timestamps: false
+    uses_graph: false
+    status: module_2_required
+
+  bert4rec:
+    category: sequential
+    required: true
+    implementation: recbole_or_official
+    source_url: "https://arxiv.org/abs/1904.06690"
+    code_url: "https://github.com/FeiSun/BERT4Rec"
+    license: "Apache-2.0 official; MIT if using RecBole"
+    needs_gpu: true
+    needs_api: false
+    module_0_1_cpu_light: false
+    uses_text: false
+    uses_timestamps: false
+    uses_graph: false
+    status: module_2_required
+    notes: "Track replicability caution from https://arxiv.org/abs/2207.07483."
+
+  tisasrec:
+    category: time_aware_sequential
+    required: true
+    implementation: official_or_clean_reimplementation
+    source_url: "https://cseweb.ucsd.edu/~jmcauley/pdfs/wsdm20b.pdf"
+    code_url: "https://github.com/JiachengLi1995/TiSASRec"
+    license: "no LICENSE found on 2026-04-29"
+    needs_gpu: true
+    needs_api: false
+    module_0_1_cpu_light: false
+    uses_text: false
+    uses_timestamps: true
+    uses_graph: false
+    status: module_2_required
+
+  fearec:
+    category: sequential
+    required: false
+    implementation: recbole_or_official
+    source_url: "https://recbole.io/docs/recbole/recbole.model.sequential_recommender.fearec.html"
+    code_url: "https://github.com/sudaada/FEARec"
+    license: "MIT if using RecBole; check official repo"
+    needs_gpu: true
+    needs_api: false
+    module_0_1_cpu_light: false
+    status: optional_after_required_baselines
+
+  bsarec:
+    category: sequential
+    required: false
+    implementation: official
+    source_url: "https://arxiv.org/abs/2312.10325"
+    code_url: "https://github.com/yehjin-shin/BSARec"
+    license: check
+    needs_gpu: true
+    needs_api: false
+    module_0_1_cpu_light: false
+    status: optional_strong_recent_baseline
+
+  llm_srec:
+    category: llm4rec
+    required: true
+    implementation: official_or_clean_reimplementation
+    source_url: "https://arxiv.org/abs/2502.13909"
+    code_url: "https://github.com/Sein-Kim/LLM-SRec"
+    license: "no LICENSE found on 2026-04-29"
+    needs_gpu: true
+    needs_api: optional
+    module_0_1_cpu_light: false
+    status: validate_after_non_llm_baselines
+
+  llara:
+    category: llm4rec
+    required: false
+    implementation: official
+    source_url: "https://arxiv.org/abs/2312.02445"
+    code_url: "https://github.com/ljy0ustc/LLaRA"
+    license: Apache-2.0
+    needs_gpu: true
+    needs_api: false
+    module_0_1_cpu_light: false
+    status: optional_expensive
+
+  p5:
+    category: llm4rec
+    required: false
+    implementation: official
+    source_url: "https://arxiv.org/abs/2203.13366"
+    code_url: "https://github.com/jeykigung/P5"
+    license: check
+    needs_gpu: true
+    needs_api: false
+    module_0_1_cpu_light: false
+    status: optional_expensive
+
+  rella:
+    category: llm4rec
+    required: false
+    implementation: official
+    source_url: "https://arxiv.org/abs/2308.11131"
+    code_url: "https://github.com/LaVieEnRose365/ReLLa"
+    license: check
+    needs_gpu: true
+    needs_api: optional
+    module_0_1_cpu_light: false
+    status: optional_expensive
+
+  g_refer:
+    category: graph_to_language
+    required: false
+    implementation: official_or_clean_static_adaptation
+    source_url: "https://arxiv.org/abs/2502.12586"
+    code_url: "https://github.com/Yuhan1i/G-Refer"
+    license: "no LICENSE found on 2026-04-29"
+    needs_gpu: true
+    needs_api: optional
+    module_0_1_cpu_light: false
+    status: optional_static_graph_to_language_comparator
+
+  dynamic_gnn_tgn:
+    category: dynamic_graph
+    required: false
+    implementation: official_or_local_adapter
+    code_url: "https://github.com/twitter-research/tgn"
+    license: check
+    needs_gpu: true
+    needs_api: false
+    module_0_1_cpu_light: false
+    status: stage_2

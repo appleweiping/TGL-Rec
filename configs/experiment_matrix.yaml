@@ -1,0 +1,76 @@
+# Experiment matrix draft. Fill exact command names after implementation.
+
+experiment_blocks:
+  smoke:
+    dataset: synthetic_temporal
+    models: [popularity, item_knn]
+    diagnostics: [history_shuffle, timestamp_randomization]
+    seeds: [2026]
+    purpose: verify code path only; never report as research result
+
+  diagnostic_ml1m:
+    dataset: movielens_1m
+    split: temporal_leave_one_out
+    models: [popularity, item_knn, sasrec, bert4rec, tisasrec]
+    diagnostics:
+      - history_shuffle
+      - order_reversal
+      - timestamp_removed
+      - timestamp_randomized
+      - window_swap
+      - similarity_vs_transition
+    seeds: [2026, 2027, 2028]
+    purpose: first real diagnostic table
+
+  diagnostic_amazon:
+    dataset: amazon_beauty
+    split: temporal_leave_one_out
+    models: [popularity, item_knn, sasrec, bert4rec, tisasrec]
+    diagnostics:
+      - history_shuffle
+      - order_reversal
+      - timestamp_removed
+      - timestamp_randomized
+      - window_swap
+      - similarity_vs_transition
+      - within_week_effect
+    seeds: [2026, 2027, 2028]
+    purpose: need-transition-heavy diagnostic table
+
+  tdig_reranker_ml1m:
+    dataset: movielens_1m
+    split: temporal_leave_one_out
+    base_model: best_reproduced_sequential
+    variants:
+      - base_only
+      - base_plus_static_directed_graph
+      - base_plus_temporal_graph
+      - base_plus_temporal_graph_language
+      - base_plus_gate
+      - full_no_dynamic_gnn
+    seeds: [2026, 2027, 2028]
+    purpose: first main method result
+
+  tdig_reranker_amazon:
+    dataset: amazon_beauty
+    split: temporal_leave_one_out
+    base_model: best_reproduced_sequential
+    variants:
+      - base_only
+      - base_plus_static_directed_graph
+      - base_plus_temporal_graph
+      - base_plus_temporal_graph_language
+      - base_plus_gate
+      - full_no_dynamic_gnn
+    seeds: [2026, 2027, 2028]
+    purpose: main e-commerce result
+
+  inductive_dynamic:
+    dataset: amazon_beauty
+    split: global_time
+    variants:
+      - best_base_sequential
+      - temporal_graph_reranker
+      - temporal_graph_reranker_plus_dynamic_gnn
+    seeds: [2026, 2027, 2028]
+    purpose: streaming/new interaction claim

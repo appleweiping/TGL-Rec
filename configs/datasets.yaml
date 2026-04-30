@@ -1,0 +1,111 @@
+# Dataset configuration draft. Codex should verify URLs/licenses before implementing downloads.
+
+datasets:
+  synthetic_temporal:
+    type: synthetic_test_only
+    source: generated
+    timestamp_field: timestamp
+    item_text_fields: [title, genres]
+    min_user_interactions: 3
+    min_item_interactions: 1
+    split:
+      - temporal_leave_one_out
+      - global_time
+    priority: smoke_only
+    status: test_fixture_only
+    reportable: false
+
+  movielens_1m:
+    type: explicit_or_implicit
+    source: public
+    source_page: https://grouplens.org/datasets/movielens/1m/
+    download_url: https://files.grouplens.org/datasets/movielens/ml-1m.zip
+    date_checked: 2026-04-29
+    timestamp_field: timestamp
+    item_text_fields: [title, genres]
+    min_user_interactions: 5
+    min_item_interactions: 5
+    split:
+      - temporal_leave_one_out
+      - global_time
+    priority: first
+    status: implemented_local_or_download
+
+  movielens_20m:
+    type: explicit_or_implicit
+    source: public
+    timestamp_field: timestamp
+    item_text_fields: [title, genres]
+    min_user_interactions: 5
+    min_item_interactions: 5
+    split:
+      - temporal_leave_one_out
+      - global_time
+    priority: expansion
+
+  amazon_beauty:
+    type: implicit
+    source: public
+    source_page: https://amazon-reviews-2023.github.io/main.html
+    huggingface: https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023
+    date_checked: 2026-04-29
+    license_note: verify current source-page and dataset-card terms before redistribution
+    timestamp_field: timestamp
+    item_text_fields: [title, main_category, categories, store, description, features]
+    excluded_full_horizon_metadata_fields: [average_rating, rating_number]
+    min_user_interactions: 5
+    min_item_interactions: 5
+    split:
+      - temporal_leave_one_out
+      - global_time
+    priority: first_ecommerce
+    status: implemented_local_file
+    preprocessing_policy:
+      duplicate_user_items: collapse_to_first_observed_event
+      same_user_same_timestamp: rejected_by_default
+      global_time: full_horizon_k_core_transductive_not_inductive
+
+  amazon_sports_or_toys:
+    type: implicit
+    source: public
+    source_page: https://amazon-reviews-2023.github.io/main.html
+    huggingface: https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023
+    date_checked: 2026-04-29
+    license_note: verify current source-page and dataset-card terms before redistribution
+    timestamp_field: timestamp
+    item_text_fields: [title, main_category, categories, store, description, features]
+    excluded_full_horizon_metadata_fields: [average_rating, rating_number]
+    min_user_interactions: 5
+    min_item_interactions: 5
+    split:
+      - temporal_leave_one_out
+      - global_time
+    priority: expansion
+    preprocessing_policy:
+      duplicate_user_items: collapse_to_first_observed_event
+      same_user_same_timestamp: rejected_by_default
+      global_time: full_horizon_k_core_transductive_not_inductive
+
+  steam:
+    type: implicit
+    source: public_or_manual_check
+    timestamp_field: timestamp
+    item_text_fields: [title, tags, genres]
+    min_user_interactions: 5
+    min_item_interactions: 5
+    split:
+      - temporal_leave_one_out
+      - global_time
+    priority: optional
+
+  yelp:
+    type: implicit
+    source: public_or_manual_check
+    timestamp_field: date
+    item_text_fields: [name, categories, city]
+    min_user_interactions: 5
+    min_item_interactions: 5
+    split:
+      - temporal_leave_one_out
+      - global_time
+    priority: optional
