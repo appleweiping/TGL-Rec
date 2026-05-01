@@ -1,0 +1,14 @@
+experiment:
+  run_id: phase2a_sequence_perturbation
+  output_dir: outputs/runs
+  seed: 2026
+
+dataset:
+  config_path: configs/datasets/tiny.yaml
+  preprocess: true
+
+diagnostic:
+  name: sequence_perturbation
+  recent_k: 2
+  window_seconds: 604800
+  half_life_seconds: 604800

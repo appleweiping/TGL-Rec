@@ -1,0 +1,17 @@
+experiment:
+  run_id: phase2a_smoke
+  output_dir: outputs/runs
+  overwrite: true
+  run_mode: smoke
+  seed: 2026
+
+dataset:
+  config_path: configs/datasets/tiny.yaml
+  preprocess: true
+
+methods: [configs/baselines/random.yaml, configs/baselines/popularity.yaml, configs/baselines/bm25.yaml, configs/baselines/mf.yaml]
+
+evaluation:
+  config_path: configs/evaluation/default.yaml
+  predictions_path: outputs/runs/phase2a_smoke/predictions.jsonl
+  item_catalog_path: outputs/runs/phase2a_smoke/artifacts/processed_dataset/items.jsonl

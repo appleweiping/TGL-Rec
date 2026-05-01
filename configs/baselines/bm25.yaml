@@ -1,0 +1,8 @@
+baseline:
+  name: bm25
+  type: bm25
+  reportable: true
+  eval_split: test
+  params:
+    k1: 1.5
+    b: 0.75

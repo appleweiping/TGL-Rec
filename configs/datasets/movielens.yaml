@@ -1,0 +1,17 @@
+dataset:
+  name: movielens_phase2b_sample
+  adapter: movielens_style
+  paths:
+    processed_dir: artifacts/datasets/movielens_1m
+    raw_dir: data/raw/movielens_1m/ml-1m
+  output_dir: outputs/processed/movielens_phase2b
+  split_strategy: leave_one_out
+  candidate_protocol: full_catalog
+  min_user_interactions: 3
+  seed: 2026
+  sample:
+    max_users: 120
+    max_items: 600
+    max_interactions: 6000
+    sample_seed: 2026
+    note: Phase 2B engineering diagnostic sample; omit limits for reportable runs.

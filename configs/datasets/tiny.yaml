@@ -1,0 +1,10 @@
+dataset:
+  name: tiny
+  adapter: tiny_jsonl
+  paths:
+    interactions: data/tiny/interactions.jsonl
+    items: data/tiny/items.jsonl
+  output_dir: outputs/processed/tiny
+  split_strategy: leave_one_out
+  candidate_protocol: full_catalog
+  seed: 2026

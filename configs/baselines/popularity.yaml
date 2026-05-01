@@ -1,0 +1,6 @@
+baseline:
+  name: popularity
+  type: popularity
+  reportable: true
+  eval_split: test
+  params: {}

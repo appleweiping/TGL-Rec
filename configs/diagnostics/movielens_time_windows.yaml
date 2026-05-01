@@ -1,0 +1,17 @@
+experiment:
+  run_id: phase2b_movielens_diagnostics
+  output_dir: outputs/runs
+  seed: 2026
+
+dataset:
+  config_path: configs/datasets/movielens.yaml
+  preprocess: true
+
+evaluation:
+  config_path: configs/evaluation/default.yaml
+  top_k: 5
+
+diagnostic:
+  windows: [1h, 1d, 7d, 30d, full]
+  half_life_seconds: 604800
+  max_history_items: 10

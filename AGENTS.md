@@ -1,107 +1,580 @@
-# AGENTS.md — Project instructions for Codex
+# AGENTS.md
 
-## Mission
+This repository is a research-grade LLM4Rec codebase. Codex must treat it as a publishable research system, not a toy demo.
 
-You are working on a top-tier research codebase for **Temporal Graph-to-Language Retrieval for Need-Aware Sequential Recommendation**. The goal is to produce a credible WWW/SIGIR/KDD/RecSys-level paper, not a toy implementation.
+## 0. Non-Negotiable Rules
 
-The project asks whether LLM-based recommenders truly use sequence and timestamps, or mostly follow semantic similarity. The target contribution is a diagnostic benchmark plus a temporal graph-to-language retrieval/reranking method that separates semantic similarity from next-need temporal transition.
+- Do not implement toy demos, mocks, pseudo-code, or notebook-only experiments unless explicitly requested.
+- Do not fabricate experimental results, tables, logs, metrics, or paper claims.
+- Do not write paper conclusions before actual experiments are run.
+- Do not silently skip failed tests, missing dependencies, missing data, or broken commands.
+- Do not make different baselines incomparable through different splits, metrics, negative sampling, candidate construction, or evaluation code.
+- Do not hard-code dataset paths, model names, seeds, metrics, or prompt templates inside source files.
+- Do not design only for one dataset or one model.
+- Do not implement only our method; strong baselines must be supported with the same evaluator.
+- Do not overwrite existing user work without first identifying the files and explaining the intended change.
+- Do not perform large refactors before producing an implementation plan.
 
-## Working principles
+## 1. Research Goal
 
-- Do not ask the user for trivial confirmations. Make a reasonable default decision, document it, and keep moving.
-- Ask for user intervention only when blocked by credentials, paid API budget, licensed data access, GPU/server constraints, or destructive operations.
-- Prefer official sources for installation, dataset format, benchmark protocol, API behavior, and library usage. Record exact URLs and access dates in `docs/literature_log.md` or a task note.
-- Never copy paper text or code into this repository unless the license permits it and attribution is preserved. Reimplement ideas cleanly.
-- Do not claim SOTA unless the baselines are reproduced fairly, tuned reasonably, and evaluated with the same split/negative sampling/full-ranking protocol.
-- Every experimental claim must point to a config, seed, dataset version, commit, and result file.
-- Avoid premature LLM/API dependence. Build the strongest retrieval + small reranker path first; add LLM calls only when they test a clear hypothesis.
+The repository must support a submission-level LLM4Rec experimental pipeline.
 
-## Definition of done for code changes
+The final system should support:
 
-A task is not done until all applicable items are true:
+- multi-domain recommendation datasets;
+- traditional recommendation baselines;
+- sequential recommendation baselines;
+- text retrieval baselines;
+- LLM zero-shot / few-shot / reranking baselines;
+- API-based LLM experiments;
+- local small-LLM LoRA / QLoRA fine-tuning;
+- our original LLM4Rec method;
+- ablation studies;
+- cold-start analysis;
+- long-tail analysis;
+- hallucination and validity evaluation;
+- diversity, coverage, novelty metrics;
+- latency, token, and cost statistics;
+- reproducible result export for paper tables and plots.
 
-1. The changed code has a runnable command documented in the task note or README.
-2. Unit or smoke tests pass, or the limitation is documented with the exact missing dependency.
-3. The code writes machine-readable outputs under `runs/` or `artifacts/` with config and seed metadata.
-4. New dataset preprocessing is deterministic and does not leak future interactions into training.
-5. New evaluation code supports at least HR@K, NDCG@K, MRR@K, and candidate/full-ranking mode when feasible.
-6. New model code has an ablation switch so it can be tested without the new component.
-7. The change updates relevant docs: `TASKS.md`, `EXPERIMENTS.md`, or `PAPER_OUTLINE.md`.
+The implementation must make it possible to start real experiments after the core modules are completed.
 
-## Research guardrails
+## 2. Expected Repository Structure
 
-- The main novelty is not simply adding timestamps to prompts. The novelty must include explicit diagnosis and modeling of similarity vs temporal need transition.
-- Keep the causal language careful. Unless an experiment uses a valid causal design, call evidence “temporal transition evidence” or “counterfactual perturbation evidence,” not proof of causality.
-- Prevent temporal leakage. When building item-item transition graphs, only use interactions available before the prediction timestamp.
-- Separate candidate generation from ranking. Report both candidate recall and final ranking metrics.
-- Keep a strong no-time/no-language/no-graph ablation suite.
-- Include statistical reliability: multiple seeds where possible, paired bootstrap or paired t-test/Wilcoxon over users, and confidence intervals for main tables.
-
-## Required baseline policy
-
-At minimum, implement or integrate:
-
-- non-sequential: popularity, item-kNN, BPR-MF or equivalent;
-- graph CF: LightGCN or equivalent;
-- sequential: GRU4Rec, SASRec, BERT4Rec;
-- time-aware sequential: TiSASRec or a stronger verified time-aware alternative;
-- recent LLM4Rec/sequential LLM baseline: LLM-SRec-style or best available reproducible code;
-- G-Refer-style static graph-to-language adaptation for explanation/reranking comparison when feasible.
-
-Before final experiments, run a literature refresh and update `BASELINES.md` with papers/code found after this repository was created.
-
-## Data policy
-
-- Prefer public benchmarks with timestamped user-item interactions: MovieLens-1M/20M, Amazon reviews, Steam, Yelp, and at least one larger sparse dataset if compute allows.
-- Dataset scripts should download public data automatically when license permits.
-- If a dataset requires manual agreement or login, write a clear `DATA_MANUAL_STEPS.md` entry and continue with alternatives.
-- Use temporal leave-one-out and a global-time inductive split. Do not mix random split results into main claims.
-
-## Experiment logging
-
-All experiments must write:
+Prefer the following structure unless the existing repo already has a better compatible layout:
 
 ```text
-runs/<date>-<short_name>/
-  config.yaml
-  metrics.json
-  metrics_by_segment.csv
-  command.txt
-  git_commit.txt
-  stdout.log
-  stderr.log
-```
+.
+├── AGENTS.md
+├── README.md
+├── requirements.txt / pyproject.toml
+├── configs/
+│   ├── datasets/
+│   ├── models/
+│   ├── retrievers/
+│   ├── baselines/
+│   ├── llm/
+│   ├── training/
+│   ├── evaluation/
+│   └── experiments/
+├── data/
+│   ├── raw/
+│   ├── processed/
+│   ├── tiny/
+│   └── README.md
+├── src/
+│   └── llm4rec/
+│       ├── __init__.py
+│       ├── data/
+│       ├── prompts/
+│       ├── retrievers/
+│       ├── rankers/
+│       ├── generators/
+│       ├── llm/
+│       ├── models/
+│       ├── trainers/
+│       ├── evaluation/
+│       ├── metrics/
+│       ├── experiments/
+│       ├── utils/
+│       └── io/
+├── scripts/
+│   ├── preprocess.py
+│   ├── train.py
+│   ├── evaluate.py
+│   ├── rerank.py
+│   ├── run_experiment.py
+│   ├── run_all.py
+│   └── export_tables.py
+├── tests/
+│   ├── unit/
+│   ├── smoke/
+│   └── fixtures/
+├── outputs/
+│   ├── logs/
+│   ├── metrics/
+│   ├── checkpoints/
+│   ├── predictions/
+│   ├── tables/
+│   └── runs/
+└── docs/
+    ├── experiment_protocol.md
+    ├── data_format.md
+    ├── baselines.md
+    └── paper_plan.md
 
-Segment-level metrics should include at least user history length, last interaction time gap, item popularity bucket, semantic-vs-transition case type, and cold/warm item status where available.
+If the current repo uses a different layout, preserve compatibility where reasonable and document deviations.
 
-## Coding standards
+3. Required Core Interfaces
 
-- Use Python 3.10+.
-- Prefer clear, typed, modular code over clever abstractions.
-- Use deterministic seeds and document nondeterminism.
-- Do not silently swallow errors. Fail loudly with actionable messages.
-- Keep model implementations independent from dataset-specific assumptions.
-- Add CLI entry points for preprocessing, graph construction, training, evaluation, and diagnostics.
+All implementations must use unified interfaces. Do not create one-off scripts that bypass these interfaces.
 
-## Suggested package layout
+3.1 Dataset / DataModule
 
-```text
-src/tglrec/data/          dataset download/preprocess/splits
-src/tglrec/graph/         temporal directed item graph and path retrieval
-src/tglrec/text/          graph-to-language templates and item text encoders
-src/tglrec/models/        rerankers, gates, dynamic GNN adapters
-src/tglrec/eval/          metrics, diagnostics, statistical tests
-src/tglrec/utils/         config, logging, seeds, io
-```
+Required responsibilities:
 
-## When running Codex subagents
+load raw interactions;
+map raw user/item IDs to internal IDs;
+load or build item metadata;
+build user histories;
+create train/valid/test splits;
+support temporal split and leave-one-out split;
+support sampled ranking and full ranking;
+construct candidate sets;
+expose item text for LLM prompts and retrieval;
+save processed artifacts.
 
-Use focused roles:
+Expected records:
 
-- `research_worker`: implements code and runs tests.
-- `reviewer`: read-only correctness, leakage, evaluation, and missing-test review.
-- `lit_scout`: read-only literature and official-doc verification.
-- `experiment_runner`: executes configured experiments and records results.
-- `repro_auditor`: checks determinism, logs, split leakage, and fair baselines.
+Interaction = {
+    "user_id": str,
+    "item_id": str,
+    "timestamp": int | float | None,
+    "rating": float | None,
+    "domain": str | None,
+}
 
-For complex tasks, spawn at least one reviewer in parallel before merging a large change.
+ItemRecord = {
+    "item_id": str,
+    "title": str,
+    "description": str | None,
+    "category": str | None,
+    "brand": str | None,
+    "domain": str | None,
+    "raw_text": str | None,
+}
+
+UserExample = {
+    "user_id": str,
+    "history": list[str],
+    "target": str,
+    "candidates": list[str] | None,
+    "domain": str | None,
+}
+
+Required files or equivalent:
+
+src/llm4rec/data/base.py
+src/llm4rec/data/registry.py
+src/llm4rec/data/preprocess.py
+src/llm4rec/data/splits.py
+src/llm4rec/data/candidates.py
+src/llm4rec/data/text_fields.py
+3.2 Retriever
+
+A retriever returns candidate items.
+
+Required retrievers:
+
+PopularityRetriever
+BM25Retriever
+DenseRetriever interface
+SequentialModelRetriever interface
+HybridRetriever
+
+Required output:
+
+RetrievalResult = {
+    "user_id": str,
+    "items": list[str],
+    "scores": list[float],
+    "metadata": dict,
+}
+
+Required files or equivalent:
+
+src/llm4rec/retrievers/base.py
+src/llm4rec/retrievers/popularity.py
+src/llm4rec/retrievers/bm25.py
+src/llm4rec/retrievers/dense.py
+src/llm4rec/retrievers/hybrid.py
+3.3 Ranker
+
+A ranker scores or reorders a candidate set.
+
+Required rankers:
+
+RandomRanker
+PopularityRanker
+BM25Ranker
+MatrixFactorization/BPR ranker if feasible
+Sequential ranker interface
+LLMReranker
+
+Required output:
+
+RankingResult = {
+    "user_id": str,
+    "items": list[str],
+    "scores": list[float],
+    "raw_output": str | None,
+    "metadata": dict,
+}
+
+Required files or equivalent:
+
+src/llm4rec/rankers/base.py
+src/llm4rec/rankers/popularity.py
+src/llm4rec/rankers/bm25.py
+src/llm4rec/rankers/mf.py
+src/llm4rec/rankers/sequential.py
+src/llm4rec/rankers/llm_reranker.py
+3.4 Generator
+
+A generator produces recommendation outputs, item IDs, explanations, or structured responses.
+
+Required responsibilities:
+
+constrained generation over candidate item IDs;
+parse generated recommendation lists;
+detect invalid items;
+optionally generate explanations;
+preserve raw LLM output for auditing.
+
+Required files or equivalent:
+
+src/llm4rec/generators/base.py
+src/llm4rec/generators/constrained.py
+src/llm4rec/generators/parser.py
+src/llm4rec/generators/explanation.py
+3.5 LLM Provider
+
+Required providers:
+
+Mock provider only for tests, not experiments;
+OpenAI-compatible API provider;
+local Hugging Face causal LM provider;
+local LoRA / QLoRA inference provider.
+
+Required features:
+
+temperature, top_p, max_tokens, seed if supported;
+retry and timeout handling;
+token usage logging when available;
+latency logging;
+raw request/response persistence;
+deterministic test mode.
+
+Required files or equivalent:
+
+src/llm4rec/llm/base.py
+src/llm4rec/llm/openai_provider.py
+src/llm4rec/llm/hf_provider.py
+src/llm4rec/llm/mock_provider.py
+src/llm4rec/llm/cost_tracker.py
+src/llm4rec/llm/response_cache.py
+3.6 Prompt Builder
+
+Required prompt types:
+
+zero-shot recommendation;
+few-shot recommendation;
+candidate reranking;
+constrained item-ID generation;
+explanation generation;
+preference summarization;
+self-verification / grounding check.
+
+Required files or equivalent:
+
+src/llm4rec/prompts/base.py
+src/llm4rec/prompts/templates.py
+src/llm4rec/prompts/builder.py
+src/llm4rec/prompts/formatters.py
+src/llm4rec/prompts/parsers.py
+3.7 Trainer
+
+Required training support:
+
+traditional baseline training;
+sequential baseline training;
+local small-LLM LoRA / QLoRA training interface;
+checkpoint save/load;
+resume;
+eval-only mode;
+gradient accumulation;
+mixed precision where applicable;
+seed control.
+
+Required files or equivalent:
+
+src/llm4rec/trainers/base.py
+src/llm4rec/trainers/traditional.py
+src/llm4rec/trainers/sequential.py
+src/llm4rec/trainers/lora.py
+src/llm4rec/trainers/checkpointing.py
+3.8 Evaluator
+
+One evaluator must be shared by all methods.
+
+Required responsibilities:
+
+load predictions;
+validate prediction schema;
+compute ranking metrics;
+compute validity / hallucination metrics;
+compute coverage / diversity / novelty / long-tail metrics;
+compute latency / token / cost metrics;
+support per-domain and aggregate metrics;
+export JSON, CSV, and LaTeX-ready tables.
+
+Required files or equivalent:
+
+src/llm4rec/evaluation/evaluator.py
+src/llm4rec/evaluation/prediction_schema.py
+src/llm4rec/evaluation/export.py
+src/llm4rec/evaluation/significance.py
+3.9 Metrics
+
+Required ranking metrics:
+
+Recall@K
+NDCG@K
+HitRate@K
+MRR@K
+MAP@K if feasible
+
+Required LLM/grounding metrics:
+
+validity rate
+hallucination rate
+parse success rate
+candidate adherence rate
+explanation groundedness placeholder or interface
+
+Required beyond-accuracy metrics:
+
+item coverage
+catalog coverage
+intra-list diversity
+novelty
+long-tail ratio
+popularity-stratified metrics
+
+Required efficiency metrics:
+
+latency mean / p50 / p95
+token count
+API cost if applicable
+GPU memory if available
+throughput
+
+Required files or equivalent:
+
+src/llm4rec/metrics/ranking.py
+src/llm4rec/metrics/validity.py
+src/llm4rec/metrics/diversity.py
+src/llm4rec/metrics/long_tail.py
+src/llm4rec/metrics/efficiency.py
+3.10 Experiment Runner
+
+Required responsibilities:
+
+read YAML config;
+instantiate dataset, retriever, ranker/generator, evaluator;
+save resolved config;
+save logs;
+save predictions;
+save metrics;
+support dry-run;
+support smoke-run;
+support multi-seed runs;
+support multi-domain runs.
+
+Required files or equivalent:
+
+src/llm4rec/experiments/config.py
+src/llm4rec/experiments/runner.py
+src/llm4rec/experiments/registry.py
+src/llm4rec/experiments/seeding.py
+src/llm4rec/experiments/logging.py
+4. Required Baselines
+
+The codebase must support at least the following baseline families.
+
+4.1 Non-personalized
+Random
+Popularity
+4.2 Traditional Collaborative Filtering
+Matrix Factorization or BPR-MF
+LightGCN or compatible graph recommender if feasible
+4.3 Sequential Recommendation
+
+At least one implemented or wrapped:
+
+GRU4Rec
+SASRec
+BERT4Rec
+4.4 Text Retrieval / Text Ranking
+BM25
+dense retrieval interface
+sentence-transformer retrieval if dependency is acceptable
+4.5 LLM Baselines
+zero-shot direct recommendation;
+few-shot direct recommendation;
+candidate reranking;
+constrained candidate reranking;
+explanation generation baseline.
+
+All baselines must output the same prediction schema and must be evaluated by the same evaluator.
+
+5. Required Data Support
+
+The system should be dataset-agnostic.
+
+At minimum:
+
+tiny fixture dataset for smoke tests;
+one MovieLens-style dataset adapter;
+one Amazon Reviews-style multi-domain adapter or interface;
+generic CSV/JSONL adapter.
+
+Required split strategies:
+
+leave-one-out;
+temporal split;
+user-stratified split if applicable.
+
+Required candidate protocols:
+
+full ranking when feasible;
+sampled negatives with fixed seed;
+candidate set loaded from file;
+retriever-generated candidate set.
+
+All protocols must be recorded in config and saved with outputs.
+
+6. Required Configs
+
+Use YAML configs. Do not rely on manual source edits.
+
+Expected config categories:
+
+configs/datasets/tiny.yaml
+configs/datasets/movielens.yaml
+configs/datasets/amazon_books.yaml
+configs/retrievers/popularity.yaml
+configs/retrievers/bm25.yaml
+configs/baselines/popularity.yaml
+configs/baselines/bpr.yaml
+configs/baselines/sasrec.yaml
+configs/baselines/llm_rerank.yaml
+configs/llm/openai_compatible.yaml
+configs/llm/hf_local.yaml
+configs/training/lora.yaml
+configs/evaluation/default.yaml
+configs/experiments/smoke.yaml
+configs/experiments/main_movielens.yaml
+configs/experiments/main_multidomain.yaml
+configs/experiments/ablation.yaml
+configs/experiments/cold_start.yaml
+configs/experiments/long_tail.yaml
+
+Each experiment config must specify:
+
+dataset;
+split strategy;
+candidate strategy;
+model or baseline;
+prompt template if applicable;
+metrics;
+seeds;
+output directory;
+logging level;
+device;
+run mode.
+7. Required Scripts
+
+Scripts must be thin wrappers around source modules.
+
+Required commands:
+
+python scripts/preprocess.py --config configs/datasets/tiny.yaml
+python scripts/train.py --config configs/experiments/smoke.yaml
+python scripts/evaluate.py --config configs/experiments/smoke.yaml
+python scripts/run_experiment.py --config configs/experiments/smoke.yaml
+python scripts/run_all.py --config configs/experiments/smoke.yaml
+python scripts/export_tables.py --input outputs/metrics --output outputs/tables
+pytest tests/
+
+If commands differ, document the actual commands in README and in the audit report.
+
+8. Required Output Artifacts
+
+Each run must save:
+
+outputs/runs/<run_id>/
+├── resolved_config.yaml
+├── environment.json
+├── git_info.json
+├── logs.txt
+├── predictions.jsonl
+├── metrics.json
+├── metrics.csv
+├── cost_latency.json
+├── checkpoints/
+└── artifacts/
+
+Prediction JSONL schema:
+
+{
+  "user_id": "u1",
+  "target_item": "i9",
+  "candidate_items": ["i1", "i2", "i9"],
+  "predicted_items": ["i9", "i2", "i1"],
+  "scores": [0.9, 0.5, 0.1],
+  "method": "llm_rerank",
+  "domain": "movies",
+  "raw_output": null,
+  "metadata": {}
+}
+9. Testing Requirements
+
+Minimum tests:
+
+dataset loading smoke test;
+split determinism test;
+candidate generation test;
+ranking metrics correctness test;
+validity/hallucination metric test;
+prompt formatting test;
+LLM response parser test;
+experiment runner smoke test;
+export table smoke test.
+
+Tests must use tiny fixture data and must not require API keys or large downloads.
+
+10. Done Criteria
+
+A stage is not complete unless:
+
+source code exists;
+config exists;
+script entrypoint exists if needed;
+smoke test or unit test exists;
+command has been run;
+result is reported;
+remaining risks are documented.
+
+For every stage, report:
+
+Files changed:
+Commands run:
+Tests run:
+Observed results:
+Design rationale:
+Remaining risks:
+Next step:
+11. Paper-Writing Rule
+
+Paper writing is allowed only after the experiment pipeline can produce real metrics.
+
+The paper draft must be grounded in:
+
+actual implemented modules;
+actual experiment protocol;
+actual metrics files;
+actual ablation outputs;
+actual failure cases or limitations.
+
+Do not invent results.

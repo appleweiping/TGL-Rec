@@ -1,0 +1,4 @@
+retriever:
+  name: popularity
+  type: popularity
+  top_k: 100

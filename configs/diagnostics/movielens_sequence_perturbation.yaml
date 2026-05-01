@@ -1,0 +1,18 @@
+experiment:
+  run_id: phase2b_movielens_diagnostics
+  output_dir: outputs/runs
+  seed: 2026
+
+dataset:
+  config_path: configs/datasets/movielens.yaml
+  preprocess: true
+
+methods: [configs/baselines/random.yaml, configs/baselines/popularity.yaml, configs/baselines/bm25.yaml, configs/baselines/mf.yaml]
+
+evaluation:
+  config_path: configs/evaluation/default.yaml
+  top_k: 5
+
+diagnostic:
+  variants: [original, reversed, shuffled_seed_0, shuffled_seed_1, shuffled_seed_2, recent_5, recent_10, remove_recent_5, popularity_sorted, timestamp_bucketed_prompt_ready]
+  recent_ks: [5, 10]

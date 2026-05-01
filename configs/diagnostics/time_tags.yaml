@@ -1,0 +1,15 @@
+experiment:
+  run_id: phase2a_time_tags
+  output_dir: outputs/runs
+  seed: 2026
+
+dataset:
+  config_path: configs/datasets/tiny.yaml
+  preprocess: true
+
+diagnostic:
+  name: time_tags
+  window_seconds: 604800
+  half_life_seconds: 604800
+  directed: false
+  weight_mode: time_decay

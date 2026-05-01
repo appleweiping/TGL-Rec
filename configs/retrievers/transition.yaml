@@ -1,0 +1,6 @@
+retriever:
+  name: transition
+  type: transition
+  top_k: 100
+  params:
+    max_history_items: 5

@@ -1,0 +1,7 @@
+evaluation:
+  ks: [1, 3, 5]
+  candidate_protocol: full_catalog
+  metrics:
+    ranking: [Recall, HitRate, NDCG, MRR]
+    validity: [validity_rate, hallucination_rate]
+    beyond_accuracy: [coverage]

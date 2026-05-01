@@ -1,0 +1,11 @@
+baseline:
+  name: mf
+  type: mf
+  reportable: true
+  eval_split: test
+  params:
+    factors: 8
+    epochs: 25
+    learning_rate: 0.05
+    regularization: 0.002
+    seed: 2026

@@ -1,0 +1,8 @@
+{"item_id":"i1","title":"Item 1","description":"Tiny item one for category A.","category":"cat_a","brand":null,"domain":"tiny","raw_text":"Item 1 cat_a starter item"}
+{"item_id":"i2","title":"Item 2","description":"Tiny item two for category A.","category":"cat_a","brand":null,"domain":"tiny","raw_text":"Item 2 cat_a sequence item"}
+{"item_id":"i3","title":"Item 3","description":"Tiny item three for category B.","category":"cat_b","brand":null,"domain":"tiny","raw_text":"Item 3 cat_b transition item"}
+{"item_id":"i4","title":"Item 4","description":"Tiny item four for category B.","category":"cat_b","brand":null,"domain":"tiny","raw_text":"Item 4 cat_b target item"}
+{"item_id":"i5","title":"Item 5","description":"Tiny item five for category C.","category":"cat_c","brand":null,"domain":"tiny","raw_text":"Item 5 cat_c starter item"}
+{"item_id":"i6","title":"Item 6","description":"Tiny item six for category C.","category":"cat_c","brand":null,"domain":"tiny","raw_text":"Item 6 cat_c sequence item"}
+{"item_id":"i7","title":"Item 7","description":"Tiny item seven for category D.","category":"cat_d","brand":null,"domain":"tiny","raw_text":"Item 7 cat_d transition item"}
+{"item_id":"i8","title":"Item 8","description":"Tiny item eight for category D.","category":"cat_d","brand":null,"domain":"tiny","raw_text":"Item 8 cat_d target item"}

@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .pytest_tmp*/
-.git_write_test/
+.git_write_test*/
 .mypy_cache/
 .ruff_cache/
 *.egg-info/
@@ -13,6 +13,7 @@ tools/
 .DS_Store
 runs/
 artifacts/
+outputs/
 data/raw/
 data/processed/
 *.log

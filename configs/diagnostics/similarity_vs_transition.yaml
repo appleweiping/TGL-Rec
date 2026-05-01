@@ -1,0 +1,17 @@
+experiment:
+  run_id: phase2a_diagnostics
+  output_dir: outputs/runs
+  seed: 2026
+
+dataset:
+  config_path: configs/datasets/tiny.yaml
+  preprocess: true
+
+diagnostic:
+  name: similarity_vs_transition
+  recent_k: 2
+  window_seconds: 604800
+  half_life_seconds: 604800
+  directed: false
+  weight_mode: time_decay
+  top_k_pairs: 50

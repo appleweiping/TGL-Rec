@@ -1,0 +1,6 @@
+prompt:
+  variant: history_with_contrastive_evidence
+  prompt_version: phase3a.history_with_contrastive_evidence.v1
+  max_history_items: 20
+  max_evidence_items: 8
+

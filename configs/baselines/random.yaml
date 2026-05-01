@@ -1,0 +1,7 @@
+baseline:
+  name: random
+  type: random
+  reportable: false
+  eval_split: test
+  params:
+    seed: 2026

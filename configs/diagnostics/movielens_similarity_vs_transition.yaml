@@ -1,0 +1,13 @@
+experiment:
+  run_id: phase2b_movielens_diagnostics
+  output_dir: outputs/runs
+  seed: 2026
+
+dataset:
+  config_path: configs/datasets/movielens.yaml
+  preprocess: true
+
+diagnostic:
+  similarity_threshold: 0.2
+  windows: [1d, 7d, 30d]
+  top_k_pairs: 500

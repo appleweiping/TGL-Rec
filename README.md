@@ -92,6 +92,234 @@ py -3.12 -m pytest -q
 The current implemented package surface is CPU-only and covers deterministic config loading,
 seed utilities, artifact manifests, ranking metrics, and MovieLens-1M preprocessing.
 
+## Phase 1 smoke run
+
+Phase 1 adds a separate `llm4rec` experiment skeleton next to the legacy `tglrec` package. The
+smoke path uses only the tiny JSONL fixture and a deterministic non-reportable skeleton ranker; it
+does not implement formal baselines, LLM providers, LoRA, OursMethod, or paper results.
+
+Install the package in editable mode:
+
+```bash
+pip install -e '.[dev]'
+```
+
+Preprocess the tiny fixture:
+
+```bash
+python scripts/preprocess.py --config configs/datasets/tiny.yaml
+```
+
+Run the Phase 1 experiment skeleton:
+
+```bash
+python scripts/run_experiment.py --config configs/experiments/smoke.yaml
+```
+
+Run the combined smoke wrapper:
+
+```bash
+python scripts/run_all.py --config configs/experiments/smoke.yaml
+```
+
+Evaluate an existing smoke run:
+
+```bash
+python scripts/evaluate.py --config configs/experiments/smoke.yaml
+```
+
+Targeted Phase 1 tests:
+
+```bash
+pytest tests/unit/test_ranking_metrics.py
+pytest tests/unit/test_validity_metrics.py
+pytest tests/unit/test_splits.py
+pytest tests/unit/test_prediction_schema.py
+pytest tests/smoke/test_tiny_preprocess.py
+pytest tests/smoke/test_experiment_runner_skeleton.py
+```
+
+Expected smoke outputs are written under:
+
+```text
+outputs/runs/phase1_smoke/
+  resolved_config.yaml
+  environment.json
+  logs.txt
+  predictions.jsonl
+  metrics.json
+  metrics.csv
+  artifacts/
+```
+
+## Phase 2A minimal baselines and diagnostics
+
+Phase 2A adds tiny-data formal baseline plumbing and time/sequence diagnostic artifacts. It does
+not implement OursMethod, API LLM providers, LoRA, formal paper tables, or final claims.
+
+Run the tiny baseline smoke matrix:
+
+```bash
+python scripts/run_all.py --config configs/experiments/phase2a_smoke.yaml
+```
+
+Build graph/time-tag diagnostic artifacts:
+
+```bash
+python scripts/build_graph.py --config configs/diagnostics/time_tags.yaml
+```
+
+Run the full Phase 2A diagnostic artifact builder:
+
+```bash
+python scripts/run_diagnostics.py --config configs/diagnostics/similarity_vs_transition.yaml
+```
+
+Targeted Phase 2A tests:
+
+```bash
+pytest tests/unit/test_sequence_transforms.py
+pytest tests/unit/test_time_features.py
+pytest tests/unit/test_transition_graph.py
+pytest tests/unit/test_time_window_graph.py
+pytest tests/unit/test_bm25_ranker.py
+pytest tests/unit/test_popularity_ranker.py
+pytest tests/smoke/test_phase2a_baselines.py
+pytest tests/smoke/test_phase2a_diagnostics.py
+```
+
+Expected baseline outputs are written under:
+
+```text
+outputs/runs/phase2a_smoke/
+  resolved_config.yaml
+  environment.json
+  logs.txt
+  predictions.jsonl
+  metrics.json
+  metrics.csv
+  artifacts/
+```
+
+Expected diagnostic outputs are written under:
+
+```text
+outputs/runs/phase2a_diagnostics/diagnostics/
+  sequence_perturbation.json
+  time_features.jsonl
+  transition_edges.jsonl
+  time_window_edges.jsonl
+  similarity_vs_transition.json
+  diagnostics_summary.json
+```
+
+## Phase 2B MovieLens-style sequence/time diagnostics
+
+Phase 2B runs baseline perturbation and time-window graph diagnostics on a MovieLens-style
+dataset. The default config uses the local MovieLens artifact when present and applies a clearly
+marked engineering sample for fast diagnostics. Remove the `sample` limits in
+`configs/datasets/movielens.yaml` only when running reportable experiments.
+
+Run perturbation diagnostics:
+
+```bash
+python scripts/run_perturbation.py --config configs/diagnostics/movielens_sequence_perturbation.yaml
+```
+
+Run time-window graph diagnostics:
+
+```bash
+python scripts/run_time_windows.py --config configs/diagnostics/movielens_time_windows.yaml
+```
+
+Export numeric diagnostic summaries:
+
+```bash
+python scripts/export_diagnostics.py --run-dir outputs/runs/phase2b_movielens_diagnostics
+```
+
+Run the combined Phase 2B wrapper:
+
+```bash
+python scripts/run_all.py --config configs/experiments/phase2b_movielens_diagnostics.yaml
+```
+
+Targeted Phase 2B tests:
+
+```bash
+pytest tests/unit/test_movielens_adapter.py
+pytest tests/unit/test_diagnostic_statistics.py
+pytest tests/unit/test_perturbation_runner.py
+pytest tests/unit/test_time_window_runner.py
+pytest tests/smoke/test_phase2b_movielens_diagnostics.py
+```
+
+Expected outputs are written under:
+
+```text
+outputs/runs/phase2b_movielens_diagnostics/
+  metrics.json
+  metrics.csv
+  perturbation_results.csv
+  perturbation_deltas.csv
+  prediction_overlap.csv
+  time_window_graph_summary.csv
+  similarity_vs_transition.json
+  similarity_vs_transition.csv
+  diagnostic_summary.json
+  artifacts/
+  diagnostics/
+```
+
+## Phase 3A LLM prompt/parser/mock-to-API diagnostics
+
+Phase 3A adds prompt variants, output parsing, mock LLM provider support, an OpenAI-compatible
+provider interface, response cache, cost/latency tracking, and rule-based grounding checks for
+sequence/time sensitivity diagnostics. It does not implement OursMethod, LoRA/QLoRA, fine-tuning,
+or paper conclusions. The mock provider is only for smoke and diagnostic infrastructure checks.
+
+Run mock LLM diagnostics:
+
+```bash
+python scripts/run_llm_diagnostics.py --config configs/diagnostics/llm_sequence_time_mock.yaml
+```
+
+Export or refresh the LLM diagnostic summary:
+
+```bash
+python scripts/export_llm_diagnostics.py --run-dir outputs/runs/phase3a_llm_diagnostics
+```
+
+Targeted Phase 3A tests:
+
+```bash
+pytest tests/unit/test_prompt_builder.py
+pytest tests/unit/test_prompt_variants.py
+pytest tests/unit/test_llm_parser.py
+pytest tests/unit/test_mock_llm_provider.py
+pytest tests/unit/test_response_cache.py
+pytest tests/unit/test_cost_tracker.py
+pytest tests/unit/test_llm_grounding.py
+pytest tests/smoke/test_phase3a_mock_llm_diagnostics.py
+```
+
+Expected outputs are written under:
+
+```text
+outputs/runs/phase3a_llm_diagnostics/
+  resolved_config.yaml
+  environment.json
+  logs.txt
+  llm_requests.jsonl
+  llm_raw_outputs.jsonl
+  predictions.jsonl
+  metrics.json
+  metrics.csv
+  llm_diagnostic_summary.json
+  cost_latency.json
+  diagnostics/
+```
+
 ## MovieLens-1M preprocessing
 
 Automatic download uses the official GroupLens archive checked on 2026-04-29:

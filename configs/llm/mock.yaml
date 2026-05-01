@@ -1,0 +1,18 @@
+llm:
+  provider: mock
+  model: mock-llm
+  run_mode: diagnostic_mock
+  mode: identity
+  modes_by_prompt_variant:
+    history_only: identity
+    history_with_order: identity
+    history_with_time_gaps: time_bucket_aware
+    history_with_time_buckets: time_bucket_aware
+    history_with_transition_evidence: transition_aware
+    history_with_time_window_evidence: time_bucket_aware
+    history_with_contrastive_evidence: transition_aware
+  decoding:
+    temperature: 0.0
+    top_p: 1.0
+    max_tokens: 512
+

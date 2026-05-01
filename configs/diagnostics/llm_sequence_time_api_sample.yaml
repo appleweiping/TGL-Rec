@@ -1,0 +1,29 @@
+experiment:
+  run_id: phase3a_llm_api_sample
+  output_dir: outputs/runs
+  seed: 2026
+  run_mode: diagnostic_api
+
+source:
+  phase2b_run_dir: outputs/runs/phase2b_movielens_diagnostics
+  prepare_phase2b_if_missing: false
+
+llm:
+  config_path: configs/llm/openai_compatible.yaml
+  allow_api_calls: false
+
+cache:
+  enabled: true
+  cache_dir: outputs/cache/llm
+
+evaluation:
+  ks: [1, 3, 5]
+  top_k: 5
+  candidate_protocol: full_catalog
+
+diagnostic:
+  max_cases_per_group: 1
+  candidate_size: 8
+  max_history_items: 20
+  max_evidence_items: 6
+  prompt_variants: [history_only, history_with_order, history_with_time_gaps, history_with_time_buckets, history_with_transition_evidence, history_with_time_window_evidence, history_with_contrastive_evidence]

@@ -1,0 +1,6 @@
+prompt:
+  variant: history_with_time_window_evidence
+  prompt_version: phase3a.history_with_time_window_evidence.v1
+  max_history_items: 20
+  max_evidence_items: 8
+

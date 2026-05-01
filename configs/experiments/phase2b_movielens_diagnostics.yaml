@@ -1,0 +1,10 @@
+experiment:
+  stage: phase2b
+  run_id: phase2b_movielens_diagnostics
+  output_dir: outputs/runs
+  overwrite: false
+  seed: 2026
+
+perturbation_config: configs/diagnostics/movielens_sequence_perturbation.yaml
+time_window_config: configs/diagnostics/movielens_time_windows.yaml
+similarity_config: configs/diagnostics/movielens_similarity_vs_transition.yaml
