@@ -15,6 +15,7 @@ from tglrec.eval.history_perturbations import (
 from tglrec.eval.semantic_transition_stress import run_semantic_transition_stress
 from tglrec.eval.tdig_recall import DEFAULT_TDIG_RECALL_SCORE_FIELD, run_tdig_candidate_recall
 from tglrec.graph.tdig import build_tdig_artifact
+from tglrec.models.bpr_mf import run_bpr_mf
 from tglrec.models.sanity_baselines import DEFAULT_KS, run_sanity_baselines
 from tglrec.utils.config import load_config
 from tglrec.utils.seeds import set_global_seed
@@ -168,6 +169,59 @@ def build_parser() -> argparse.ArgumentParser:
             "disabled by default because their temporal order may be arbitrary"
         ),
     )
+
+    train = subparsers.add_parser("train", help="model training commands")
+    train_sub = train.add_subparsers(dest="trainer", required=True)
+    bpr = train_sub.add_parser(
+        "bpr-mf",
+        help="train and evaluate a deterministic NumPy BPR matrix-factorization baseline",
+    )
+    bpr.add_argument(
+        "--dataset-dir",
+        type=Path,
+        default=Path("artifacts/datasets/movielens_1m"),
+        help="processed dataset directory containing interactions.csv and items.csv",
+    )
+    bpr.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="run output directory; defaults to runs/<timestamp>-bpr-mf",
+    )
+    bpr.add_argument(
+        "--split-name",
+        choices=["temporal_leave_one_out", "global_time"],
+        default="temporal_leave_one_out",
+    )
+    bpr.add_argument("--eval-split", choices=["val", "test"], default="test")
+    bpr.add_argument("--ks", type=int, nargs="+", default=list(DEFAULT_KS))
+    bpr.add_argument("--factors", type=int, default=64)
+    bpr.add_argument("--epochs", type=int, default=20)
+    bpr.add_argument("--learning-rate", type=float, default=0.05)
+    bpr.add_argument("--regularization", type=float, default=0.0025)
+    bpr.add_argument(
+        "--max-train-pairs",
+        type=int,
+        default=None,
+        help="optional deterministic prefix of train pairs for engineering smoke runs",
+    )
+    bpr.add_argument(
+        "--max-eval-cases",
+        type=int,
+        default=None,
+        help="optional deterministic prefix of eval cases for engineering smoke runs",
+    )
+    bpr.add_argument(
+        "--include-seen",
+        action="store_true",
+        help="rank previously seen items instead of filtering them",
+    )
+    bpr.add_argument(
+        "--no-validation-history",
+        action="store_true",
+        help="for test evaluation, do not use each user's validation event as seen history",
+    )
+    bpr.add_argument("--seed", type=int, default=2026)
 
     evaluate = subparsers.add_parser("evaluate", help="evaluation commands")
     evaluate_sub = evaluate.add_subparsers(dest="evaluator", required=True)
@@ -494,6 +548,32 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(f"wrote TDIG artifact: {result.output_dir}")
         print(f"edges={result.num_edges} transitions={result.num_transitions}")
+        return 0
+    if args.command == "train" and args.trainer == "bpr-mf":
+        set_global_seed(args.seed)
+        result = run_bpr_mf(
+            dataset_dir=args.dataset_dir,
+            output_dir=args.output_dir,
+            split_name=args.split_name,
+            eval_split=args.eval_split,
+            ks=tuple(args.ks),
+            factors=args.factors,
+            epochs=args.epochs,
+            learning_rate=args.learning_rate,
+            regularization=args.regularization,
+            max_train_pairs=args.max_train_pairs,
+            max_eval_cases=args.max_eval_cases,
+            use_validation_history_for_test=not args.no_validation_history,
+            exclude_seen=not args.include_seen,
+            seed=args.seed,
+            command=command,
+        )
+        print(f"wrote BPR-MF run: {result.output_dir}")
+        print(f"eval_cases={result.num_cases}")
+        metric_text = " ".join(
+            f"{name}={value:.6f}" for name, value in sorted(result.metrics.items())
+        )
+        print(f"bpr_mf: {metric_text}")
         return 0
     if args.command == "evaluate" and args.evaluator == "sanity-baselines":
         set_global_seed(args.seed)

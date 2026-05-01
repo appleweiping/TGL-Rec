@@ -205,6 +205,23 @@ runs/<name>/
   environment.json
 ```
 
+## BPR-MF baseline
+
+The first trainable collaborative-filtering baseline is a deterministic NumPy BPR matrix
+factorization runner:
+
+```bash
+py -3.12 -m tglrec.cli train bpr-mf --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430 --output-dir runs/ml1m-bpr-mf --ks 5 10 20 --factors 64 --epochs 20 --learning-rate 0.05 --regularization 0.0025 --seed 2026
+```
+
+BPR-MF trains only on `split=train` user-item pairs and evaluates full-ranking HR/NDCG/MRR over
+the processed item universe. Validation events are never optimization positives; for test
+evaluation they are used only as prior seen history for candidate filtering unless
+`--no-validation-history` is passed. Runs write `metrics.json`, `metrics_by_epoch.csv`,
+`metrics_by_case.csv`, `metrics_by_segment.csv`, run provenance/status files, `environment.json`,
+and `checksums.json`. Use `--max-train-pairs` or `--max-eval-cases` only for engineering smoke
+runs; omit both for reportable metrics.
+
 ## CPU history perturbation diagnostics
 
 The first diagnostic CLI slice evaluates `original`, `history_shuffle`, `order_reversal`,

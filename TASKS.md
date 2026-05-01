@@ -94,6 +94,36 @@ Use this as the living task board. Every completed task should leave a command, 
 - User intervention required: none for CPU sanity work; Git checkout provenance is required before paper-grade experiment claims.
 - Next recommended task: implement T1.3 Amazon Reviews 2023 local-file/download preprocessing, or add dataset checksum/tie-count metadata if prioritizing reproducibility hardening before the e-commerce dataset.
 
+### T2.2 BPR-MF baseline
+
+- Owner: research_worker
+- Output: local trainable non-sequential CF baseline
+- Status: completed first deterministic NumPy CPU runner 2026-05-01.
+- Output: `src/tglrec/models/bpr_mf.py`, `tglrec train bpr-mf`,
+  `metrics.json`, `metrics_by_epoch.csv`, `metrics_by_case.csv`,
+  `metrics_by_segment.csv`, and standard run provenance/checksum files.
+- Command:
+  `py -3.12 -m tglrec.cli train bpr-mf --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430 --output-dir runs/ml1m-bpr-mf --ks 5 10 20 --factors 64 --epochs 20 --learning-rate 0.05 --regularization 0.0025 --seed 2026`
+- Engineering smoke command:
+  `py -3.12 -m tglrec.cli train bpr-mf --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430 --output-dir runs/20260501-ml1m-bpr-mf-smoke-fast --ks 5 10 20 --factors 16 --epochs 1 --learning-rate 0.03 --max-train-pairs 5000 --max-eval-cases 200 --seed 2026`
+- Engineering smoke result: `runs/20260501-ml1m-bpr-mf-smoke-fast/` completed over a deterministic
+  5000-pair/200-case prefix. Metrics: HR@5=0.015000, HR@10=0.025000, HR@20=0.050000,
+  NDCG@10=0.012676, MRR@10=0.009042. This is not reportable because it uses
+  `--max-train-pairs` and `--max-eval-cases`.
+- Tests: `py -3.12 -m pytest tests\test_bpr_mf.py -q --basetemp .pytest_tmp\bpr-optimized-targeted`
+  passed 2 tests; `py -3.12 -m pytest tests\test_bpr_mf.py tests\test_cli.py tests\test_sanity_baselines.py tests\test_semantic_transition_stress.py -q --basetemp .pytest_tmp\bpr-optimized-related`
+  passed 12 tests. `py -3.12 -m ruff check src\tglrec\models\bpr_mf.py tests\test_bpr_mf.py src\tglrec\cli.py`
+  passed.
+- Notes: BPR-MF trains only on `split=train` user-item positives with deterministic negative
+  sampling. Validation events are never optimization positives; for test evaluation they are used
+  only as prior seen history for candidate filtering by default. `--max-train-pairs` and
+  `--max-eval-cases` are engineering smoke controls and must be omitted for reportable metrics.
+  The train split path avoids materializing every training row as an `EvaluationCase`, which reduced
+  the 5000-pair/200-case MovieLens smoke from about 50 seconds to about 19 seconds in this
+  workspace.
+- Next recommended task: run a non-truncated MovieLens BPR-MF sweep from a clean committed state,
+  then add LightGCN or RecBole-compatible SASRec integration.
+
 ### T3.1 Diagnostic perturbations
 
 - Owner: research_worker + reviewer

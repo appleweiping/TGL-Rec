@@ -64,7 +64,7 @@ Recommended required executable baselines:
 |---|---|---:|---|---:|---:|---|---|
 | Popularity | local or RecBole Pop | project / MIT if RecBole | all | no | no | Module 2 first | sanity baseline; full-ranking feasible |
 | item-kNN | local or RecBole ItemKNN | project / MIT if RecBole | all | no | no | Module 2 first | co-occurrence comparator for TDIG |
-| BPR-MF | local or RecBole BPR | project / MIT if RecBole | all implicit | no for ML-1M | no | Module 2 first | required non-sequential CF |
+| BPR-MF | local or RecBole BPR | project / MIT if RecBole | all implicit | no for ML-1M | no | local CPU runner added 2026-05-01 | required non-sequential CF |
 | GRU4Rec | RecBole or https://github.com/hidasib/GRU4Rec | check official | all sequences | yes for real runs | no | required | use project splits, not default session splits |
 | SASRec | https://github.com/kang205/SASRec or RecBole | Apache-2.0 / MIT RecBole | all sequences | yes | no | required | official code is old; RecBole easier |
 | BERT4Rec | https://github.com/FeiSun/BERT4Rec or RecBole | Apache-2.0 / MIT RecBole | all sequences | yes | no | required | include replicability caution from https://arxiv.org/abs/2207.07483 |
@@ -83,7 +83,10 @@ Module 0/1 CPU-light baseline policy:
   The first completed MovieLens-1M run is under `runs/20260429-ml1m-sanity-baselines-v2/`.
   It is suitable for engineering sanity checks, not paper-grade claims, because this workspace is
   not a Git checkout and the dataset artifact is not yet content-addressed with checksums.
-- Keep `bpr_mf` as the next executable classic baseline for Module 2.
+- `bpr_mf` has a local deterministic NumPy runner as of 2026-05-01:
+  `tglrec train bpr-mf --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430`.
+  It is suitable for CPU engineering runs and small MovieLens sweeps; tune hyperparameters before
+  citing results.
 - Add `tdig_transition_counts` as a local non-neural diagnostic baseline: directed item-item transition counts/lift from training-only events, with no language model.
 - Use RecBole as an integration path where it preserves the project split files and evaluator semantics.
 - Defer full SASRec, BERT4Rec, TiSASRec, LightGCN, GRU4Rec, and LLM-SRec runs until Module 2; only tiny CPU smoke runs are appropriate before GPU setup.
