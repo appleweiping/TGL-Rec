@@ -17,6 +17,13 @@ project wording and should be rechecked before final experiments.
 - Compute/API needs: CPU feasible for Pop/ItemKNN/BPR on small data; GPU recommended for
   transformer and graph neural baselines.
 - Reproduction risks: do not mix RecBole default splits with project temporal splits.
+- Data-format follow-up checked 2026-05-01:
+  - Atomic files: https://recbole.io/atomic_files.html
+  - Data settings / `benchmark_filename`: https://recbole.io/docs/user_guide/config/data_settings.html
+  - Evaluation settings / full ranking: https://recbole.io/docs/user_guide/config/evaluation_settings.html
+  - Project decision: export project `train`/`val`/`test` labels as RecBole benchmark files for
+    general CF baselines first. Sequential RecBole models need a separate history-aware adapter
+    before reportable SASRec/BERT4Rec/TiSASRec runs.
 
 ## MovieLens-1M Official Data
 

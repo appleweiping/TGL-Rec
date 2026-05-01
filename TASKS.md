@@ -137,6 +137,30 @@ Use this as the living task board. Every completed task should leave a command, 
 - Next recommended task: run a non-truncated MovieLens BPR-MF sweep from a clean committed state,
   then add LightGCN or RecBole-compatible SASRec integration.
 
+### T2.3 RecBole general-CF export
+
+- Owner: research_worker
+- Output: RecBole atomic benchmark files for external BPR/LightGCN-style baselines
+- Status: completed first general-CF export bridge 2026-05-01.
+- Output: `src/tglrec/data/recbole_export.py`, `tglrec export recbole-general`,
+  `<dataset>.train.inter`, `<dataset>.valid.inter`, `<dataset>.test.inter`,
+  `recbole_general_cf.yaml`, `metadata.json`, and `checksums.json`.
+- Command:
+  `py -3.12 -m tglrec.cli export recbole-general --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430 --output-dir artifacts/recbole/ml1m_loo_general --dataset-name ml1m_loo_general`
+- Smoke result: `artifacts/recbole/ml1m_loo_general/` completed from the checksum-bearing
+  MovieLens-1M artifact with 987531 train interactions, 6040 validation interactions, 6040 test
+  interactions, 6040 users, and 3416 items.
+- Tests: `py -3.12 -m pytest tests\test_recbole_export.py tests\test_cli.py -q --basetemp .pytest_tmp\recbole-export-targeted-3`
+  passed 5 tests; `py -3.12 -m pytest -q --basetemp .pytest_tmp\recbole-export-full`
+  passed 54 tests; `py -3.12 -m ruff check src\tglrec\data\recbole_export.py src\tglrec\cli.py tests\test_recbole_export.py`
+  passed.
+- Notes: this bridge preserves project train/validation/test labels through RecBole
+  `benchmark_filename` for general collaborative-filtering models such as BPR and LightGCN.
+  It is intentionally not marked as sequential-model ready: SASRec, BERT4Rec, and TiSASRec need a
+  separate history-aware adapter/export before reportable runs.
+- Next recommended task: add the sequential baseline export/runner gate, then run tiny RecBole
+  LightGCN and SASRec smoke tests once the target environment has RecBole/PyTorch installed.
+
 ### T3.1 Diagnostic perturbations
 
 - Owner: research_worker + reviewer

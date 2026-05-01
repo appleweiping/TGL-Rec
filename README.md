@@ -230,6 +230,21 @@ BPR-MF run with its own config, metrics, segment files, and checksum manifest.
 py -3.12 -m tglrec.cli train bpr-mf-sweep --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430 --output-dir runs/ml1m-bpr-mf-sweep --ks 5 10 20 --factors-grid 32 64 --epochs 20 --learning-rate-grid 0.03 0.05 --regularization-grid 0.001 0.0025 --seed-grid 2026 2027 --best-metric NDCG@10
 ```
 
+## RecBole general-CF export
+
+Use this bridge before running external BPR/LightGCN-style baselines in RecBole:
+
+```bash
+py -3.12 -m tglrec.cli export recbole-general --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430 --output-dir artifacts/recbole/ml1m_loo_general --dataset-name ml1m_loo_general
+```
+
+The export writes RecBole atomic benchmark files
+`<dataset>.train.inter`, `<dataset>.valid.inter`, and `<dataset>.test.inter`, plus
+`recbole_general_cf.yaml`, `metadata.json`, and `checksums.json`. It preserves the project's
+precomputed train/validation/test labels for general collaborative-filtering models such as BPR
+and LightGCN. Do not use this export as-is for SASRec, BERT4Rec, or TiSASRec; sequential baselines
+need a separate history-aware adapter so validation/test targets see the correct prior histories.
+
 ## CPU history perturbation diagnostics
 
 The first diagnostic CLI slice evaluates `original`, `history_shuffle`, `order_reversal`,
