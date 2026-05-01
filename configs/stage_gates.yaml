@@ -1,0 +1,116 @@
+# Stage gates for building TGL-Rec before paper-grade experiments.
+
+project_status:
+  basic_setup_complete: false
+  notify_user_when_complete: true
+  current_stage: baseline_infrastructure
+
+stages:
+  local_cpu_no_api:
+    purpose: deterministic data, diagnostics, and lightweight baselines
+    allowed_compute: local_cpu
+    allowed_api: false
+    allowed_lora: false
+    required_before_exit:
+      - checksum_manifested_movielens_1m
+      - at_least_one_need_transition_dataset_pipeline
+      - popularity_itemknn_bpr_mf_runs
+      - bpr_mf_sweep_wrapper
+      - tdig_candidate_recall
+      - semantic_transition_stress_candidates
+      - recbole_general_cf_export
+      - run_artifact_contract_tests
+    current_status:
+      checksum_manifested_movielens_1m: complete
+      at_least_one_need_transition_dataset_pipeline: partial_amazon_local_ingestion
+      popularity_itemknn_bpr_mf_runs: complete_engineering
+      bpr_mf_sweep_wrapper: complete
+      tdig_candidate_recall: complete_engineering
+      semantic_transition_stress_candidates: complete_engineering
+      recbole_general_cf_export: complete
+      run_artifact_contract_tests: partial
+
+  gpu_server_no_api:
+    purpose: reproduce strong non-LLM and time-aware baselines first
+    enter_when:
+      - local_cpu_no_api.required_before_exit mostly complete
+      - dataset artifacts and export configs are committed or reproducibly generated
+      - GPU environment has RecBole/PyTorch versions recorded
+    allowed_compute: gpu_server
+    allowed_api: false
+    allowed_lora: false
+    required_outputs:
+      - lightgcn_three_seed_results
+      - gru4rec_three_seed_results
+      - sasrec_three_seed_results
+      - bert4rec_three_seed_results
+      - tisasrec_or_clean_time_aware_alternative
+      - comparable_hyperparameter_search_log
+      - segment_metrics_for_all_main_baselines
+
+  local_or_gpu_small_reranker_no_api:
+    purpose: test original TDIG retrieval and need-aware reranking without LLM dependence
+    enter_when:
+      - strongest_non_llm_baselines_have_valid_runs
+      - semantic_vs_transition_stress_cases_exist
+      - candidate_generation_recall_is_logged
+    allowed_compute: local_cpu_or_gpu_server
+    allowed_api: false
+    allowed_lora: false
+    required_outputs:
+      - feature_table_for_user_candidate_pairs
+      - no_graph_no_time_no_language_ablation_switches
+      - need_gate_ablation_results
+      - paired_significance_tests
+
+  local_llm_or_lora:
+    purpose: test whether language evidence adds value after non-LLM evidence is strong
+    enter_when:
+      - reranker_no_api_improves_or_failure_is_diagnosed
+      - open_model_license_and_training_budget_are_recorded
+      - prompts_or_evidence_templates_are_frozen
+    allowed_compute: gpu_server
+    allowed_api: false
+    allowed_lora: true
+    allowed_use_cases:
+      - llm_srec_style_baseline_reproduction
+      - graph_to_language_evidence_encoder
+      - LoRA_ablation_on_frozen_evidence_templates
+    blocked_use_cases:
+      - replacing_missing_non_llm_baselines
+      - generating_unverifiable_graph_evidence
+
+  proprietary_or_hosted_api:
+    purpose: optional diagnostic or explanation ablation, not the first main ranking path
+    enter_when:
+      - non_api_main_tables_exist
+      - request_budget_and_data_policy_are_approved_by_user
+      - prompt_cache_and_request_log_are_implemented
+      - API_terms_allow_the_planned_data_use
+    allowed_compute: hosted_api
+    allowed_api: true
+    allowed_lora: false
+    required_outputs:
+      - request_cache_with_hashes
+      - prompt_template_version
+      - cost_and_latency_report
+      - non_api_comparison_table
+
+basic_setup_completion_checklist:
+  - movielens_and_amazon_or_second_domain_preprocessing_ready
+  - checksum_and_metadata_manifests_ready
+  - local_sanity_and_bpr_baselines_ready
+  - recbole_general_cf_export_ready
+  - sequential_baseline_export_or_runner_ready
+  - tdig_graph_and_candidate_recall_ready
+  - semantic_transition_stress_ready
+  - experiment_logging_contract_ready
+  - baseline_and_experiment_matrix_updated
+  - no_required_step_depends_on_unapproved_api_or_paid_service
+
+originality_guardrails:
+  - do_not_claim_novelty_from_timestamp_prompts_only
+  - do_not_copy_unlicensed_baseline_code
+  - keep_TDIG_retrieval_and_need_gate_as_original_contribution_core
+  - use_API_or_LoRA_only_as_controlled_ablation_or_baseline
+  - report_failures_and_negative_results_when_components_do_not_help

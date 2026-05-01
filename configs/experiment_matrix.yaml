@@ -1,6 +1,24 @@
 # Experiment matrix draft. Fill exact command names after implementation.
 
 experiment_blocks:
+  setup_gate_local_cpu:
+    dataset: movielens_1m_checksummed
+    split: temporal_leave_one_out
+    models: [popularity, item_knn, bpr_mf]
+    infrastructure:
+      - recbole_general_cf_export
+      - tdig_candidate_recall
+      - semantic_transition_stress_candidates
+    seeds: [2026]
+    purpose: complete no-API project setup before GPU/server experiments
+
+  setup_gate_gpu_recbole:
+    dataset: movielens_1m_checksummed
+    split: temporal_leave_one_out
+    models: [lightgcn, gru4rec, sasrec, bert4rec, tisasrec]
+    seeds: [2026]
+    purpose: tiny server smoke after RecBole/PyTorch environment is available; not reportable
+
   smoke:
     dataset: synthetic_temporal
     models: [popularity, item_knn]

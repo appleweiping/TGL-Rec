@@ -13,6 +13,20 @@ Use this as the living task board. Every completed task should leave a command, 
 - Result: baseline sources and risks recorded for RecBole, MovieLens-1M, Amazon Reviews 2023, BPR, GRU4Rec, SASRec, BERT4Rec, TiSASRec, LightGCN, TGN, EvolveGCN, LLM-SRec, LLaRA, P5, ReLLa, G-Refer, G-CRS, FEARec, BSARec, and Meta generative recommenders.
 - Notes: refresh again before final experiments; do not treat optional LLM/GNN entries as runnable until Module 2 validates licenses, dependencies, and split compatibility.
 
+### T0.2 Experiment stage gates
+
+- Owner: research_worker
+- Output: machine-readable setup/experiment gate and route note
+- Status: completed first gate plan 2026-05-01.
+- Output: `configs/stage_gates.yaml`, `docs/experiment_gates.md`, updated
+  `configs/experiment_matrix.yaml`, and updated `EXPERIMENTS.md`.
+- Command: `py -3.12 -m tglrec.cli check-config configs/stage_gates.yaml`
+- Notes: API and LoRA are explicitly late-stage tools. The setup route is local CPU/no API,
+  then GPU/server/no API for strong baselines, then small reranker/no API, then local LLM/LoRA,
+  then optional hosted API only with user-approved budget/data policy and request logging.
+- Next recommended task: implement the sequential baseline export/runner gate for
+  SASRec/BERT4Rec/TiSASRec so the project can move from general CF setup to server baselines.
+
 ### T1.1 Package skeleton
 
 - Owner: research_worker
