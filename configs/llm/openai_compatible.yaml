@@ -1,14 +1,19 @@
 llm:
   provider: openai_compatible
   base_url: https://api.openai.com/v1
-  model: null
+  model: gpt-4o-mini
   api_key_env: OPENAI_API_KEY
   run_mode: diagnostic_api
   allow_api_calls: false
   timeout_seconds: 60
   max_retries: 2
+  structured_output:
+    enabled: true
+    strict: true
   decoding:
     temperature: 0.0
     top_p: 1.0
     max_tokens: 512
-
+  pricing:
+    prompt_per_1k: 0.0
+    completion_per_1k: 0.0

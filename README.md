@@ -320,6 +320,63 @@ outputs/runs/phase3a_llm_diagnostics/
   diagnostics/
 ```
 
+## Phase 3B API LLM micro-diagnostic
+
+Phase 3B is a small OpenAI-compatible API micro-diagnostic on sampled sequence/time cases. It
+checks whether a real LLM responds to order, time buckets, transition evidence, time-window
+evidence, and contrastive evidence. It is not OursMethod, not LoRA/QLoRA, not fine-tuning, not a
+paper-scale experiment, and not evidence for paper conclusions.
+
+Run the cost estimate and dry run first. These commands do not require an API key and do not call
+the API:
+
+```bash
+python scripts/estimate_api_cost.py --config configs/diagnostics/llm_sequence_time_api_micro.yaml
+python scripts/run_api_micro_diagnostic.py --config configs/diagnostics/llm_sequence_time_api_micro.yaml --dry-run
+```
+
+The default hard cap is 125 planned calls:
+
+```text
+5 case groups x 5 cases x 5 prompt variants = 125 planned API requests
+```
+
+To run the real API micro-diagnostic, set the configured environment variable without writing the
+key into any config or output file:
+
+```bash
+export OPENAI_API_KEY="..."
+```
+
+On Windows PowerShell:
+
+```powershell
+$env:OPENAI_API_KEY="..."
+```
+
+Then explicitly set `allow_api_calls: true` in `configs/llm/openai_compatible.yaml` only after
+confirming budget/model/key, and run:
+
+```bash
+python scripts/run_api_micro_diagnostic.py --config configs/diagnostics/llm_sequence_time_api_micro.yaml
+```
+
+Outputs are written under:
+
+```text
+outputs/runs/phase3b_api_micro/
+  cost_preflight.json
+  api_requests.jsonl
+  api_raw_outputs.jsonl
+  predictions.jsonl
+  metrics.json
+  metrics.csv
+  api_micro_summary.json
+  cost_latency.json
+  artifacts/api_sampled_cases.json
+  diagnostics/
+```
+
 ## MovieLens-1M preprocessing
 
 Automatic download uses the official GroupLens archive checked on 2026-04-29:

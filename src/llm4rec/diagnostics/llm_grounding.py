@@ -48,6 +48,7 @@ def evaluate_evidence_grounding(
         "evidence_grounding_rate": grounded / float(total or 1),
         "grounded_evidence_count": grounded,
         "items": results,
+        "contrastive_evidence_usage": any(row.get("type") == "contrastive" for row in results),
         "semantic_evidence_usage": any(row.get("type") == "semantic" for row in results),
         "time_evidence_usage": any(row.get("type") in {"time_gap", "time_bucket", "time_window"} for row in results),
         "transition_evidence_usage": any(row.get("type") == "transition" for row in results),
@@ -105,6 +106,7 @@ def aggregate_grounding(rows: list[dict[str, Any]]) -> dict[str, float]:
     if not rows:
         return {
             "evidence_grounding_rate": 0.0,
+            "contrastive_evidence_usage_rate": 0.0,
             "semantic_evidence_usage_rate": 0.0,
             "time_evidence_usage_rate": 0.0,
             "transition_evidence_usage_rate": 0.0,
@@ -113,6 +115,12 @@ def aggregate_grounding(rows: list[dict[str, Any]]) -> dict[str, float]:
         "evidence_grounding_rate": sum(
             float(row.get("metadata", {}).get("grounding", {}).get("evidence_grounding_rate", 0.0))
             for row in rows
+        )
+        / float(len(rows)),
+        "contrastive_evidence_usage_rate": sum(
+            1.0
+            for row in rows
+            if row.get("metadata", {}).get("grounding", {}).get("contrastive_evidence_usage")
         )
         / float(len(rows)),
         "semantic_evidence_usage_rate": sum(

@@ -15,14 +15,22 @@ from llm4rec.llm.base import LLMRequest, LLMResponse
 class ResponseCache:
     """JSON response cache keyed by model, prompt, decoding params, and candidates."""
 
-    def __init__(self, cache_dir: str | Path = "outputs/cache/llm", *, enabled: bool = True):
+    def __init__(
+        self,
+        cache_dir: str | Path = "outputs/cache/llm",
+        *,
+        enabled: bool = True,
+        write_enabled: bool | None = None,
+    ):
         self.cache_dir = ensure_dir(resolve_path(cache_dir))
         self.enabled = bool(enabled)
+        self.write_enabled = self.enabled if write_enabled is None else bool(write_enabled)
 
     def key_for(self, request: LLMRequest) -> str:
         """Build a stable cache key for a request without storing secrets."""
 
         payload = {
+            "base_url_hash": request.metadata.get("base_url_hash"),
             "candidate_item_ids": [str(item) for item in request.candidate_item_ids],
             "dataset_run_id": request.metadata.get("dataset_run_id"),
             "decoding_params": request.decoding_params,
@@ -30,6 +38,9 @@ class ResponseCache:
             "prompt_hash": hashlib.sha256(request.prompt.encode("utf-8")).hexdigest(),
             "prompt_version": request.prompt_version,
             "provider": request.provider,
+            "structured_output_schema_version": request.metadata.get(
+                "structured_output_schema_version", "disabled"
+            ),
         }
         text = json.dumps(payload, ensure_ascii=True, sort_keys=True)
         return hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -59,7 +70,7 @@ class ResponseCache:
         """Persist a response in the cache."""
 
         path = self.path_for(request)
-        if not self.enabled:
+        if not self.enabled or not self.write_enabled:
             return path
         write_json(
             path,

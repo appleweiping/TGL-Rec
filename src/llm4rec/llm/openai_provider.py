@@ -12,6 +12,7 @@ from typing import Any
 from llm4rec.llm.base import LLMRequest, LLMResponse
 from llm4rec.llm.response_cache import ResponseCache
 from llm4rec.llm.safety import ensure_api_allowed
+from llm4rec.llm.structured_output import openai_response_format
 
 
 class OpenAICompatibleProvider:
@@ -83,13 +84,20 @@ class OpenAICompatibleProvider:
 
     def _payload(self, request: LLMRequest) -> dict[str, Any]:
         params = dict(request.decoding_params)
-        return {
+        payload = {
             "max_tokens": int(params.get("max_tokens", 512)),
             "messages": [{"content": request.prompt, "role": "user"}],
             "model": self.model,
             "temperature": float(params.get("temperature", 0.0)),
             "top_p": float(params.get("top_p", 1.0)),
         }
+        response_format = openai_response_format(
+            enabled=bool(request.metadata.get("structured_output_enabled", False)),
+            strict=bool(request.metadata.get("structured_output_strict", True)),
+        )
+        if response_format is not None:
+            payload["response_format"] = response_format
+        return payload
 
     def _to_response(self, parsed: dict[str, Any], *, latency_ms: float) -> LLMResponse:
         usage = dict(parsed.get("usage", {}))
@@ -109,6 +117,7 @@ class OpenAICompatibleProvider:
             latency_ms=latency_ms,
             metadata={
                 "finish_reason": choices[0].get("finish_reason") if choices and isinstance(choices[0], dict) else None,
+                "raw_response": parsed,
                 "response_id": parsed.get("id"),
             },
         )
