@@ -245,6 +245,22 @@ precomputed train/validation/test labels for general collaborative-filtering mod
 and LightGCN. Do not use this export as-is for SASRec, BERT4Rec, or TiSASRec; sequential baselines
 need a separate history-aware adapter so validation/test targets see the correct prior histories.
 
+## Sequence case export
+
+Use this export for local sequential runners, LLM prompt diagnostics, or feature-table construction:
+
+```bash
+py -3.12 -m tglrec.cli export sequence-cases --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430 --output-dir artifacts/sequences/ml1m_loo_sequence_cases --dataset-name ml1m_loo_sequence_cases
+```
+
+The artifact writes compact `user_sequences.csv` plus `eval_cases.csv`. Evaluation rows contain a
+target item and JSON-encoded prior history item IDs, timestamps, and event IDs. Validation cases use
+prior train history; test cases use prior train plus validation history by default, or train-only
+history with `--no-validation-history`. Histories are capped to the most recent 50 events by
+default; pass `--max-history-items 0` only when a full-history export is intentionally needed.
+`train_examples.csv` is header-only by default; pass `--write-train-examples` only for small smoke
+or when a runner cannot materialize train prefixes from `user_sequences.csv`.
+
 ## CPU history perturbation diagnostics
 
 The first diagnostic CLI slice evaluates `original`, `history_shuffle`, `order_reversal`,

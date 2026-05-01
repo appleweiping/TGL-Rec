@@ -6,7 +6,7 @@ The build order is governed by `configs/stage_gates.yaml` and summarized in
 `docs/experiment_gates.md`.
 
 - Local CPU/no API first: data manifests, leakage checks, sanity baselines, BPR-MF, TDIG recall,
-  semantic-vs-transition stress sets, and RecBole general-CF export.
+  semantic-vs-transition stress sets, RecBole general-CF export, and sequence case export.
 - GPU/server/no API second: LightGCN, GRU4Rec, SASRec, BERT4Rec, TiSASRec or a verified time-aware
   alternative, all under the project splits.
 - Small reranker/no API third: TDIG feature table and need-aware gate with no-time/no-graph/no-text

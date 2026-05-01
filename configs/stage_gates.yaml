@@ -19,6 +19,7 @@ stages:
       - tdig_candidate_recall
       - semantic_transition_stress_candidates
       - recbole_general_cf_export
+      - sequence_case_export
       - run_artifact_contract_tests
     current_status:
       checksum_manifested_movielens_1m: complete
@@ -28,6 +29,7 @@ stages:
       tdig_candidate_recall: complete_engineering
       semantic_transition_stress_candidates: complete_engineering
       recbole_general_cf_export: complete
+      sequence_case_export: complete
       run_artifact_contract_tests: partial
 
   gpu_server_no_api:
@@ -101,7 +103,8 @@ basic_setup_completion_checklist:
   - checksum_and_metadata_manifests_ready
   - local_sanity_and_bpr_baselines_ready
   - recbole_general_cf_export_ready
-  - sequential_baseline_export_or_runner_ready
+  - sequence_case_export_ready
+  - sequential_baseline_runner_or_recbole_adapter_ready
   - tdig_graph_and_candidate_recall_ready
   - semantic_transition_stress_ready
   - experiment_logging_contract_ready

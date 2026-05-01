@@ -9,6 +9,7 @@ from pathlib import Path
 from tglrec.data.amazon import preprocess_amazon_reviews_2023
 from tglrec.data.movielens import preprocess_movielens_1m
 from tglrec.data.recbole_export import export_recbole_general_cf
+from tglrec.data.sequence_export import export_sequence_cases
 from tglrec.eval.history_perturbations import (
     DEFAULT_HISTORY_PERTURBATIONS,
     run_history_perturbation_diagnostics,
@@ -198,6 +199,48 @@ def build_parser() -> argparse.ArgumentParser:
         "--split-name",
         choices=["temporal_leave_one_out", "global_time"],
         default="temporal_leave_one_out",
+    )
+    sequence_cases = export_sub.add_parser(
+        "sequence-cases",
+        help="export leakage-safe train examples and eval cases with explicit histories",
+    )
+    sequence_cases.add_argument(
+        "--dataset-dir",
+        type=Path,
+        default=Path("artifacts/datasets/movielens_1m"),
+        help="processed dataset directory containing interactions.csv",
+    )
+    sequence_cases.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="export output directory; defaults to artifacts/sequences/<dataset-name>",
+    )
+    sequence_cases.add_argument(
+        "--dataset-name",
+        default=None,
+        help="export dataset name; defaults to a deterministic name from dataset dir and split",
+    )
+    sequence_cases.add_argument(
+        "--split-name",
+        choices=["temporal_leave_one_out", "global_time"],
+        default="temporal_leave_one_out",
+    )
+    sequence_cases.add_argument(
+        "--no-validation-history",
+        action="store_true",
+        help="for test cases, do not include each user's validation events in prior history",
+    )
+    sequence_cases.add_argument(
+        "--max-history-items",
+        type=int,
+        default=50,
+        help="recent history events retained per example/case; 0 keeps full prior history",
+    )
+    sequence_cases.add_argument(
+        "--write-train-examples",
+        action="store_true",
+        help="materialize one training row per train prefix; default keeps compact user sequences",
     )
 
     train = subparsers.add_parser("train", help="model training commands")
@@ -647,6 +690,25 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"dataset={result.dataset_name} split={result.split_name} "
             f"train={result.num_train} valid={result.num_valid} test={result.num_test}"
+        )
+        return 0
+    if args.command == "export" and args.exporter == "sequence-cases":
+        result = export_sequence_cases(
+            dataset_dir=args.dataset_dir,
+            output_dir=args.output_dir,
+            dataset_name=args.dataset_name,
+            split_name=args.split_name,
+            use_validation_history_for_test=not args.no_validation_history,
+            max_history_items=args.max_history_items,
+            write_train_examples=args.write_train_examples,
+            command=command,
+        )
+        print(f"wrote sequence case export: {result.output_dir}")
+        print(
+            f"dataset={result.dataset_name} split={result.split_name} "
+            f"train_examples={result.num_train_examples} "
+            f"train_transitions_available={result.num_train_transitions_available} "
+            f"valid_cases={result.num_validation_cases} test_cases={result.num_test_cases}"
         )
         return 0
     if args.command == "train" and args.trainer == "bpr-mf":

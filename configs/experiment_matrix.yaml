@@ -7,6 +7,7 @@ experiment_blocks:
     models: [popularity, item_knn, bpr_mf]
     infrastructure:
       - recbole_general_cf_export
+      - sequence_case_export
       - tdig_candidate_recall
       - semantic_transition_stress_candidates
     seeds: [2026]

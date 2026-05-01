@@ -175,6 +175,34 @@ Use this as the living task board. Every completed task should leave a command, 
 - Next recommended task: add the sequential baseline export/runner gate, then run tiny RecBole
   LightGCN and SASRec smoke tests once the target environment has RecBole/PyTorch installed.
 
+### T2.4 Sequence case export
+
+- Owner: research_worker
+- Output: leakage-safe train examples and validation/test sequence cases
+- Status: completed first sequence case export 2026-05-01.
+- Output: `src/tglrec/data/sequence_export.py`, `tglrec export sequence-cases`,
+  `user_sequences.csv`, `eval_cases.csv`, header-only default `train_examples.csv`,
+  `config.yaml`, `metadata.json`, and `checksums.json`.
+- Command:
+  `py -3.12 -m tglrec.cli export sequence-cases --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430 --output-dir artifacts/sequences/ml1m_loo_sequence_cases --dataset-name ml1m_loo_sequence_cases`
+- Smoke result: `artifacts/sequences/ml1m_loo_sequence_cases/` completed from the checksum-bearing
+  MovieLens-1M artifact with 981491 available train transitions, 6040 validation cases, 6040 test
+  cases, and default `max_history_items=50`. Default compact export materialized
+  `user_sequences.csv` (~24.7MB), `eval_cases.csv` (~13.8MB), and header-only
+  `train_examples.csv`; no repeated-prefix 1GB train artifact is produced unless requested.
+- Tests: `py -3.12 -m pytest tests\test_sequence_export.py tests\test_cli.py -q --basetemp .pytest_tmp\sequence-export-targeted-3`
+  passed 5 tests; `py -3.12 -m pytest -q --basetemp .pytest_tmp\sequence-export-full-3`
+  passed 56 tests; `py -3.12 -m ruff check src\tglrec\data\sequence_export.py src\tglrec\cli.py tests\test_sequence_export.py`
+  passed.
+- Notes: train examples use prior train events only. Validation cases use prior train history. Test
+  cases use prior train plus validation history by default, with `--no-validation-history` available
+  for strict train-only ablations. This export is the shared no-leakage input for local
+  SASRec/TiSASRec-style runners, LLM prompt diagnostics, and TDIG reranker feature tables. Histories
+  are capped to the most recent 50 events by default. `train_examples.csv` is header-only unless
+  `--write-train-examples` is passed, avoiding very large repeated-prefix artifacts.
+- Next recommended task: add a tiny sequential baseline smoke runner or RecBole sequential adapter
+  that consumes this export without changing the split semantics.
+
 ### T3.1 Diagnostic perturbations
 
 - Owner: research_worker + reviewer
