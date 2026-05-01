@@ -1,4 +1,4 @@
-"""Config-driven experiment runner for smoke and Phase 2A baselines."""
+﻿"""Config-driven experiment runner for smoke and Phase 2A baselines."""
 
 from __future__ import annotations
 
@@ -24,6 +24,7 @@ from llm4rec.rankers.bm25 import BM25Ranker
 from llm4rec.rankers.mf import MatrixFactorizationRanker
 from llm4rec.rankers.popularity import PopularityRanker
 from llm4rec.rankers.random import RandomRanker
+from llm4rec.rankers.sequential import GRU4RecInterface, MarkovTransitionRanker, SASRecInterface
 from llm4rec.utils.env import collect_environment
 
 
@@ -287,6 +288,12 @@ def _make_ranker(config: dict[str, Any], *, seed: int) -> BaseRanker:
             regularization=float(params.get("regularization", 0.002)),
             seed=int(params.get("seed", seed)),
         )
+    if method_type in {"markov", "markov_transition", "sequential_markov"}:
+        return MarkovTransitionRanker()
+    if method_type == "sasrec":
+        return SASRecInterface(reportable=bool(config.get("reportable", False)))
+    if method_type == "gru4rec":
+        return GRU4RecInterface(reportable=bool(config.get("reportable", False)))
     raise ValueError(f"Unknown ranker type: {method_type}")
 
 

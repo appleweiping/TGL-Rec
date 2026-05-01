@@ -1,0 +1,11 @@
+﻿manifest:
+  dataset: movielens
+  split_strategy: temporal_leave_one_out
+  candidate_strategy: full_catalog_or_fixed_sampled_negatives
+  methods: [configs/baselines/popularity.yaml, configs/baselines/bm25.yaml, configs/baselines/mf.yaml, configs/baselines/sasrec.yaml, configs/baselines/gru4rec.yaml]
+  seeds: [2026, 2027, 2028]
+  metrics: [Recall@5, NDCG@5, MRR@5, catalog_coverage, long_tail_ratio]
+  output_dir: outputs/runs/main_accuracy
+  run_mode: planned
+  reportable: false
+  note: Pre-experiment manifest only; formal sequential baselines are interfaces until implemented.

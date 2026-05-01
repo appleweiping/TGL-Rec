@@ -1,0 +1,6 @@
+﻿baseline:
+  name: markov_transition
+  type: markov_transition
+  reportable: false
+  eval_split: test
+  note: Deterministic first-order Markov smoke baseline; not a formal SASRec/GRU4Rec result.

@@ -1,0 +1,8 @@
+﻿baseline:
+  name: sasrec
+  type: sasrec
+  reportable: false
+  eval_split: test
+  interface_only: false
+  training_config: configs/training/sasrec_smoke.yaml
+  note: Real SASRec-style baseline option; smoke configs remain reportable=false until full protocol freeze.

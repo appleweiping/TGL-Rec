@@ -1,0 +1,10 @@
+﻿manifest:
+  dataset: multidomain
+  split_strategy: temporal_leave_one_out
+  candidate_strategy: fixed_sampled_negatives
+  methods: [configs/baselines/popularity.yaml, configs/baselines/bm25.yaml, configs/baselines/mf.yaml]
+  seeds: [2026, 2027, 2028]
+  metrics: [Recall@5, NDCG@5, MRR@5, catalog_coverage]
+  output_dir: outputs/runs/main_multidomain
+  run_mode: planned
+  reportable: false

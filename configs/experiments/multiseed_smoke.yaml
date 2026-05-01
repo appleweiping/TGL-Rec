@@ -1,0 +1,8 @@
+﻿experiment:
+  run_id: multiseed_smoke
+  output_dir: outputs/runs
+  run_mode: smoke
+  reportable: false
+base_config: configs/experiments/phase2a_smoke.yaml
+seeds: [2026, 2027]
+metrics: [Recall@5, NDCG@5, MRR@5]

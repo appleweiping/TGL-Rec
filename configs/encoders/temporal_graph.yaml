@@ -1,0 +1,7 @@
+﻿encoder:
+  type: temporal_graph_encoder
+  reportable: false
+  hidden_dim: 16
+  time_encoding: log_timestamp_projection
+  update: gru_cell
+  note: Lightweight trainable temporal graph encoder, not full TGN.

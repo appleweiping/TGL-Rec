@@ -1,0 +1,7 @@
+﻿experiment:
+  run_id: export_smoke
+  output_dir: outputs/runs
+  run_mode: smoke
+  reportable: false
+input_dir: outputs/runs
+output_dir: outputs/tables

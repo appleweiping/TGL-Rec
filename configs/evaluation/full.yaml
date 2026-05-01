@@ -1,0 +1,9 @@
+﻿evaluation:
+  ks: [1, 3, 5, 10]
+  candidate_protocol: full_catalog
+  metrics:
+    ranking: [Recall, HitRate, NDCG, MRR]
+    validity: [validity_rate, hallucination_rate, parse_success_rate, candidate_adherence_rate]
+    beyond_accuracy: [catalog_coverage, item_coverage, intra_list_diversity, novelty, long_tail_ratio]
+    efficiency: [mean_latency_ms, p50_latency_ms, p95_latency_ms, prompt_tokens, completion_tokens, total_tokens]
+    segments: [domain, user_sparsity, item_popularity]

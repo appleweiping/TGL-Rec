@@ -1,10 +1,18 @@
-# TGLRec: Temporal Graph-to-Language Retrieval for Need-Aware Sequential Recommendation
+﻿# TGLRec: Temporal Graph-to-Language Retrieval for Need-Aware Sequential Recommendation
 
 Working title: **Beyond Similarity: Time-Aware Graph Translation for LLM-based Sequential Recommendation**.
 
 This repository is intended to become a top-tier recommendation-systems research project, not a toy demo. The central question is:
 
 > Do LLM-based recommenders follow temporal need transitions, or do they mostly retrieve semantically similar items? Can temporal graph-to-language evidence make sequential recommendation more robust, explainable, and inductive?
+
+## Current phase
+
+Current status: **Phase 6, real sequential baseline and lightweight dynamic graph encoder option**.
+The codebase now supports pre-experiment infrastructure, a non-reportable `TimeGraphEvidenceRec`
+skeleton, a real SASRec-style baseline when PyTorch is installed, and a lightweight trainable
+`TemporalGraphEncoder` option. No paper-scale experiments have been run, no real API calls should
+be made yet, and no paper conclusions are claimed.
 
 ## Core hypothesis
 
@@ -91,6 +99,102 @@ py -3.12 -m pytest -q
 
 The current implemented package surface is CPU-only and covers deterministic config loading,
 seed utilities, artifact manifests, ranking metrics, and MovieLens-1M preprocessing.
+
+## Phase 4 pre-experiment validation
+
+Run the CI-style project validation:
+
+```bash
+python scripts/validate_project.py
+```
+
+Validate planned experiment manifests:
+
+```bash
+python scripts/validate_experiment.py --config configs/experiments/main_accuracy.yaml
+python scripts/validate_experiment.py --config configs/experiments/ablation.yaml
+```
+
+Train a tiny smoke baseline and checkpoint:
+
+```bash
+python scripts/train.py --config configs/experiments/smoke.yaml
+```
+
+Evaluate smoke predictions with the shared evaluator:
+
+```bash
+python scripts/evaluate.py --config configs/experiments/smoke.yaml
+```
+
+Export table artifacts from saved metrics:
+
+```bash
+python scripts/export_tables.py --input outputs/runs --output outputs/tables
+```
+
+LoRA/QLoRA support is dry-run only at this stage:
+
+```bash
+python scripts/train.py --config configs/training/lora.yaml --dry-run
+```
+
+## Phase 5 method skeleton validation
+
+Run the non-reportable method smoke:
+
+```bash
+python scripts/run_method_smoke.py --config configs/experiments/phase5_method_smoke.yaml
+```
+
+Run the non-reportable ablation smoke:
+
+```bash
+python scripts/run_method_smoke.py --config configs/experiments/phase5_ablation_smoke.yaml
+```
+
+Export the method card:
+
+```bash
+python scripts/export_method_card.py --config configs/methods/time_graph_evidence.yaml
+```
+
+Validate Phase 5 smoke manifests:
+
+```bash
+python scripts/validate_experiment.py --config configs/experiments/phase5_method_smoke.yaml
+python scripts/validate_experiment.py --config configs/experiments/phase5_ablation_smoke.yaml
+```
+
+Phase 5 outputs are written under `outputs/runs/phase5_method_smoke/` and
+`outputs/runs/phase5_ablation_smoke/`. They are smoke artifacts only, not formal results.
+
+## Phase 6 sequential and dynamic encoder smoke
+
+Run SASRec smoke training/evaluation:
+
+```bash
+python scripts/train_sasrec.py --config configs/experiments/phase6_sasrec_smoke.yaml
+```
+
+Run lightweight TemporalGraphEncoder smoke training/evaluation:
+
+```bash
+python scripts/train_temporal_graph.py --config configs/experiments/phase6_temporal_graph_smoke.yaml
+```
+
+Run `TimeGraphEvidenceRec` with the optional dynamic encoder score path:
+
+```bash
+python scripts/run_method_smoke.py --config configs/experiments/phase6_method_encoder_smoke.yaml
+```
+
+SASRec and TemporalGraphEncoder require the optional PyTorch dependency. If PyTorch is unavailable,
+the commands write explicit `skipped_pytorch_unavailable` artifacts. Markov remains smoke-only and
+must not be reported as a formal SASRec/GRU4Rec result. The TemporalGraphEncoder is lightweight and
+trainable, but it is not full TGN.
+
+These commands are pre-experiment checks. They do not establish paper results.
 
 ## Phase 1 smoke run
 

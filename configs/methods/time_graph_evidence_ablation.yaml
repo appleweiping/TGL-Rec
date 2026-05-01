@@ -1,0 +1,7 @@
+﻿method:
+  base_config_path: configs/methods/time_graph_evidence.yaml
+  reportable: false
+ablation:
+  names: [full, w_o_llm, w_o_retrieval, w_o_temporal_graph, w_o_transition_edges, w_o_time_window_edges, w_o_time_gap_tags, w_o_semantic_similarity, w_o_user_profile, w_o_grounding_constraint, w_o_explanation, w_o_dynamic_encoder, encoder_only, text_only, graph_only]
+  reportable: false
+  note: Phase 5 ablation smoke only; not paper-scale results.

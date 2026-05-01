@@ -1,0 +1,43 @@
+﻿method:
+  name: time_graph_evidence_rec
+  codename: TimeGraphEvidenceRec
+  reportable: false
+  eval_split: test
+  status: phase5_skeleton_non_reportable
+retrieval:
+  modes: [transition_topk, time_window_topk, semantic_topk, contrastive_transition_only, recent_history_focused, user_drift_blocks]
+  top_k_per_candidate: 4
+  recent_history_items: 2
+  semantic_min_similarity: 0.1
+  contrastive_max_similarity: 0.35
+translator:
+  mode: prompt_ready_json
+scoring:
+  transition_weight: 1.0
+  window_weight: 0.5
+  semantic_weight: 0.25
+  recency_weight: 0.1
+  dynamic_encoder_weight: 0.25
+time_window:
+  window_seconds: 86400
+encoder:
+  type: temporal_graph_encoder
+  reportable: false
+  checkpoint_path: null
+ablation:
+  use_llm: false
+  use_retrieval: true
+  use_temporal_graph: true
+  use_transition_edges: true
+  use_time_window_edges: true
+  use_time_gap_tags: true
+  use_semantic_similarity: true
+  use_user_profile: true
+  use_recent_block: true
+  use_long_term_block: true
+  use_grounding_constraint: true
+  use_explanation: true
+  use_dynamic_encoder: false
+llm:
+  provider: none
+  allow_api_calls: false

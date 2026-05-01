@@ -1,0 +1,16 @@
+﻿training:
+  type: traditional_mf
+  run_id: phase4_train_smoke
+  seed: 2026
+  overwrite: true
+  resume: false
+  eval_only: false
+  eval_split: test
+  baseline:
+    name: mf
+    type: mf
+    params:
+      factors: 4
+      epochs: 3
+      learning_rate: 0.05
+      regularization: 0.002

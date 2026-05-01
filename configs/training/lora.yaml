@@ -1,0 +1,15 @@
+﻿training:
+  type: lora
+  base_model: local-test-causal-lm
+  adapter_output_dir: outputs/runs/lora_dry_run
+  quantization: 4bit
+  lora_r: 8
+  lora_alpha: 16
+  lora_dropout: 0.05
+  target_modules: [q_proj, v_proj]
+  max_seq_length: 512
+  batch_size: 1
+  gradient_accumulation_steps: 4
+  learning_rate: 0.0002
+  num_train_epochs: 1
+  save_steps: 10

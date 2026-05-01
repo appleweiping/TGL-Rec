@@ -1,0 +1,7 @@
+﻿baseline:
+  name: gru4rec
+  type: gru4rec
+  reportable: false
+  eval_split: test
+  interface_only: true
+  note: Formal GRU4Rec interface placeholder; implementation required before reportable use.
