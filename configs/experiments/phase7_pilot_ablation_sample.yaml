@@ -1,0 +1,42 @@
+manifest:
+  dataset: movielens_style_sampled_pilot
+  split_strategy: leave_one_out
+  candidate_strategy: sampled_fixed
+  methods: [time_graph_evidence_ablation]
+  seeds: [0]
+  metrics: [Recall@1, Recall@5, Recall@10, HitRate@5, NDCG@5, MRR@5, coverage]
+  output_dir: outputs/runs
+  run_mode: pilot
+  reportable: false
+experiment:
+  run_id: phase7_pilot_ablation_sample
+  output_dir: outputs/runs
+  overwrite: true
+  run_mode: pilot
+  seed: 0
+  reportable: false
+pilot_reportable: false
+dataset:
+  name: movielens_style_sampled_pilot
+  adapter: movielens_style
+  split_strategy: leave_one_out
+  candidate_protocol: sampled_fixed
+pilot:
+  ablation: true
+  max_users: 200
+  max_items: 1000
+  max_interactions: 10000
+  candidate_size: 100
+  continue_on_failure: true
+  split_artifact: shared
+  candidate_artifact: shared
+ablation:
+  names: [full, w_o_temporal_graph, w_o_transition_edges, w_o_time_window_edges, w_o_time_gap_tags, w_o_semantic_similarity, w_o_dynamic_encoder, graph_only, text_only]
+evaluation:
+  ks: [1, 5, 10]
+  candidate_protocol: sampled_fixed
+training:
+  enable_lora_training: false
+llm:
+  provider: none
+  allow_api_calls: false

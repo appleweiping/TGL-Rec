@@ -13,6 +13,9 @@
 - [x] SASRec-style implementation path, with explicit PyTorch-unavailable skip behavior.
 - [x] OursMethod design skeleton and ablation interfaces.
 - [x] Lightweight TemporalGraphEncoder option, not full TGN.
+- [x] Frozen protocol docs for datasets, splits, candidates, metrics, reportability, leakage.
+- [x] NON_REPORTABLE pilot matrix and ablation pilot outputs.
+- [x] Pilot resource estimate, failure audit, and table export.
 - [ ] Real GRU4Rec/BERT4Rec/TiSASRec implementations.
 - [ ] Protocol freeze before reportable runs.
 - [ ] Paper-scale experiments.

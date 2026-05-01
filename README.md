@@ -8,11 +8,12 @@ This repository is intended to become a top-tier recommendation-systems research
 
 ## Current phase
 
-Current status: **Phase 6, real sequential baseline and lightweight dynamic graph encoder option**.
+Current status: **Phase 7, protocol freeze and NON_REPORTABLE pilot matrix**.
 The codebase now supports pre-experiment infrastructure, a non-reportable `TimeGraphEvidenceRec`
 skeleton, a real SASRec-style baseline when PyTorch is installed, and a lightweight trainable
-`TemporalGraphEncoder` option. No paper-scale experiments have been run, no real API calls should
-be made yet, and no paper conclusions are claimed.
+`TemporalGraphEncoder` option, plus frozen protocol docs, resource estimates, failure audits, and
+pilot table export. No paper-scale experiments have been run, no real API calls should be made yet,
+and no paper conclusions are claimed.
 
 ## Core hypothesis
 
@@ -193,6 +194,21 @@ SASRec and TemporalGraphEncoder require the optional PyTorch dependency. If PyTo
 the commands write explicit `skipped_pytorch_unavailable` artifacts. Markov remains smoke-only and
 must not be reported as a formal SASRec/GRU4Rec result. The TemporalGraphEncoder is lightweight and
 trainable, but it is not full TGN.
+
+## Phase 7 protocol freeze and pilot matrix
+
+Phase 7 freezes the pre-experiment protocol and runs NON_REPORTABLE pilot matrices only:
+
+```bash
+python scripts/estimate_pilot_resources.py --config configs/experiments/phase7_pilot_movielens_sample.yaml
+python scripts/run_pilot_matrix.py --config configs/experiments/phase7_pilot_movielens_sample.yaml
+python scripts/run_pilot_matrix.py --config configs/experiments/phase7_pilot_ablation_sample.yaml
+python scripts/export_pilot_tables.py --run-dir outputs/runs/phase7_pilot_movielens_sample
+python scripts/audit_failures.py --run-dir outputs/runs/phase7_pilot_movielens_sample
+```
+
+Pilot tables include a `NON_REPORTABLE` marker. Pilot data is sampled/fixture-style infrastructure
+validation and must not be used as paper-scale evidence.
 
 These commands are pre-experiment checks. They do not establish paper results.
 
