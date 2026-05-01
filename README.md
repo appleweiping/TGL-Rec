@@ -279,6 +279,63 @@ auditable edge statistics with deterministic tie-breaking. In-memory event rows 
 must not contain same-user same-timestamp ties; provide deterministic `event_id` values or resolve
 the tie policy before graph construction.
 
+## TDIG candidate recall
+
+The CPU recall evaluator measures whether direct-transition TDIG candidates contain each held-out
+target under strict as-of train evidence:
+
+```bash
+py -3.12 -m tglrec.cli evaluate tdig-candidate-recall --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430 --output-dir runs/ml1m-tdig-candidate-recall --ks 5 10 20 --max-history-items 20
+```
+
+For each prediction case, the evaluator incrementally updates TDIG edge statistics only from
+`split=train` events with timestamps strictly before the target timestamp. It then retrieves direct
+transition candidates from the user's recent unique source items, pruning to `--per-source-top-k`
+per source item before aggregating by `--score-field`. The validation event is used as test-time
+user history by default without adding it to TDIG edge evidence. Pass `--no-validation-history` for
+a train-only source-history protocol. The command writes
+`metrics.json`, `metrics_by_case.csv`, `metrics_by_segment.csv`, `config.yaml`, `command.txt`,
+`git_commit.txt`, `git_status.txt`, `run_status.json`, `stdout.log`, `stderr.log`,
+`environment.json`, and `checksums.json` under the run directory. `config.yaml` records processed
+dataset file fingerprints when those files are available; if the dataset predates checksum
+manifests, the missing `checksums.json` is recorded explicitly.
+
+Same-timestamp skip counters use explicit count names in `metrics.json`:
+`same_timestamp_tie_group_skip_count` counts tied timestamp groups, while
+`same_timestamp_adjacent_transition_skip_count` counts skipped adjacent same-timestamp transition
+pairs. `same_timestamp_ambiguous_bridge_skip_count` counts later chronological bridges skipped
+after an unresolved tied timestamp group.
+
+The evaluator also writes deterministic semantic-vs-transition diagnostic labels. For each case,
+`metrics_by_case.csv` includes `semantic_vs_transition_case_type`,
+`target_has_transition_evidence`, `semantic_overlap_max`,
+`semantic_overlap_source_item_id`, and `semantic_overlap_tokens_json`. Semantic evidence is a
+simple token-overlap heuristic over non-id columns in processed `items.csv`; transition evidence is
+true only when the target is retrieved and ranked by the strict as-of direct TDIG state. Segment
+metrics now aggregate by `semantic_vs_transition_case_type` with labels
+`semantic_and_transition`, `semantic_only`, `transition_only`,
+`neither_semantic_nor_transition`, or `not_computed` when no source-history comparison can be made.
+
+## Semantic-vs-transition stress candidates
+
+The hard-candidate diagnostic builds a small shared candidate set for each held-out case: the true
+target, a lexical semantic hard negative, a direct TDIG transition hard negative, a popularity hard
+negative, and a deterministic random negative when each role is available.
+
+```bash
+py -3.12 -m tglrec.cli evaluate semantic-transition-stress --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430 --output-dir runs/ml1m-semantic-transition-stress --ks 1 2 5 --max-history-items 20 --per-source-top-k 50 --seed 2026
+```
+
+The evaluator uses the same strict as-of policy as TDIG candidate recall: transition evidence and
+popularity are updated only from `split=train` events before the prediction timestamp, while
+validation events are optional source-history events only. It writes `metrics.json`,
+`metrics_by_case.csv`, `metrics_by_segment.csv`, run metadata, Git provenance/status, environment
+metadata, and `checksums.json`. The initial diagnostic rankers are deliberately simple:
+`semantic_overlap`, `tdig_transition`, and `popularity`. They report Semantic Trap Rate, Transition
+Win Rate, target top-1 rate, target MRR, hard-candidate coverage, and the same required segment
+buckets used by other evaluators. Pass `--max-eval-cases N` only for deterministic engineering
+smoke runs; omit it for reportable metrics.
+
 ## Compute policy
 
 The project should start on CPU/small GPU with graph retrieval and lightweight reranking. Final SOTA-level experiments likely need at least one GPU for SASRec/BERT4Rec/TiSASRec/LLM-SRec-style baselines and dynamic GNN variants. API-based LLM calls are optional and should be restricted to small reranking/explanation studies unless the user explicitly provides budget and keys.

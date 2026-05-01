@@ -369,14 +369,17 @@ def _event_precedes(history_event: EvaluationCase, prediction_case: EvaluationCa
 
 
 def _cases_from_frame(frame: pd.DataFrame) -> list[EvaluationCase]:
+    values = frame[
+        [schema.USER_ID, schema.ITEM_ID, schema.TIMESTAMP, schema.EVENT_ID]
+    ].to_numpy()
     cases = [
         EvaluationCase(
-            user_id=int(row[schema.USER_ID]),
-            item_id=int(row[schema.ITEM_ID]),
-            timestamp=int(row[schema.TIMESTAMP]),
-            event_id=int(row[schema.EVENT_ID]),
+            user_id=int(user_id),
+            item_id=int(item_id),
+            timestamp=int(timestamp),
+            event_id=int(event_id),
         )
-        for _, row in frame.iterrows()
+        for user_id, item_id, timestamp, event_id in values
     ]
     return sorted(cases, key=lambda row: (row.timestamp, row.user_id, row.event_id))
 

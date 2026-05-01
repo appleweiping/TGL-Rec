@@ -50,6 +50,19 @@ Use this as the living task board. Every completed task should leave a command, 
 - Command: `py -3.12 -m pytest tests\test_movielens_preprocessing.py tests\test_amazon_preprocessing.py -q --basetemp .pytest_tmp\preprocess-guardrails`
 - Result: 9 passed
 - Notes: MovieLens and Amazon preprocessing now write processed CSV SHA256 entries into `metadata.json` and a full artifact checksum manifest in `checksums.json`. The manifest covers processed CSVs plus `config.yaml`, `metadata.json`, `command.txt`, `git_commit.txt`, and `created_at_utc.txt`. No network downloads were performed.
+- Follow-up 2026-04-30: verified `artifacts/datasets/movielens_1m_20260430_checksummed/`
+  as the checksum-bearing MovieLens-1M artifact. It contains `checksums.json`, processed split
+  CSV SHA256 entries, tie statistics, and manifest files. Command recorded in its `command.txt`:
+  `D:\Research\TGL-Rec\src\tglrec\cli.py preprocess movielens-1m --raw-dir data/raw/movielens_1m/ml-1m --output-dir artifacts/datasets/movielens_1m_20260430_checksummed --min-user-interactions 5 --min-item-interactions 5 --seed 2026`.
+  Targeted verification with `py -3.12 -m pytest tests\test_tdig_recall.py tests\test_movielens_preprocessing.py -q --basetemp .pytest_tmp\checksummed-recall-targeted`
+  passed 9 tests.
+- Non-overwriting repro follow-up 2026-04-30: regenerated MovieLens-1M from the local zip without
+  network into `artifacts/datasets/movielens_1m_checksummed_20260430/`:
+  `py -3.12 -m tglrec.cli preprocess movielens-1m --zip-path data/raw/movielens_1m/ml-1m.zip --output-dir artifacts/datasets/movielens_1m_checksummed_20260430 --min-user-interactions 5 --min-item-interactions 5 --seed 2026`.
+  Result: 999611 interactions, 6040 users, 3416 items. The artifact includes `checksums.json`;
+  `interactions.csv` SHA256 is `62d53cbbfa768188f479ecd5749a432a77cab844f835221ae31ff5c9e169d43c`.
+  Targeted verification with `py -3.12 -m pytest tests\test_movielens_preprocessing.py tests\test_tdig_recall.py -q --basetemp .pytest_tmp\repro-followup-precheck`
+  passed 9 tests.
 
 ### T1.3 Amazon/Steam/Yelp preprocessing
 
@@ -121,11 +134,12 @@ Use this as the living task board. Every completed task should leave a command, 
   nonzero original metrics. `metrics_by_case.csv` rows are deterministic and include `case_id`,
   `user_id`, `target_item_id`, `target_timestamp`, `model`, non-original perturbation,
   original/perturbed target rank, rank delta, and hit deltas for each configured K.
-- Known blockers: semantic-vs-transition case labels remain `not_computed`; current MovieLens
-  artifact lacks post-T1.5 `checksums.json`; this workspace is not a Git checkout, so
-  `git_commit.txt` is `UNAVAILABLE`.
-- User intervention required: none for CPU implementation. A real Git checkout plus regenerated
-  dataset artifacts are required before paper-grade claims.
+- Known blockers: the full semantic-vs-transition hard-candidate stress test remains pending;
+  older MovieLens artifacts may predate post-T1.5 `checksums.json`. Use
+  `artifacts/datasets/movielens_1m_checksummed_20260430/` for follow-up engineering runs that need
+  processed artifact fingerprints.
+- User intervention required: none for CPU implementation. A clean or snapshotted Git worktree is
+  required before paper-grade claims.
 - Files changed in latest slice: `src/tglrec/eval/history_perturbations.py`,
   `src/tglrec/cli.py`, `tests/test_history_perturbations.py`, `README.md`, `TASKS.md`.
 - Tests run in previous slice:
@@ -133,19 +147,23 @@ Use this as the living task board. Every completed task should leave a command, 
   passed 2 tests;
   `py -3.12 -m pytest tests\test_history_perturbations.py tests\test_sanity_baselines.py -q --basetemp .pytest_tmp\history-case-ranks-with-sanity`
   passed 7 tests.
-- Next recommended task: regenerate MovieLens artifacts with checksums before running another real
-  diagnostic artifact, then add semantic-vs-transition case labels.
+- Next recommended task: rerun any diagnostic artifact that will be cited from a clean/snapshotted
+  Git state using the checksum-bearing MovieLens artifact, then build the full
+  semantic-vs-transition hard-candidate stress test.
 - Done when: shuffle/reversal/time perturbation metrics are available on one real dataset with
   versioned dataset artifacts and Git provenance.
 
-### T4.1 TDIG graph builder
+### T4.1 TDIG graph builder and candidate recall
 
 - Owner: research_worker
 - Output: graph files and retrieval API
-- Status: partially completed 2026-04-30 for deterministic direct-transition TDIG construction
-  and retrieval API. Candidate recall measurement remains pending.
+- Status: completed first direct-transition graph builder, CPU candidate recall evaluator, and
+  deterministic semantic-vs-transition labeling slice 2026-04-30. Multi-hop/path retrieval remains
+  pending.
 - Output: `src/tglrec/graph/tdig.py`, `tglrec graph build-tdig`,
-  train-only `edges.csv` graph artifacts under `artifacts/graphs/<name>/` when run.
+  train-only `edges.csv` graph artifacts under `artifacts/graphs/<name>/` when run;
+  `src/tglrec/eval/tdig_recall.py`, `tglrec evaluate tdig-candidate-recall`, run-style
+  recall artifacts under `runs/<name>/`.
 - Command: `py -3.12 -m tglrec.cli graph build-tdig --dataset-dir artifacts/datasets/movielens_1m --output-dir artifacts/graphs/ml1m-tdig`
 - Tests: `py -3.12 -m pytest tests\test_tdig.py -q --basetemp .pytest_tmp\tdig`
   passed 5 tests; `py -3.12 -m pytest tests\test_tdig.py tests\test_cli.py tests\test_sanity_baselines.py -q --basetemp .pytest_tmp\tdig-with-cli`
@@ -174,22 +192,91 @@ Use this as the living task board. Every completed task should leave a command, 
   TDIG metadata records input dataset fingerprints/provenance warnings, same-user identical
   timestamp directed transitions are skipped by default and counted, and `environment.json`
   includes key package versions.
-- Known blockers: GitHub publication is blocked in this workspace because `gh` is not installed,
-  `git ls-remote https://github.com/appleweiping/TGL-Rec.git` fails with Windows credential error
-  `schannel: AcquireCredentialsHandle failed: SEC_E_NO_CREDENTIALS`, and both normal `git init -b main`
-  and fallback `git init --bare --initial-branch=main git-upload.git` fail while writing Git
-  `config.lock`/`config` with `Permission denied`. Rerun/push from an authenticated GitHub
-  environment with writable Git metadata. Existing graph artifacts created before the repro fixes
-  should be regenerated before use.
-- Next recommended task: add TDIG candidate recall evaluation under a global-time split or an
-  explicit per-case `strict_before_timestamp` cache, then connect similarity-vs-transition labels.
+- Candidate recall slice 2026-04-30: added an incremental as-of CPU evaluator for direct TDIG
+  candidates. For each eval target, TDIG edge evidence is updated only from `split=train` events
+  with timestamp strictly before the target timestamp; optional validation history is used only as
+  a test-time source item, not as graph edge evidence, and same-timestamp validation/test ties are
+  excluded from source history by default. Ambiguous same-user same-timestamp train ties are not
+  allowed to bridge into later transition edges. Outputs include `metrics.json`,
+  `metrics_by_case.csv`, `metrics_by_segment.csv`, `config.yaml`, `command.txt`,
+  `git_commit.txt`, `git_status.txt`, `run_status.json`, `stdout.log`, `stderr.log`,
+  `environment.json`, and `checksums.json`.
+- Candidate recall command:
+  `py -3.12 -m tglrec.cli evaluate tdig-candidate-recall --dataset-dir artifacts/datasets/movielens_1m --output-dir runs/20260430-ml1m-tdig-candidate-recall-v4 --ks 5 10 20 --max-history-items 20 --seed 2026`
+- Candidate recall engineering smoke: wrote `runs/20260430-ml1m-tdig-candidate-recall-v4/`
+  over 6040 MovieLens-1M test cases. Direct TDIG candidate recall was
+  `candidate_recall@5=0.021192`, `candidate_recall@10=0.039404`, and
+  `candidate_recall@20=0.063245`; final as-of state observed 175567 TDIG edges and 217986
+  transitions, with 242437 same-timestamp tie groups skipped. This run completed successfully
+  without shell timeout and writes `git_status.txt`, `run_status.json`, dataset file fingerprints,
+  and package versions. It is still an engineering artifact, not a paper-grade claim, because the
+  workspace is dirty/untracked and the current MovieLens processed dataset predates
+  `checksums.json`. Earlier runs under `runs/20260430-ml1m-tdig-candidate-recall/`,
+  `runs/20260430-ml1m-tdig-candidate-recall-v2/`, and
+  `runs/20260430-ml1m-tdig-candidate-recall-v3/` were produced before the final leakage/provenance
+  fixes and should be treated as obsolete.
+- Checksum-artifact recall follow-up 2026-04-30: reran the same strict TDIG candidate recall
+  protocol on the new non-overwriting artifact
+  `artifacts/datasets/movielens_1m_checksummed_20260430/`:
+  `py -3.12 -m tglrec.cli evaluate tdig-candidate-recall --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430 --output-dir runs/20260430-ml1m-checksummed-tdig-candidate-recall --ks 5 10 20 --max-history-items 20 --seed 2026`.
+  The run completed successfully and records dataset fingerprints including `checksums.json` in
+  `config.yaml`, plus `git_status.txt`, `run_status.json`, `environment.json`, stdout/stderr logs,
+  command, metrics, and per-case/per-segment CSVs. Metrics matched the final strict protocol:
+  `candidate_recall@5=0.021192`, `candidate_recall@10=0.039404`, and
+  `candidate_recall@20=0.063245`; final as-of state observed 175567 TDIG edges and 217986
+  transitions. This run used the same canonical checksum-bearing dataset but predates the explicit
+  skip-counter names and run-level checksum manifest, so it is obsolete for the skip-counter
+  follow-up. This is still an engineering run, not a paper-grade claim, because the current
+  implementation is dirty/untracked relative to `git_commit.txt`.
+- Repro follow-up blocker closure 2026-04-30: reran the clarified TDIG recall path on the canonical
+  checksum-bearing MovieLens artifact without overwriting prior runs:
+  `py -3.12 -m tglrec.cli evaluate tdig-candidate-recall --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430 --output-dir runs/20260430-ml1m-checksummed-tdig-candidate-recall-skip-counts --ks 5 10 20 --max-history-items 20 --seed 2026`.
+  Output: `runs/20260430-ml1m-checksummed-tdig-candidate-recall-skip-counts/`. Result:
+  `candidate_recall@5=0.021192`, `candidate_recall@10=0.039404`,
+  `candidate_recall@20=0.063245`, 175567 final as-of TDIG edges, 217986 final as-of TDIG
+  transitions, 242437 same-timestamp tie groups skipped, 523628 adjacent same-timestamp transition
+  pairs skipped, and 239877 ambiguous chronological bridges skipped after tied timestamp groups.
+  The run wrote `checksums.json` with SHA256 entries for config, metrics, per-case/per-segment
+  CSVs, command, Git provenance/status, run status, logs, and environment metadata. Treat
+  `runs/20260430-ml1m-checksummed-tdig-candidate-recall-v2/` as obsolete for the skip-counter
+  follow-up because it still used the legacy `skipped_same_timestamp_*` metric names.
+- Candidate recall tests: `py -3.12 -m pytest tests\test_tdig_recall.py -q --basetemp .pytest_tmp\tdig-recall-provenance`
+  passed 6 tests; `py -3.12 -m pytest tests\test_tdig_recall.py tests\test_tdig.py tests\test_cli.py -q --basetemp .pytest_tmp\tdig-recall-related-provenance`
+  passed 18 tests; final verification
+  `py -3.12 -m pytest -q --basetemp .pytest_tmp\all-skip-metrics`
+  passed 46 tests.
+  Current follow-up targeted verification:
+  `py -3.12 -m pytest tests\test_movielens_preprocessing.py tests\test_tdig_recall.py -q --basetemp .pytest_tmp\repro-followup-precheck`
+  passed 9 tests.
+  Latest targeted verification: `py -3.12 -m pytest tests\test_tdig_recall.py -q --basetemp .pytest_tmp\tdig-recall-skip-counts`
+  passed 6 tests; `py -3.12 -m pytest tests\test_movielens_preprocessing.py tests\test_tdig_recall.py -q --basetemp .pytest_tmp\repro-followup-skip-counts`
+  passed 9 tests.
+- Reviewer/repro follow-up: reviewer confirmed no remaining must-fix findings after fixes for
+  same-timestamp train tie propagation, same-timestamp validation/test history, CLI recall knobs,
+  invalid cutoffs, and item-universe validation. Repro blockers for the current code path are
+  limited to paper-grade provenance: commit/snapshot the dirty implementation and rerun from a
+  clean worktree before citing metrics.
+- Known blockers: existing graph artifacts created before the repro fixes should be regenerated
+  before use. GitHub push/publication still depends on an authenticated remote environment. Local
+  Git snapshotting is blocked in the current Windows checkout: on 2026-05-01 `git add README.md
+  TASKS.md src/tglrec/cli.py src/tglrec/eval/tdig_recall.py tests/test_tdig_recall.py` failed with
+  `fatal: Unable to create 'D:/Research/TGL-Rec/.git/index.lock': Permission denied`, and removing
+  the explicit `.git` Deny ACL via `Set-Acl` failed with `UnauthorizedAccessException`.
+- User intervention required: none for the CPU evaluator. Paper-grade reporting requires rerunning
+  candidate recall from a clean/snapshotted Git state.
+- Next recommended task: fix Git metadata permissions, commit/snapshot the implementation, rerun
+  TDIG candidate recall from that clean state if paper-grade provenance is needed, then add
+  embedding/hard-negative semantic-vs-transition stress candidates.
 - Real artifact smoke: `py -3.12 -m tglrec.cli graph build-tdig --dataset-dir artifacts/datasets/movielens_1m --output-dir artifacts/graphs/ml1m-tdig`
   wrote `edges.csv` with 500422 edges and 981491 transitions plus metadata and checksums. The
   command printed successful output but the shell wrapper timed out after 134 seconds, so rerun with
   a longer timeout before treating the runtime log as paper-grade.
 - Files changed: `src/tglrec/graph/tdig.py`, `src/tglrec/graph/__init__.py`, `src/tglrec/cli.py`,
-  `tests/test_tdig.py`, `README.md`, `TASKS.md`.
-- Done when: direct transition retrieval is tested and candidate recall is reported.
+  `src/tglrec/eval/tdig_recall.py`, `tests/test_tdig.py`, `tests/test_tdig_recall.py`,
+  `README.md`, `TASKS.md`.
+- Done when: direct transition retrieval is tested and candidate recall is reported. First CPU
+  evaluator is implemented and has been run on a checksum-bearing MovieLens artifact; paper-grade
+  reporting still requires rerun from a clean or snapshotted Git state.
 
 ## Mid-stage tasks
 
@@ -204,6 +291,66 @@ Use this as the living task board. Every completed task should leave a command, 
 - Build semantic item embeddings from item text.
 - Generate hard candidates.
 - Report Semantic Trap Rate and Transition Win Rate.
+- Status: first CPU-checkable labeling slice completed 2026-04-30 in TDIG candidate recall.
+- Output: `metrics_by_case.csv` and `metrics_by_segment.csv` from
+  `tglrec evaluate tdig-candidate-recall` now include deterministic
+  `semantic_vs_transition_case_type` labels derived from processed `items.csv` token overlap and
+  strict as-of TDIG target retrieval evidence.
+- Tests: `py -3.12 -m pytest tests\test_tdig_recall.py -q --basetemp .pytest_tmp\tdig-case-labels-3`
+  passed 7 tests; `py -3.12 -m pytest tests\test_tdig_recall.py tests\test_tdig.py tests\test_cli.py -q --basetemp .pytest_tmp\tdig-semantic-labels-related-2`
+  passed 19 tests; `py -3.12 -m pytest -q --basetemp .pytest_tmp\tdig-semantic-labels-all-2`
+  passed 47 tests. Local confirmation also passed with
+  `.pytest_tmp\tdig-semantic-labels-edge`, `.pytest_tmp\tdig-semantic-labels-related`, and
+  `.pytest_tmp\tdig-semantic-labels-all`. `py -3.12 -m ruff check src\tglrec\eval\tdig_recall.py tests\test_tdig_recall.py`
+  passed, with Windows denying `.ruff_cache` writes only.
+- Real artifact smoke: `py -3.12 -m tglrec.cli evaluate tdig-candidate-recall --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430 --output-dir runs/20260430-ml1m-checksummed-tdig-candidate-recall-semantic-labels --ks 5 10 20 --max-history-items 20 --seed 2026`.
+  The evaluator printed successful completion for 6040 MovieLens-1M test cases and wrote
+  `run_status.json` plus `checksums.json`, but the outer shell wrapper timed out after 187 seconds
+  and returned exit code 124, so treat it as an engineering smoke rather than a paper-grade run.
+  Metrics matched the previous strict TDIG recall artifact:
+  `candidate_recall@5=0.021192`, `candidate_recall@10=0.039404`,
+  `candidate_recall@20=0.063245`; `metrics_by_segment.csv` now includes case-type segments:
+  3275 `semantic_and_transition`, 2642 `semantic_only`, 34 `transition_only`, and
+  89 `neither_semantic_nor_transition`.
+- Notes: this is not yet the full T3.2 hard-candidate stress test or embedding-based semantic
+  neighbor construction. It is an auditable segment-labeling bridge for TDIG recall outputs:
+  semantic evidence uses only existing processed item metadata, and transition evidence uses only
+  direct TDIG evidence available before each target timestamp. Cases with TDIG target evidence but
+  empty target metadata are labeled `transition_only` rather than falling back to `not_computed`.
+- Hard-candidate slice 2026-05-01: implemented the first CPU hard-candidate stress evaluator.
+  Output: `src/tglrec/eval/semantic_transition_stress.py`,
+  `tglrec evaluate semantic-transition-stress`, `metrics_by_case.csv`,
+  `metrics_by_segment.csv`, `metrics.json`, and standard run provenance/checksum files.
+  The evaluator emits the true target plus lexical semantic, direct TDIG transition, popularity,
+  and deterministic random hard negatives where available. It scores the shared set with diagnostic
+  `semantic_overlap`, `tdig_transition`, and `popularity` rankers and reports Semantic Trap Rate,
+  Transition Win Rate, target top-1, target MRR, and hard-candidate coverage.
+- Hard-candidate command:
+  `py -3.12 -m tglrec.cli evaluate semantic-transition-stress --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430 --output-dir runs/ml1m-semantic-transition-stress --ks 1 2 5 --max-history-items 20 --per-source-top-k 50 --seed 2026`
+- Hard-candidate tests: `py -3.12 -m pytest tests\test_semantic_transition_stress.py tests\test_tdig_recall.py -q --basetemp .pytest_tmp\semantic-stress-max-cases-2`
+  passed 9 tests. `py -3.12 -m pytest tests\test_semantic_transition_stress.py tests\test_tdig_recall.py tests\test_sanity_baselines.py -q --basetemp .pytest_tmp\fast-cases-targeted`
+  passed 14 tests. `py -3.12 -m ruff check src\tglrec\eval\semantic_transition_stress.py tests\test_semantic_transition_stress.py src\tglrec\cli.py`
+  passed, with Windows denying `.ruff_cache` writes only. Full verification:
+  `py -3.12 -m pytest -q --basetemp .pytest_tmp\all-semantic-stress` passed 49 tests.
+- Hard-candidate performance follow-up: lexical semantic neighbor lookup now uses a per-source-item
+  cached token-neighbor list, and deterministic random negatives use a cheap stable integer key
+  instead of per-candidate SHA256 sorting. The shared `_cases_from_frame` conversion now uses a
+  vectorized `to_numpy()` path instead of pandas `iterrows()`, which reduced a 200-case MovieLens
+  stress smoke from about 60 seconds to 13.4 seconds in this workspace.
+- Real artifact smoke: `py -3.12 -m tglrec.cli evaluate semantic-transition-stress --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430 --output-dir runs/20260501-ml1m-semantic-transition-stress-200case-fast --ks 1 2 5 --max-history-items 20 --per-source-top-k 50 --max-eval-cases 200 --seed 2026`
+  completed successfully and wrote `runs/20260501-ml1m-semantic-transition-stress-200case-fast/`
+  with run-status/checksum files. Headline smoke metrics over the deterministic 200-case prefix:
+  semantic hard-negative coverage 1.0, target transition evidence rate 0.120000,
+  `semantic_overlap_semantic_trap_rate=0.985000`,
+  `tdig_transition_transition_win_rate=0.875000`, and
+  `transition_hard_negative_coverage=0.975000`. This is an engineering smoke only because it uses
+  `--max-eval-cases` and the Git worktree is not clean/snapshotted.
+- Known blockers: semantic neighbors are still lexical token-overlap candidates, not embedding
+  neighbors. Paper-grade stress metrics require a clean/snapshotted Git state and a real
+  MovieLens/Amazon run after the Git metadata ACL blocker is fixed.
+- Next recommended task: run the stress evaluator on the checksum-bearing MovieLens artifact from
+  a clean commit, then add embedding-based semantic neighbors and expose the generated candidate
+  sets to future rerankers.
 
 ### T5.1 Graph-to-language evidence
 

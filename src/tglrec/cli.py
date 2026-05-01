@@ -12,6 +12,8 @@ from tglrec.eval.history_perturbations import (
     DEFAULT_HISTORY_PERTURBATIONS,
     run_history_perturbation_diagnostics,
 )
+from tglrec.eval.semantic_transition_stress import run_semantic_transition_stress
+from tglrec.eval.tdig_recall import DEFAULT_TDIG_RECALL_SCORE_FIELD, run_tdig_candidate_recall
 from tglrec.graph.tdig import build_tdig_artifact
 from tglrec.models.sanity_baselines import DEFAULT_KS, run_sanity_baselines
 from tglrec.utils.config import load_config
@@ -270,6 +272,154 @@ def build_parser() -> argparse.ArgumentParser:
         help="for test evaluation, do not add each user's validation event as prior history",
     )
     history_diag.add_argument("--seed", type=int, default=2026)
+
+    tdig_recall = evaluate_sub.add_parser(
+        "tdig-candidate-recall",
+        aliases=["tdig-recall"],
+        help="evaluate direct-transition TDIG candidate recall with strict as-of train evidence",
+    )
+    tdig_recall.add_argument(
+        "--dataset-dir",
+        type=Path,
+        default=Path("artifacts/datasets/movielens_1m"),
+        help="processed dataset directory containing interactions.csv and items.csv",
+    )
+    tdig_recall.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="run output directory; defaults to runs/<timestamp>-tdig-candidate-recall",
+    )
+    tdig_recall.add_argument(
+        "--split-name",
+        choices=["temporal_leave_one_out", "global_time"],
+        default="temporal_leave_one_out",
+    )
+    tdig_recall.add_argument("--eval-split", choices=["val", "test"], default="test")
+    tdig_recall.add_argument("--ks", type=int, nargs="+", default=list(DEFAULT_KS))
+    tdig_recall.add_argument(
+        "--max-history-items",
+        type=int,
+        default=20,
+        help="number of recent user history events used as TDIG source items; 0 uses all",
+    )
+    tdig_recall.add_argument(
+        "--score-field",
+        choices=["support", "transition_probability", "lift", "pmi"],
+        default=DEFAULT_TDIG_RECALL_SCORE_FIELD,
+        help="edge statistic used to rank TDIG candidates across source history items",
+    )
+    tdig_recall.add_argument(
+        "--per-source-top-k",
+        type=int,
+        default=50,
+        help="number of direct TDIG candidates retained per source history item before aggregation",
+    )
+    tdig_recall.add_argument(
+        "--aggregation",
+        choices=["max", "sum"],
+        default="max",
+        help="how to combine scores for candidates reached from multiple source history items",
+    )
+    tdig_recall.add_argument(
+        "--gap-bucket",
+        choices=["same_session", "within_1d", "within_1w", "within_1m", "long_gap"],
+        default=None,
+        help="optional time-gap bucket support used as the candidate score",
+    )
+    tdig_recall.add_argument(
+        "--include-seen",
+        action="store_true",
+        help="allow previously seen items in generated TDIG candidates",
+    )
+    tdig_recall.add_argument(
+        "--no-validation-history",
+        action="store_true",
+        help="for test evaluation, do not use each user's validation event as a source history item",
+    )
+    tdig_recall.add_argument(
+        "--include-same-timestamp-transitions",
+        action="store_true",
+        help="include same-user same-timestamp transitions in the as-of TDIG state",
+    )
+    tdig_recall.add_argument("--seed", type=int, default=2026)
+
+    stress = evaluate_sub.add_parser(
+        "semantic-transition-stress",
+        aliases=["stress-candidates"],
+        help="build semantic-vs-transition hard candidate sets with as-of TDIG evidence",
+    )
+    stress.add_argument(
+        "--dataset-dir",
+        type=Path,
+        default=Path("artifacts/datasets/movielens_1m"),
+        help="processed dataset directory containing interactions.csv and items.csv",
+    )
+    stress.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="run output directory; defaults to runs/<timestamp>-semantic-transition-stress",
+    )
+    stress.add_argument(
+        "--split-name",
+        choices=["temporal_leave_one_out", "global_time"],
+        default="temporal_leave_one_out",
+    )
+    stress.add_argument("--eval-split", choices=["val", "test"], default="test")
+    stress.add_argument("--ks", type=int, nargs="+", default=list(DEFAULT_KS))
+    stress.add_argument(
+        "--max-history-items",
+        type=int,
+        default=20,
+        help="number of recent user history events used as source items; 0 uses all",
+    )
+    stress.add_argument(
+        "--score-field",
+        choices=["support", "transition_probability", "lift", "pmi"],
+        default=DEFAULT_TDIG_RECALL_SCORE_FIELD,
+        help="edge statistic used to rank TDIG transition candidates",
+    )
+    stress.add_argument(
+        "--per-source-top-k",
+        type=int,
+        default=50,
+        help="number of direct TDIG candidates retained per source history item",
+    )
+    stress.add_argument(
+        "--aggregation",
+        choices=["max", "sum"],
+        default="max",
+        help="how to combine TDIG scores for candidates reached from multiple source items",
+    )
+    stress.add_argument(
+        "--gap-bucket",
+        choices=["same_session", "within_1d", "within_1w", "within_1m", "long_gap"],
+        default=None,
+        help="optional time-gap bucket support used as the transition score",
+    )
+    stress.add_argument(
+        "--include-seen",
+        action="store_true",
+        help="allow previously seen items in generated hard negatives",
+    )
+    stress.add_argument(
+        "--no-validation-history",
+        action="store_true",
+        help="for test evaluation, do not use each user's validation event as source history",
+    )
+    stress.add_argument(
+        "--include-same-timestamp-transitions",
+        action="store_true",
+        help="include same-user same-timestamp transitions in the as-of TDIG state",
+    )
+    stress.add_argument(
+        "--max-eval-cases",
+        type=int,
+        default=None,
+        help="optional deterministic prefix of eval cases for engineering smoke runs",
+    )
+    stress.add_argument("--seed", type=int, default=2026)
     return parser
 
 
@@ -390,6 +540,60 @@ def main(argv: list[str] | None = None) -> int:
             for perturbation, metrics in baseline_metrics.items():
                 metric_text = " ".join(f"{name}={value:.6f}" for name, value in sorted(metrics.items()))
                 print(f"{baseline}/{perturbation}: {metric_text}")
+        return 0
+    if args.command == "evaluate" and args.evaluator in {"tdig-candidate-recall", "tdig-recall"}:
+        set_global_seed(args.seed)
+        result = run_tdig_candidate_recall(
+            dataset_dir=args.dataset_dir,
+            output_dir=args.output_dir,
+            split_name=args.split_name,
+            eval_split=args.eval_split,
+            ks=tuple(args.ks),
+            max_history_items=args.max_history_items,
+            per_source_top_k=args.per_source_top_k,
+            score_field=args.score_field,
+            aggregation=args.aggregation,
+            gap_bucket_name=args.gap_bucket,
+            use_validation_history_for_test=not args.no_validation_history,
+            exclude_seen=not args.include_seen,
+            include_same_timestamp_transitions=args.include_same_timestamp_transitions,
+            seed=args.seed,
+            command=command,
+        )
+        print(f"wrote TDIG candidate recall run: {result.output_dir}")
+        print(f"eval_cases={result.num_cases}")
+        metric_text = " ".join(f"{name}={value:.6f}" for name, value in sorted(result.metrics.items()))
+        print(f"tdig_direct: {metric_text}")
+        return 0
+    if args.command == "evaluate" and args.evaluator in {
+        "semantic-transition-stress",
+        "stress-candidates",
+    }:
+        set_global_seed(args.seed)
+        result = run_semantic_transition_stress(
+            dataset_dir=args.dataset_dir,
+            output_dir=args.output_dir,
+            split_name=args.split_name,
+            eval_split=args.eval_split,
+            ks=tuple(args.ks),
+            max_history_items=args.max_history_items,
+            per_source_top_k=args.per_source_top_k,
+            score_field=args.score_field,
+            aggregation=args.aggregation,
+            gap_bucket_name=args.gap_bucket,
+            use_validation_history_for_test=not args.no_validation_history,
+            exclude_seen=not args.include_seen,
+            include_same_timestamp_transitions=args.include_same_timestamp_transitions,
+            max_eval_cases=args.max_eval_cases,
+            seed=args.seed,
+            command=command,
+        )
+        print(f"wrote semantic-transition stress run: {result.output_dir}")
+        print(f"eval_cases={result.num_cases}")
+        metric_text = " ".join(
+            f"{name}={value:.6f}" for name, value in sorted(result.metrics.items())
+        )
+        print(f"semantic_transition_stress: {metric_text}")
         return 0
     parser.print_help()
     return 0
