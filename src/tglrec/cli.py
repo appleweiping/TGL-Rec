@@ -15,7 +15,7 @@ from tglrec.eval.history_perturbations import (
 from tglrec.eval.semantic_transition_stress import run_semantic_transition_stress
 from tglrec.eval.tdig_recall import DEFAULT_TDIG_RECALL_SCORE_FIELD, run_tdig_candidate_recall
 from tglrec.graph.tdig import build_tdig_artifact
-from tglrec.models.bpr_mf import run_bpr_mf
+from tglrec.models.bpr_mf import run_bpr_mf, run_bpr_mf_sweep
 from tglrec.models.sanity_baselines import DEFAULT_KS, run_sanity_baselines
 from tglrec.utils.config import load_config
 from tglrec.utils.seeds import set_global_seed
@@ -222,6 +222,62 @@ def build_parser() -> argparse.ArgumentParser:
         help="for test evaluation, do not use each user's validation event as seen history",
     )
     bpr.add_argument("--seed", type=int, default=2026)
+
+    bpr_sweep = train_sub.add_parser(
+        "bpr-mf-sweep",
+        help="run a deterministic grid sweep over BPR-MF hyperparameters",
+    )
+    bpr_sweep.add_argument(
+        "--dataset-dir",
+        type=Path,
+        default=Path("artifacts/datasets/movielens_1m"),
+        help="processed dataset directory containing interactions.csv and items.csv",
+    )
+    bpr_sweep.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="sweep output directory; defaults to runs/<timestamp>-bpr-mf-sweep",
+    )
+    bpr_sweep.add_argument(
+        "--split-name",
+        choices=["temporal_leave_one_out", "global_time"],
+        default="temporal_leave_one_out",
+    )
+    bpr_sweep.add_argument("--eval-split", choices=["val", "test"], default="test")
+    bpr_sweep.add_argument("--ks", type=int, nargs="+", default=list(DEFAULT_KS))
+    bpr_sweep.add_argument("--factors-grid", type=int, nargs="+", default=[64])
+    bpr_sweep.add_argument("--epochs", type=int, default=20)
+    bpr_sweep.add_argument("--learning-rate-grid", type=float, nargs="+", default=[0.05])
+    bpr_sweep.add_argument("--regularization-grid", type=float, nargs="+", default=[0.0025])
+    bpr_sweep.add_argument("--seed-grid", type=int, nargs="+", default=[2026])
+    bpr_sweep.add_argument(
+        "--max-train-pairs",
+        type=int,
+        default=None,
+        help="optional deterministic prefix of train pairs for engineering smoke runs",
+    )
+    bpr_sweep.add_argument(
+        "--max-eval-cases",
+        type=int,
+        default=None,
+        help="optional deterministic prefix of eval cases for engineering smoke runs",
+    )
+    bpr_sweep.add_argument(
+        "--include-seen",
+        action="store_true",
+        help="rank previously seen items instead of filtering them",
+    )
+    bpr_sweep.add_argument(
+        "--no-validation-history",
+        action="store_true",
+        help="for test evaluation, do not use each user's validation event as seen history",
+    )
+    bpr_sweep.add_argument(
+        "--best-metric",
+        default="NDCG@10",
+        help="metric used to select the best trial from sweep_results.csv",
+    )
 
     evaluate = subparsers.add_parser("evaluate", help="evaluation commands")
     evaluate_sub = evaluate.add_subparsers(dest="evaluator", required=True)
@@ -574,6 +630,37 @@ def main(argv: list[str] | None = None) -> int:
             f"{name}={value:.6f}" for name, value in sorted(result.metrics.items())
         )
         print(f"bpr_mf: {metric_text}")
+        return 0
+    if args.command == "train" and args.trainer == "bpr-mf-sweep":
+        set_global_seed(args.seed_grid[0])
+        result = run_bpr_mf_sweep(
+            dataset_dir=args.dataset_dir,
+            output_dir=args.output_dir,
+            split_name=args.split_name,
+            eval_split=args.eval_split,
+            ks=tuple(args.ks),
+            factors_grid=tuple(args.factors_grid),
+            epochs=args.epochs,
+            learning_rate_grid=tuple(args.learning_rate_grid),
+            regularization_grid=tuple(args.regularization_grid),
+            seed_grid=tuple(args.seed_grid),
+            max_train_pairs=args.max_train_pairs,
+            max_eval_cases=args.max_eval_cases,
+            use_validation_history_for_test=not args.no_validation_history,
+            exclude_seen=not args.include_seen,
+            best_metric=args.best_metric,
+            command=command,
+        )
+        print(f"wrote BPR-MF sweep: {result.output_dir}")
+        print(f"trials={len(result.results)} best_metric={result.best_metric}")
+        best_metric_value = float(result.best_trial[result.best_metric])
+        print(
+            "best_trial="
+            f"{result.best_trial['trial_id']} {result.best_metric}={best_metric_value:.6f} "
+            f"factors={result.best_trial['factors']} "
+            f"lr={result.best_trial['learning_rate']} "
+            f"reg={result.best_trial['regularization']} seed={result.best_trial['seed']}"
+        )
         return 0
     if args.command == "evaluate" and args.evaluator == "sanity-baselines":
         set_global_seed(args.seed)

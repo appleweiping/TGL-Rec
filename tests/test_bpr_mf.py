@@ -7,7 +7,7 @@ import pytest
 
 from tglrec.cli import main
 from tglrec.data import schema
-from tglrec.models.bpr_mf import run_bpr_mf
+from tglrec.models.bpr_mf import run_bpr_mf, run_bpr_mf_sweep
 
 
 def _write_processed_dataset(root: Path, interactions: list[dict[str, object]]) -> None:
@@ -133,6 +133,102 @@ def test_bpr_mf_cli_writes_deterministic_run_outputs(tmp_path: Path, capsys):
     assert 2 not in json.loads(rows[0]["top_item_ids_json"])
 
 
+def test_bpr_mf_sweep_cli_writes_parent_and_child_outputs(tmp_path: Path, capsys):
+    dataset = tmp_path / "processed"
+    _write_processed_dataset(
+        dataset,
+        [
+            {schema.EVENT_ID: 0, schema.USER_ID: 1, schema.ITEM_ID: 1, schema.TIMESTAMP: 10, schema.SPLIT_LOO: "train"},
+            {schema.EVENT_ID: 1, schema.USER_ID: 1, schema.ITEM_ID: 2, schema.TIMESTAMP: 20, schema.SPLIT_LOO: "train"},
+            {schema.EVENT_ID: 2, schema.USER_ID: 2, schema.ITEM_ID: 1, schema.TIMESTAMP: 10, schema.SPLIT_LOO: "train"},
+            {schema.EVENT_ID: 3, schema.USER_ID: 2, schema.ITEM_ID: 3, schema.TIMESTAMP: 20, schema.SPLIT_LOO: "train"},
+            {schema.EVENT_ID: 4, schema.USER_ID: 0, schema.ITEM_ID: 1, schema.TIMESTAMP: 30, schema.SPLIT_LOO: "train"},
+            {schema.EVENT_ID: 5, schema.USER_ID: 0, schema.ITEM_ID: 2, schema.TIMESTAMP: 40, schema.SPLIT_LOO: "val"},
+            {schema.EVENT_ID: 6, schema.USER_ID: 0, schema.ITEM_ID: 3, schema.TIMESTAMP: 50, schema.SPLIT_LOO: "test"},
+            {schema.EVENT_ID: 7, schema.USER_ID: 3, schema.ITEM_ID: 4, schema.TIMESTAMP: 10, schema.SPLIT_LOO: "train"},
+            {schema.EVENT_ID: 8, schema.USER_ID: 3, schema.ITEM_ID: 3, schema.TIMESTAMP: 20, schema.SPLIT_LOO: "train"},
+        ],
+    )
+    first = tmp_path / "sweep"
+    second = tmp_path / "sweep_second"
+
+    assert (
+        main(
+            [
+                "train",
+                "bpr-mf-sweep",
+                "--dataset-dir",
+                str(dataset),
+                "--output-dir",
+                str(first),
+                "--ks",
+                "1",
+                "5",
+                "--factors-grid",
+                "2",
+                "4",
+                "--epochs",
+                "1",
+                "--learning-rate-grid",
+                "0.03",
+                "--regularization-grid",
+                "0.001",
+                "--seed-grid",
+                "2026",
+                "--max-train-pairs",
+                "8",
+                "--best-metric",
+                "NDCG@5",
+            ]
+        )
+        == 0
+    )
+    captured = capsys.readouterr()
+    assert "wrote BPR-MF sweep:" in captured.out
+    result = run_bpr_mf_sweep(
+        dataset_dir=dataset,
+        output_dir=second,
+        ks=(1, 5),
+        factors_grid=(2, 4),
+        epochs=1,
+        learning_rate_grid=(0.03,),
+        regularization_grid=(0.001,),
+        seed_grid=(2026,),
+        max_train_pairs=8,
+        best_metric="NDCG@5",
+        command="synthetic",
+    )
+
+    for name in [
+        "config.yaml",
+        "metrics.json",
+        "sweep_results.csv",
+        "command.txt",
+        "git_commit.txt",
+        "git_status.txt",
+        "run_status.json",
+        "stdout.log",
+        "stderr.log",
+        "environment.json",
+        "checksums.json",
+    ]:
+        assert (first / name).exists()
+    assert (first / "trials" / "trial_000" / "metrics.json").exists()
+    assert (first / "trials" / "trial_001" / "checksums.json").exists()
+    assert len(result.results) == 2
+    assert _normalized_sweep_rows(first / "sweep_results.csv") == _normalized_sweep_rows(
+        second / "sweep_results.csv"
+    )
+    config = (first / "config.yaml").read_text(encoding="utf-8")
+    assert "baseline_name: bpr_mf_sweep" in config
+    assert "factors_grid:" in config
+    metrics = json.loads((first / "metrics.json").read_text(encoding="utf-8"))
+    assert metrics["baseline"] == "bpr_mf_sweep"
+    assert metrics["selection_metric"] == "NDCG@5"
+    assert metrics["num_trials"] == 2
+    assert metrics["best_trial"]["trial_id"] in {"trial_000", "trial_001"}
+
+
 def test_bpr_mf_rejects_bad_inputs_and_missing_item_metadata(tmp_path: Path):
     dataset = tmp_path / "processed"
     _write_processed_dataset(
@@ -153,3 +249,11 @@ def test_bpr_mf_rejects_bad_inputs_and_missing_item_metadata(tmp_path: Path):
     items.to_csv(dataset / "items.csv", index=False)
     with pytest.raises(ValueError, match="items.csv is missing"):
         run_bpr_mf(dataset_dir=dataset, output_dir=tmp_path / "missing_item")
+
+
+def _normalized_sweep_rows(path: Path) -> list[dict[str, str]]:
+    with path.open(newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    for row in rows:
+        row["output_dir"] = ""
+    return rows

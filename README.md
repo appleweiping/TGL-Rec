@@ -222,6 +222,14 @@ evaluation they are used only as prior seen history for candidate filtering unle
 and `checksums.json`. Use `--max-train-pairs` or `--max-eval-cases` only for engineering smoke
 runs; omit both for reportable metrics.
 
+For reproducible hyperparameter sweeps, use the wrapper command below. The parent run writes
+`sweep_results.csv` plus a best-trial `metrics.json`; each child trial under `trials/` is a full
+BPR-MF run with its own config, metrics, segment files, and checksum manifest.
+
+```bash
+py -3.12 -m tglrec.cli train bpr-mf-sweep --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430 --output-dir runs/ml1m-bpr-mf-sweep --ks 5 10 20 --factors-grid 32 64 --epochs 20 --learning-rate-grid 0.03 0.05 --regularization-grid 0.001 0.0025 --seed-grid 2026 2027 --best-metric NDCG@10
+```
+
 ## CPU history perturbation diagnostics
 
 The first diagnostic CLI slice evaluates `original`, `history_shuffle`, `order_reversal`,

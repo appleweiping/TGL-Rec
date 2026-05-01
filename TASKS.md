@@ -98,10 +98,10 @@ Use this as the living task board. Every completed task should leave a command, 
 
 - Owner: research_worker
 - Output: local trainable non-sequential CF baseline
-- Status: completed first deterministic NumPy CPU runner 2026-05-01.
-- Output: `src/tglrec/models/bpr_mf.py`, `tglrec train bpr-mf`,
+- Status: completed first deterministic NumPy CPU runner 2026-05-01; sweep wrapper added 2026-05-01.
+- Output: `src/tglrec/models/bpr_mf.py`, `tglrec train bpr-mf`, `tglrec train bpr-mf-sweep`,
   `metrics.json`, `metrics_by_epoch.csv`, `metrics_by_case.csv`,
-  `metrics_by_segment.csv`, and standard run provenance/checksum files.
+  `metrics_by_segment.csv`, `sweep_results.csv`, and standard run provenance/checksum files.
 - Command:
   `py -3.12 -m tglrec.cli train bpr-mf --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430 --output-dir runs/ml1m-bpr-mf --ks 5 10 20 --factors 64 --epochs 20 --learning-rate 0.05 --regularization 0.0025 --seed 2026`
 - Engineering smoke command:
@@ -110,9 +110,21 @@ Use this as the living task board. Every completed task should leave a command, 
   5000-pair/200-case prefix. Metrics: HR@5=0.015000, HR@10=0.025000, HR@20=0.050000,
   NDCG@10=0.012676, MRR@10=0.009042. This is not reportable because it uses
   `--max-train-pairs` and `--max-eval-cases`.
+- Sweep command:
+  `py -3.12 -m tglrec.cli train bpr-mf-sweep --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430 --output-dir runs/ml1m-bpr-mf-sweep --ks 5 10 20 --factors-grid 32 64 --epochs 20 --learning-rate-grid 0.03 0.05 --regularization-grid 0.001 0.0025 --seed-grid 2026 2027 --best-metric NDCG@10`
+- Sweep smoke command:
+  `py -3.12 -m tglrec.cli train bpr-mf-sweep --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430 --output-dir runs/20260501-ml1m-bpr-mf-sweep-smoke --ks 5 10 20 --factors-grid 8 16 --learning-rate-grid 0.03 --regularization-grid 0.0025 --epochs 1 --max-train-pairs 5000 --max-eval-cases 200 --seed-grid 2026 --best-metric NDCG@10`
+- Sweep smoke result: `runs/20260501-ml1m-bpr-mf-sweep-smoke/` completed 2 deterministic
+  trials over a 5000-pair/200-case prefix. Best by NDCG@10 was `trial_001`
+  (`factors=16`, `lr=0.03`, `regularization=0.0025`, `seed=2026`) with HR@10=0.025000,
+  NDCG@10=0.012676, MRR@10=0.009042. This is not reportable because it uses smoke truncation.
 - Tests: `py -3.12 -m pytest tests\test_bpr_mf.py -q --basetemp .pytest_tmp\bpr-optimized-targeted`
   passed 2 tests; `py -3.12 -m pytest tests\test_bpr_mf.py tests\test_cli.py tests\test_sanity_baselines.py tests\test_semantic_transition_stress.py -q --basetemp .pytest_tmp\bpr-optimized-related`
   passed 12 tests. `py -3.12 -m ruff check src\tglrec\models\bpr_mf.py tests\test_bpr_mf.py src\tglrec\cli.py`
+  passed. Sweep update validation: `py -3.12 -m pytest tests\test_bpr_mf.py -q --basetemp .pytest_tmp\bpr-sweep-targeted`
+  passed 3 tests; `py -3.12 -m pytest tests\test_bpr_mf.py tests\test_cli.py tests\test_sanity_baselines.py tests\test_semantic_transition_stress.py -q --basetemp .pytest_tmp\bpr-sweep-related`
+  passed 13 tests; `py -3.12 -m pytest -q --basetemp .pytest_tmp\bpr-sweep-full`
+  passed 52 tests; `py -3.12 -m ruff check src\tglrec\models\bpr_mf.py src\tglrec\cli.py tests\test_bpr_mf.py`
   passed.
 - Notes: BPR-MF trains only on `split=train` user-item positives with deterministic negative
   sampling. Validation events are never optimization positives; for test evaluation they are used
@@ -120,7 +132,8 @@ Use this as the living task board. Every completed task should leave a command, 
   `--max-eval-cases` are engineering smoke controls and must be omitted for reportable metrics.
   The train split path avoids materializing every training row as an `EvaluationCase`, which reduced
   the 5000-pair/200-case MovieLens smoke from about 50 seconds to about 19 seconds in this
-  workspace.
+  workspace. The sweep wrapper keeps parent-level `sweep_results.csv` and child-level full run
+  artifacts, so reportable sweeps can be resumed from a clean command without ad hoc notebooks.
 - Next recommended task: run a non-truncated MovieLens BPR-MF sweep from a clean committed state,
   then add LightGCN or RecBole-compatible SASRec integration.
 

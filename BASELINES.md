@@ -85,8 +85,9 @@ Module 0/1 CPU-light baseline policy:
   not a Git checkout and the dataset artifact is not yet content-addressed with checksums.
 - `bpr_mf` has a local deterministic NumPy runner as of 2026-05-01:
   `tglrec train bpr-mf --dataset-dir artifacts/datasets/movielens_1m_checksummed_20260430`.
-  It is suitable for CPU engineering runs and small MovieLens sweeps; tune hyperparameters before
-  citing results.
+  A reproducible sweep wrapper is also available via `tglrec train bpr-mf-sweep`, with parent-level
+  `sweep_results.csv` and full child run artifacts. It is suitable for CPU engineering runs and
+  small MovieLens sweeps; tune hyperparameters before citing results.
 - Add `tdig_transition_counts` as a local non-neural diagnostic baseline: directed item-item transition counts/lift from training-only events, with no language model.
 - Use RecBole as an integration path where it preserves the project split files and evaluator semantics.
 - Defer full SASRec, BERT4Rec, TiSASRec, LightGCN, GRU4Rec, and LLM-SRec runs until Module 2; only tiny CPU smoke runs are appropriate before GPU setup.

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import importlib.metadata
+import itertools
 import json
 import platform
 import subprocess
@@ -45,6 +46,16 @@ class BPRMFResult:
     output_dir: Path
     metrics: dict[str, float]
     num_cases: int
+
+
+@dataclass(frozen=True)
+class BPRMFSweepResult:
+    """Summary of a completed BPR-MF hyperparameter sweep."""
+
+    output_dir: Path
+    best_metric: str
+    best_trial: dict[str, Any]
+    results: list[dict[str, Any]]
 
 
 @dataclass(frozen=True)
@@ -208,6 +219,139 @@ def run_bpr_mf(
         num_items=len(item_universe),
     )
     return BPRMFResult(output_dir=run_root, metrics=metrics, num_cases=len(eval_cases))
+
+
+def run_bpr_mf_sweep(
+    *,
+    dataset_dir: str | Path,
+    output_dir: str | Path | None = None,
+    split_name: str = "temporal_leave_one_out",
+    eval_split: str = "test",
+    ks: tuple[int, ...] = DEFAULT_KS,
+    factors_grid: tuple[int, ...] = (64,),
+    epochs: int = 20,
+    learning_rate_grid: tuple[float, ...] = (0.05,),
+    regularization_grid: tuple[float, ...] = (0.0025,),
+    seed_grid: tuple[int, ...] = (2026,),
+    max_train_pairs: int | None = None,
+    max_eval_cases: int | None = None,
+    use_validation_history_for_test: bool = True,
+    exclude_seen: bool = True,
+    best_metric: str = "NDCG@10",
+    command: str = "tglrec train bpr-mf-sweep",
+) -> BPRMFSweepResult:
+    """Run a deterministic BPR-MF grid sweep and summarize the best trial."""
+
+    if not factors_grid:
+        raise ValueError("factors_grid must contain at least one value")
+    if any(value <= 0 for value in factors_grid):
+        raise ValueError(f"factors_grid must contain only positive values, got {factors_grid}")
+    if not learning_rate_grid:
+        raise ValueError("learning_rate_grid must contain at least one value")
+    if any(value <= 0.0 for value in learning_rate_grid):
+        raise ValueError(
+            f"learning_rate_grid must contain only positive values, got {learning_rate_grid}"
+        )
+    if not regularization_grid:
+        raise ValueError("regularization_grid must contain at least one value")
+    if any(value < 0.0 for value in regularization_grid):
+        raise ValueError(
+            f"regularization_grid must contain only non-negative values, got {regularization_grid}"
+        )
+    if not seed_grid:
+        raise ValueError("seed_grid must contain at least one value")
+
+    dataset_root = Path(dataset_dir)
+    run_root = Path(output_dir) if output_dir is not None else _default_sweep_dir()
+    trials_root = ensure_dir(run_root / "trials")
+    results: list[dict[str, Any]] = []
+    for trial_index, (factors, learning_rate, regularization, seed) in enumerate(
+        itertools.product(factors_grid, learning_rate_grid, regularization_grid, seed_grid)
+    ):
+        trial_id = f"trial_{trial_index:03d}"
+        trial_output = trials_root / trial_id
+        trial_command = (
+            f"{command} # {trial_id} factors={factors} learning_rate={learning_rate} "
+            f"regularization={regularization} seed={seed}"
+        )
+        trial = run_bpr_mf(
+            dataset_dir=dataset_root,
+            output_dir=trial_output,
+            split_name=split_name,
+            eval_split=eval_split,
+            ks=ks,
+            factors=factors,
+            epochs=epochs,
+            learning_rate=learning_rate,
+            regularization=regularization,
+            max_train_pairs=max_train_pairs,
+            max_eval_cases=max_eval_cases,
+            use_validation_history_for_test=use_validation_history_for_test,
+            exclude_seen=exclude_seen,
+            seed=seed,
+            command=trial_command,
+        )
+        if best_metric not in trial.metrics:
+            available = ", ".join(sorted(trial.metrics))
+            raise ValueError(f"best_metric {best_metric!r} not found; available metrics: {available}")
+        row = {
+            "trial_id": trial_id,
+            "output_dir": str(trial.output_dir),
+            "factors": factors,
+            "epochs": epochs,
+            "learning_rate": learning_rate,
+            "regularization": regularization,
+            "seed": seed,
+            "num_eval_cases": trial.num_cases,
+        }
+        row.update(trial.metrics)
+        results.append(row)
+
+    best_trial = max(
+        results,
+        key=lambda row: (float(row[best_metric]), -int(str(row["trial_id"]).split("_")[1])),
+    )
+    _write_sweep_outputs(
+        run_root,
+        command=command,
+        config={
+            "baseline_name": "bpr_mf_sweep",
+            "candidate_mode": "full_ranking",
+            "dataset_dir": str(dataset_root),
+            "dataset_provenance": _dataset_provenance(dataset_root),
+            "epochs": epochs,
+            "eval_split": eval_split,
+            "exclude_seen": exclude_seen,
+            "factors_grid": list(factors_grid),
+            "history_splits": _history_splits(
+                eval_split,
+                use_validation_history_for_test=use_validation_history_for_test,
+            ),
+            "ks": list(ks),
+            "learning_rate_grid": list(learning_rate_grid),
+            "max_eval_cases": max_eval_cases,
+            "max_train_pairs": max_train_pairs,
+            "num_trials": len(results),
+            "regularization_grid": list(regularization_grid),
+            "seed_grid": list(seed_grid),
+            "selection_metric": best_metric,
+            "split_name": split_name,
+            "training_policy": (
+                "Each BPR-MF trial trains only on split=train user-item pairs. Validation events "
+                "are never optimization positives; for test evaluation they can only be used as "
+                "prior seen history for candidate filtering when enabled."
+            ),
+        },
+        best_metric=best_metric,
+        best_trial=best_trial,
+        results=results,
+    )
+    return BPRMFSweepResult(
+        output_dir=run_root,
+        best_metric=best_metric,
+        best_trial=best_trial,
+        results=results,
+    )
 
 
 def _positive_pairs_from_frame(train_frame: pd.DataFrame) -> list[_PositivePair]:
@@ -479,6 +623,11 @@ def _default_run_dir() -> Path:
     return Path("runs") / f"{stamp}-bpr-mf"
 
 
+def _default_sweep_dir() -> Path:
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    return Path("runs") / f"{stamp}-bpr-mf-sweep"
+
+
 def _write_run_outputs(
     output_dir: Path,
     *,
@@ -548,6 +697,97 @@ def _write_run_outputs(
             "environment.json",
         ],
     )
+
+
+def _write_sweep_outputs(
+    output_dir: Path,
+    *,
+    command: str,
+    config: dict[str, Any],
+    best_metric: str,
+    best_trial: dict[str, Any],
+    results: list[dict[str, Any]],
+) -> None:
+    root = ensure_dir(output_dir)
+    write_config(config, root / "config.yaml")
+    _write_sweep_results(root / "sweep_results.csv", results)
+    write_json(
+        {
+            "baseline": config["baseline_name"],
+            "candidate_mode": config["candidate_mode"],
+            "created_at_utc": datetime.now(timezone.utc).isoformat(),
+            "selection_metric": best_metric,
+            "best_metric_value": float(best_trial[best_metric]),
+            "best_trial": best_trial,
+            "num_trials": len(results),
+            "trial_dirs": [row["output_dir"] for row in results],
+        },
+        root / "metrics.json",
+    )
+    _write_environment(root / "environment.json")
+    write_json(
+        {
+            "completed_successfully": True,
+            "created_at_utc": datetime.now(timezone.utc).isoformat(),
+            "note": "This records sweep completion after all child BPR-MF trials completed.",
+        },
+        root / "run_status.json",
+    )
+    (root / "command.txt").write_text(command + "\n", encoding="utf-8", newline="\n")
+    (root / "git_commit.txt").write_text(
+        current_git_commit(".") + "\n", encoding="utf-8", newline="\n"
+    )
+    (root / "git_status.txt").write_text(_current_git_status(), encoding="utf-8", newline="\n")
+    (root / "stdout.log").write_text(
+        json.dumps(
+            {
+                "best_metric": best_metric,
+                "best_trial": best_trial,
+                "num_trials": len(results),
+                "output_dir": str(root),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    (root / "stderr.log").write_text("", encoding="utf-8", newline="\n")
+    write_checksum_manifest(
+        root,
+        [
+            "config.yaml",
+            "metrics.json",
+            "sweep_results.csv",
+            "command.txt",
+            "git_commit.txt",
+            "git_status.txt",
+            "run_status.json",
+            "stdout.log",
+            "stderr.log",
+            "environment.json",
+        ],
+    )
+
+
+def _write_sweep_results(path: Path, rows: list[dict[str, Any]]) -> None:
+    base_fields = [
+        "trial_id",
+        "output_dir",
+        "factors",
+        "epochs",
+        "learning_rate",
+        "regularization",
+        "seed",
+        "num_eval_cases",
+    ]
+    metric_fields = sorted({field for row in rows for field in row if "@" in field})
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=[*base_fields, *metric_fields])
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({field: row.get(field, "") for field in [*base_fields, *metric_fields]})
 
 
 def _write_metrics_by_epoch(path: Path, rows: list[dict[str, Any]]) -> None:
