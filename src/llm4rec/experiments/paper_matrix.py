@@ -11,6 +11,7 @@ import hashlib
 import heapq
 import json
 import math
+import os
 import sys
 import time
 from collections import Counter, defaultdict
@@ -18,7 +19,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
+from llm4rec.data.candidates import candidate_row_id
 from llm4rec.data.movielens_adapter import load_movielens_style, remap_user_item_ids
+from llm4rec.evaluation.prediction_schema import CANDIDATE_SCHEMA_COMPACT_REF
 from llm4rec.evaluation.export import write_evaluation_outputs
 from llm4rec.evaluation.failure_audit import audit_failures
 from llm4rec.experiments.config import load_yaml_config, resolve_path, save_resolved_config
@@ -26,7 +29,6 @@ from llm4rec.experiments.seeding import set_global_seed
 from llm4rec.io.artifacts import ensure_dir, read_jsonl, write_csv_rows, write_json
 from llm4rec.metrics.long_tail import long_tail_items
 from llm4rec.metrics.novelty import item_novelty
-from llm4rec.metrics.ranking import hit_rate_at_k, mrr_at_k, ndcg_at_k, recall_at_k
 from llm4rec.models.sasrec import SASRecModel, TORCH_AVAILABLE as SASREC_TORCH_AVAILABLE
 from llm4rec.trainers.sasrec import build_item_mappings, left_pad
 from llm4rec.utils.env import collect_environment, current_git_commit
@@ -69,6 +71,9 @@ class PaperMatrixRequest:
     methods: tuple[str, ...]
     output_dir: Path
     continue_on_failure: bool
+    candidate_output_mode: str = "expanded"
+    max_expanded_candidate_items: int = 200
+    rerun_failed_only: bool = False
 
 
 @dataclass
@@ -91,6 +96,8 @@ class DatasetBundle:
     long_tail: set[str]
     candidate_pool: dict[str, Any] | None
     artifact_checksums: dict[str, Any]
+    candidate_output_mode: str = "expanded"
+    max_expanded_candidate_items: int = 200
 
 
 class MetricAccumulator:
@@ -123,11 +130,24 @@ class MetricAccumulator:
         candidate_set = set(candidates)
         target = str(row["target_item"])
         self.count += 1
+        deduped: list[str] = []
+        seen: set[str] = set()
+        for item in predicted:
+            if item in seen:
+                continue
+            seen.add(item)
+            deduped.append(item)
+        target_rank = None
+        for rank, item in enumerate(deduped[: max(METRIC_KS)], start=1):
+            if item == target:
+                target_rank = rank
+                break
         for k in METRIC_KS:
-            self.ranking_sums[f"Recall@{k}"] += recall_at_k(predicted, target, k)
-            self.ranking_sums[f"HitRate@{k}"] += hit_rate_at_k(predicted, target, k)
-            self.ranking_sums[f"NDCG@{k}"] += ndcg_at_k(predicted, target, k)
-            self.ranking_sums[f"MRR@{k}"] += mrr_at_k(predicted, target, k)
+            if target_rank is not None and target_rank <= k:
+                self.ranking_sums[f"Recall@{k}"] += 1.0
+                self.ranking_sums[f"HitRate@{k}"] += 1.0
+                self.ranking_sums[f"NDCG@{k}"] += 1.0 / math.log2(target_rank + 1.0)
+                self.ranking_sums[f"MRR@{k}"] += 1.0 / float(target_rank)
         for item in predicted[:TOP_K]:
             self.predicted_total += 1
             if item in self.item_catalog:
@@ -185,9 +205,17 @@ def run_paper_matrix(request: PaperMatrixRequest) -> Path:
     _assert_manifest_safety(manifest, experiments, request)
     output_dir = ensure_dir(resolve_path(request.output_dir))
     _write_root_manifest(output_dir, manifest, request, experiments)
+    preserved_status = [
+        row for row in _read_csv(output_dir / "method_status.csv")
+        if row.get("dataset") not in set(request.datasets)
+    ]
+    preserved_metrics = [
+        row for row in _read_csv(output_dir / "metrics_by_method.csv")
+        if row.get("dataset") not in set(request.datasets)
+    ]
 
     dataset_bundles = {
-        dataset: _load_dataset_bundle(dataset, experiments[dataset], request.seed)
+        dataset: _load_dataset_bundle(dataset, experiments[dataset], request)
         for dataset in request.datasets
     }
     pre_run_checksums = {
@@ -195,8 +223,8 @@ def run_paper_matrix(request: PaperMatrixRequest) -> Path:
     }
     write_json(output_dir / "artifact_checksums_pre.json", pre_run_checksums)
 
-    method_status: list[dict[str, Any]] = []
-    metrics_rows: list[dict[str, Any]] = []
+    method_status: list[dict[str, Any]] = list(preserved_status)
+    metrics_rows: list[dict[str, Any]] = list(preserved_metrics)
     for dataset_name in request.datasets:
         bundle = dataset_bundles[dataset_name]
         for raw_method in request.methods:
@@ -368,6 +396,11 @@ def _fit_method(bundle: DatasetBundle, context: MethodContext) -> None:
     _resource_guard(bundle, method)
     if method == "popularity":
         context.state["popularity"] = Counter(str(row["item_id"]) for row in bundle.train_rows)
+        if bundle.candidate_pool:
+            context.state["shared_pool_popularity"] = _shared_pool_popularity_state(
+                bundle,
+                context.state["popularity"],
+            )
         _write_method_artifact(context.run_dir, "popularity_counts.json", dict(context.state["popularity"]))
     elif method == "bm25":
         context.state["bm25"] = _build_bm25_state(bundle)
@@ -411,24 +444,26 @@ def _write_predictions_and_metrics(
     domain_accumulators: dict[str, MetricAccumulator] = {}
     started = time.perf_counter()
     prediction_count = 0
-    candidate_json_cache = _candidate_json_cache(bundle)
     with predictions_path.open("w", encoding="utf-8", newline="\n") as handle:
         for row in _iter_candidate_rows(bundle):
             if str(row.get("split")) != "test":
                 continue
-            candidates, candidate_items_json = _candidate_items_and_json_for_row(
-                bundle,
-                row,
-                candidate_json_cache,
-            )
             target = str(row["target_item"])
-            if target not in candidates:
+            output_mode = _candidate_output_mode(bundle)
+            use_fast_compact_popularity = (
+                output_mode == CANDIDATE_SCHEMA_COMPACT_REF
+                and context.method == "popularity"
+                and bundle.candidate_pool is not None
+            )
+            candidates = [] if use_fast_compact_popularity else _candidate_items_for_row(bundle, row)
+            if not _target_included_in_candidate_row(bundle, row):
                 raise ValueError(f"target missing from frozen candidates: dataset={bundle.name} user={row['user_id']}")
-            history = [
-                item for item in bundle.history_by_user.get(str(row["user_id"]), [])
-                if item != target
-            ]
-            timestamp = bundle.test_timestamp_by_user.get(str(row["user_id"]))
+            history = _history_for_method(bundle, context.method, str(row["user_id"]), target)
+            timestamp = (
+                bundle.test_timestamp_by_user.get(str(row["user_id"]))
+                if context.method in {"temporal_graph_encoder", "time_graph_evidence_dynamic"}
+                else None
+            )
             top_items, top_scores, metadata = _rank_top_k(
                 bundle,
                 context,
@@ -439,7 +474,7 @@ def _write_predictions_and_metrics(
                 prediction_timestamp=timestamp,
             )
             prediction = {
-                "candidate_items": candidates,
+                "candidate_items": candidates or _minimal_metric_candidates(top_items, target),
                 "domain": row.get("domain"),
                 "metadata": {
                     **metadata,
@@ -457,18 +492,18 @@ def _write_predictions_and_metrics(
                 "target_item": target,
                 "user_id": str(row["user_id"]),
             }
-            _write_prediction_row(handle, prediction, candidate_items_json)
+            output_prediction = _output_prediction_row(bundle, row, prediction)
+            handle.write(json.dumps(output_prediction, ensure_ascii=True, separators=(",", ":")) + "\n")
             accumulator.add(prediction)
             domain = str(row.get("domain") or "unknown")
-            domain_accumulators.setdefault(
-                domain,
-                MetricAccumulator(
+            if domain not in domain_accumulators:
+                domain_accumulators[domain] = MetricAccumulator(
                     item_catalog=bundle.item_catalog,
                     item_popularity=bundle.item_popularity,
                     long_tail=bundle.long_tail,
                     candidate_protocol=bundle.candidate_protocol,
-                ),
-            ).add(prediction)
+                )
+            domain_accumulators[domain].add(prediction)
             prediction_count += 1
             if prediction_count % 50000 == 0:
                 _append_log(
@@ -482,6 +517,9 @@ def _write_predictions_and_metrics(
         "by_domain": by_domain,
         "by_method": {context.method: dict(overall)},
         "candidate_protocol": bundle.candidate_protocol,
+        "candidate_schema": _candidate_output_mode(bundle),
+        "candidate_artifact_path": str(bundle.candidate_artifact),
+        "candidate_artifact_sha256": bundle.artifact_checksums.get("candidate_sha256"),
         "dataset": bundle.name,
         "matrix": "main_accuracy",
         "num_predictions": prediction_count,
@@ -505,6 +543,9 @@ def _rank_top_k(
 ) -> tuple[list[str], list[float], dict[str, Any]]:
     method = context.method
     if method == "popularity":
+        if not candidates and bundle.candidate_pool:
+            scores = _shared_pool_popularity_scores(context, target_item)
+            return _top_k_from_pairs(scores), _top_k_scores(scores), {"fit_on": "train_split_only", "shared_pool_fast_path": True}
         counts: Counter[str] = context.state["popularity"]
         scores = [(float(counts.get(item, 0)), item) for item in candidates]
         return _top_k_from_pairs(scores), _top_k_scores(scores), {"fit_on": "train_split_only"}
@@ -605,6 +646,37 @@ def _build_bm25_state(bundle: DatasetBundle) -> dict[str, Any]:
         },
         "token_re": token_re,
     }
+
+
+def _shared_pool_popularity_state(bundle: DatasetBundle, counts: Counter[str]) -> dict[str, Any]:
+    pool = [str(item) for item in bundle.candidate_pool.get("candidate_items", [])] if bundle.candidate_pool else []
+    negatives = [
+        str(item)
+        for item in bundle.candidate_pool.get("negative_pool_for_targets_outside_pool", pool[:-1])
+    ] if bundle.candidate_pool else []
+    return {
+        "pool_set": set(pool),
+        "pool_top": _top_k_score_items([(float(counts.get(item, 0)), item) for item in pool]),
+        "negative_top": _top_k_score_items([(float(counts.get(item, 0)), item) for item in negatives]),
+        "counts": counts,
+    }
+
+
+def _shared_pool_popularity_scores(context: MethodContext, target_item: str) -> list[tuple[float, str]]:
+    state = context.state["shared_pool_popularity"]
+    counts: Counter[str] = state["counts"]
+    if str(target_item) in state["pool_set"]:
+        return list(state["pool_top"])
+    pairs = [*state["negative_top"], (float(counts.get(str(target_item), 0)), str(target_item))]
+    return _top_k_score_items(pairs)
+
+
+def _top_k_score_items(score_item_pairs: list[tuple[float, str]]) -> list[tuple[float, str]]:
+    top = heapq.nsmallest(
+        TOP_K,
+        ((-float(score), str(item)) for score, item in score_item_pairs),
+    )
+    return [(-float(neg_score), item) for neg_score, item in top]
 
 
 def _bm25_scores(state: dict[str, Any], history: list[str], candidates: list[str]) -> list[tuple[float, str]]:
@@ -872,7 +944,7 @@ def _evidence_scores(state: dict[str, Any], history: list[str], candidates: list
     return scores
 
 
-def _load_dataset_bundle(dataset_name: str, experiment: dict[str, Any], seed: int) -> DatasetBundle:
+def _load_dataset_bundle(dataset_name: str, experiment: dict[str, Any], request: PaperMatrixRequest) -> DatasetBundle:
     split_artifact = resolve_path(experiment["split_artifact"])
     candidate_artifact = resolve_path(experiment["candidate_artifact"])
     config_path = resolve_path(experiment["config_path"])
@@ -889,6 +961,14 @@ def _load_dataset_bundle(dataset_name: str, experiment: dict[str, Any], seed: in
     candidate_pool = None
     if candidate_pool_artifact is not None and candidate_pool_artifact.is_file():
         candidate_pool = json.loads(candidate_pool_artifact.read_text(encoding="utf-8"))
+        pool_items = [str(item) for item in candidate_pool.get("candidate_items", [])]
+        negative_pool = [
+            str(item)
+            for item in candidate_pool.get("negative_pool_for_targets_outside_pool", pool_items[:-1])
+        ]
+        candidate_pool["_candidate_items_list"] = pool_items
+        candidate_pool["_candidate_items_set"] = set(pool_items)
+        candidate_pool["_negative_pool_list"] = negative_pool
     checksums = _artifact_checksums(dataset_name, experiment, candidate_pool_artifact=candidate_pool_artifact)
     _verify_required_checksums(dataset_name, checksums)
     return DatasetBundle(
@@ -908,6 +988,8 @@ def _load_dataset_bundle(dataset_name: str, experiment: dict[str, Any], seed: in
         long_tail=long_tail_items(dict(item_popularity), quantile=0.2),
         candidate_pool=candidate_pool,
         artifact_checksums=checksums,
+        candidate_output_mode=request.candidate_output_mode,
+        max_expanded_candidate_items=request.max_expanded_candidate_items,
     )
 
 
@@ -972,21 +1054,124 @@ def _iter_candidate_rows(bundle: DatasetBundle) -> Iterable[dict[str, Any]]:
                 yield row
 
 
+def _history_for_method(bundle: DatasetBundle, method: str, user_id: str, target_item: str) -> list[str]:
+    if method not in {"bm25", "sasrec", "time_graph_evidence", "time_graph_evidence_dynamic"}:
+        return []
+    return [
+        item for item in bundle.history_by_user.get(str(user_id), [])
+        if item != str(target_item)
+    ]
+
+
 def _candidate_items_for_row(bundle: DatasetBundle, row: dict[str, Any]) -> list[str]:
     if row.get("candidate_storage") == "shared_pool":
         if not bundle.candidate_pool:
             raise FileNotFoundError(f"missing candidate pool for {bundle.name}")
         target = str(row["target_item"])
-        pool = [str(item) for item in bundle.candidate_pool["candidate_items"]]
-        if target in pool:
+        pool = bundle.candidate_pool.get("_candidate_items_list") or [
+            str(item) for item in bundle.candidate_pool["candidate_items"]
+        ]
+        if target in bundle.candidate_pool.get("_candidate_items_set", set()):
             return pool
-        negatives = [str(item) for item in bundle.candidate_pool.get("negative_pool_for_targets_outside_pool", pool[:-1])]
+        negatives = bundle.candidate_pool.get("_negative_pool_list") or [
+            str(item) for item in bundle.candidate_pool.get("negative_pool_for_targets_outside_pool", pool[:-1])
+        ]
         candidates = [*negatives, target]
         expected_size = int(row.get("candidate_size", len(pool)))
         if len(candidates) != expected_size:
             raise ValueError(f"expanded shared-pool candidate size mismatch: expected={expected_size} actual={len(candidates)}")
         return candidates
     return [str(item) for item in row.get("candidate_items", [])]
+
+
+def _target_included_in_candidate_row(bundle: DatasetBundle, row: dict[str, Any]) -> bool:
+    target = str(row["target_item"])
+    if row.get("candidate_storage") == "shared_pool":
+        if not bundle.candidate_pool:
+            return False
+        pool = bundle.candidate_pool.get("_candidate_items_list") or [
+            str(item) for item in bundle.candidate_pool.get("candidate_items", [])
+        ]
+        if target in bundle.candidate_pool.get("_candidate_items_set", set()):
+            return True
+        negatives_size = len(bundle.candidate_pool.get("_negative_pool_list") or bundle.candidate_pool.get("negative_pool_for_targets_outside_pool", pool[:-1]))
+        return negatives_size + 1 == int(row.get("candidate_size", len(pool)))
+    return target in {str(item) for item in row.get("candidate_items", [])}
+
+
+def _minimal_metric_candidates(predicted_items: list[str], target_item: str) -> list[str]:
+    seen: set[str] = set()
+    output: list[str] = []
+    for item in [*predicted_items, str(target_item)]:
+        if item in seen:
+            continue
+        seen.add(item)
+        output.append(item)
+    return output
+
+
+def _output_prediction_row(
+    bundle: DatasetBundle,
+    candidate_row: dict[str, Any],
+    prediction: dict[str, Any],
+) -> dict[str, Any]:
+    mode = _candidate_output_mode(bundle)
+    if mode != CANDIDATE_SCHEMA_COMPACT_REF:
+        return prediction
+    output = dict(prediction)
+    output.pop("candidate_items", None)
+    metadata = dict(output.get("metadata", {}))
+    metadata.pop("candidate_artifact", None)
+    metadata["candidate_schema"] = CANDIDATE_SCHEMA_COMPACT_REF
+    output["metadata"] = metadata
+    output["candidate_ref"] = _candidate_ref(bundle, candidate_row)
+    output["schema_version"] = "prediction_row_v2"
+    return output
+
+
+def _candidate_output_mode(bundle: DatasetBundle) -> str:
+    requested = str(bundle.candidate_output_mode)
+    if requested == CANDIDATE_SCHEMA_COMPACT_REF:
+        return CANDIDATE_SCHEMA_COMPACT_REF
+    if requested not in {"expanded", CANDIDATE_SCHEMA_COMPACT_REF}:
+        raise ValueError(f"unsupported candidate_output_mode: {requested}")
+    size = _bundle_candidate_size(bundle)
+    if size > int(bundle.max_expanded_candidate_items):
+        return CANDIDATE_SCHEMA_COMPACT_REF
+    return "expanded"
+
+
+def _bundle_candidate_size(bundle: DatasetBundle) -> int:
+    if bundle.candidate_pool:
+        return int(bundle.candidate_pool.get("candidate_size", len(bundle.candidate_pool.get("candidate_items", []))))
+    return int(bundle.max_expanded_candidate_items)
+
+
+def _candidate_ref(bundle: DatasetBundle, candidate_row: dict[str, Any]) -> dict[str, Any]:
+    row_id = str(
+        candidate_row.get("candidate_row_id")
+        or candidate_row_id(
+            user_id=str(candidate_row["user_id"]),
+            target_item=str(candidate_row["target_item"]),
+            split=str(candidate_row.get("split", "test")),
+        )
+    )
+    ref: dict[str, Any] = {
+        "artifact_id": f"{bundle.name}_candidates_protocol_v1",
+        "artifact_path": str(bundle.candidate_artifact),
+        "artifact_sha256": str(bundle.artifact_checksums["candidate_sha256"]),
+        "candidate_row_id": row_id,
+        "candidate_size": int(candidate_row.get("candidate_size", _bundle_candidate_size(bundle))),
+        "candidate_storage": str(candidate_row.get("candidate_storage", "expanded")),
+        "split": str(candidate_row.get("split", "test")),
+    }
+    if bundle.candidate_pool_artifact is not None:
+        ref["candidate_pool_artifact"] = str(bundle.candidate_pool_artifact)
+    if bundle.artifact_checksums.get("candidate_pool_sha256"):
+        ref["candidate_pool_sha256"] = str(bundle.artifact_checksums["candidate_pool_sha256"])
+    if candidate_row.get("target_inclusion_rule"):
+        ref["target_inclusion_rule"] = str(candidate_row["target_inclusion_rule"])
+    return ref
 
 
 def _candidate_items_and_json_for_row(
@@ -1190,6 +1375,7 @@ def _write_root_manifest(
             "api_calls_allowed": False,
             "code_commit": current_git_commit(resolve_path(".")),
             "continue_on_failure": request.continue_on_failure,
+            "candidate_output_mode": request.candidate_output_mode,
             "datasets": list(request.datasets),
             "experiments": experiments,
             "launch_manifest": str(resolve_path(request.manifest_path)),
@@ -1201,6 +1387,7 @@ def _write_root_manifest(
             "output_dir": str(output_dir),
             "protocol_version": "protocol_v1",
             "python_executable": sys.executable,
+            "rerun_failed_only": request.rerun_failed_only,
             "seed": request.seed,
         },
     )
@@ -1225,7 +1412,12 @@ def _prepare_method_dir(
     ):
         stale = method_dir / stale_name
         if stale.is_file():
-            stale.unlink()
+            archive_dir = ensure_dir(
+                method_dir
+                / "failed_attempts"
+                / time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+            )
+            stale.replace(archive_dir / stale.name)
     resolved = {
         "api_calls_allowed": False,
         "candidate_artifact": str(bundle.candidate_artifact),
@@ -1413,26 +1605,32 @@ def _require_torch(label: str) -> Any:
 
 
 def _resource_guard(bundle: DatasetBundle, method: str) -> None:
-    if len(bundle.test_timestamp_by_user) > 100000:
+    if os.environ.get("LLM4REC_ALLOW_AMAZON_HEAVY_LOCAL") == "1":
+        return
+    heavy_shared_pool_methods = {
+        "bm25",
+        "mf_bpr",
+        "sasrec",
+        "temporal_graph_encoder",
+        "time_graph_evidence",
+        "time_graph_evidence_dynamic",
+    }
+    if (
+        bundle.name == "amazon_multidomain_filtered_iterative_k3"
+        and method in heavy_shared_pool_methods
+        and bundle.candidate_pool is not None
+        and _candidate_output_mode(bundle) == CANDIDATE_SCHEMA_COMPACT_REF
+        and len(bundle.test_timestamp_by_user) >= 300000
+    ):
         raise RuntimeError(
-            "Local Phase 9B resource guard: this dataset has "
-            f"{len(bundle.test_timestamp_by_user)} test users and the current prediction schema "
-            "requires expanding the frozen 1000-candidate shared pool into every prediction row. "
-            f"{method} on {bundle.name} is recorded as an explicit resource failure; "
-            "rerun the failed Amazon jobs after approving a compact shared-pool prediction schema "
-            "or using a higher-throughput experiment machine."
+            "Local Phase 9B compute guard: compact_ref now prevents repeated "
+            "candidate_items JSONL expansion, but "
+            f"{method} still requires a vectorized shared-pool scorer before "
+            f"running {len(bundle.test_timestamp_by_user)} test users x "
+            f"{_bundle_candidate_size(bundle)} candidates on this local CPU path. "
+            "No split or candidate artifact was regenerated. Set "
+            "LLM4REC_ALLOW_AMAZON_HEAVY_LOCAL=1 only after approving the long "
+            "local run or implementing a vectorized scorer, then rerun failed "
+            "Amazon jobs only."
         )
-    trainable = {"mf_bpr", "sasrec", "temporal_graph_encoder", "time_graph_evidence_dynamic"}
-    if method not in trainable:
-        return
-    if len(bundle.test_timestamp_by_user) <= 100000:
-        return
-    torch = _require_torch(method)
-    if bool(getattr(torch.cuda, "is_available", lambda: False)()):
-        return
-    raise RuntimeError(
-        "PyTorch is available, but only CPU was detected; "
-        f"{method} on {bundle.name} has {len(bundle.test_timestamp_by_user)} test users and is "
-        "recorded as an explicit Phase 9B resource failure instead of silently skipping. "
-        "Rerun failed jobs with a GPU-enabled PyTorch interpreter."
-    )
+    return

@@ -25,6 +25,7 @@ def audit_failures(run_dir: str | Path) -> dict[str, Any]:
         failures.append(
             {
                 "category": _failure_category(status, str(row.get("message", ""))),
+                "dataset": row.get("dataset", "unknown"),
                 "message": row.get("message", row.get("failure", "")),
                 "method": method,
                 "status": status,
@@ -34,7 +35,7 @@ def audit_failures(run_dir: str | Path) -> dict[str, Any]:
     for failure in failures:
         categories[failure["category"]] = categories.get(failure["category"], 0) + 1
     report = {
-        "blocks_paper_scale_readiness": False,
+        "blocks_paper_scale_readiness": bool(failures),
         "failure_categories": categories,
         "failure_count": len(failures),
         "failures": failures,

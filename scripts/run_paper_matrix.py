@@ -23,6 +23,9 @@ def main() -> int:
     parser.add_argument("--methods", nargs="+", required=True)
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--continue-on-failure", action="store_true")
+    parser.add_argument("--candidate-output-mode", choices=["expanded", "compact_ref"], default="expanded")
+    parser.add_argument("--max-expanded-candidate-items", type=int, default=200)
+    parser.add_argument("--rerun-failed-only", action="store_true")
     args = parser.parse_args()
     run_dir = run_paper_matrix(
         PaperMatrixRequest(
@@ -33,6 +36,9 @@ def main() -> int:
             methods=tuple(normalize_method(str(method)) for method in args.methods),
             output_dir=args.output_dir,
             continue_on_failure=bool(args.continue_on_failure),
+            candidate_output_mode="compact_ref_v1" if args.candidate_output_mode == "compact_ref" else "expanded",
+            max_expanded_candidate_items=int(args.max_expanded_candidate_items),
+            rerun_failed_only=bool(args.rerun_failed_only),
         )
     )
     print(f"paper matrix completed: {run_dir}")

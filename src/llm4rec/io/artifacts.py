@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, Iterable
@@ -35,6 +36,30 @@ def read_jsonl(path: str | Path) -> list[dict[str, Any]]:
                 raise ValueError(f"JSONL row {line_number} in {path} is not an object.")
             rows.append(value)
     return rows
+
+
+def iter_jsonl(path: str | Path) -> Iterable[dict[str, Any]]:
+    """Stream a JSONL file as dictionaries."""
+
+    with Path(path).open("r", encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            stripped = line.strip()
+            if not stripped:
+                continue
+            value = json.loads(stripped)
+            if not isinstance(value, dict):
+                raise ValueError(f"JSONL row {line_number} in {path} is not an object.")
+            yield value
+
+
+def sha256_file(path: str | Path) -> str:
+    """Return the SHA256 digest for a file."""
+
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def write_jsonl(path: str | Path, rows: Iterable[dict[str, Any]]) -> None:

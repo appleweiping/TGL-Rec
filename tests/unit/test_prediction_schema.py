@@ -49,3 +49,25 @@ def test_no_candidates_protocol_allows_empty_candidates() -> None:
         "scores": [],
     }
     assert validate_prediction_row(row, candidate_protocol="no_candidates")["candidate_items"] == []
+
+
+def test_prediction_schema_accepts_compact_candidate_ref() -> None:
+    row = {
+        "user_id": "u1",
+        "target_item": "i3",
+        "candidate_ref": {
+            "artifact_id": "tiny_candidates_protocol_v1",
+            "artifact_path": "outputs/artifacts/protocol_v1/tiny/candidates.jsonl",
+            "artifact_sha256": "abc123",
+            "candidate_row_id": "test|u1|i3",
+            "candidate_size": 2,
+        },
+        "predicted_items": ["i3"],
+        "scores": [1.0],
+        "metadata": {"candidate_schema": "compact_ref_v1"},
+    }
+
+    normalized = validate_prediction_row(row, candidate_protocol="fixed_sampled")
+
+    assert normalized["candidate_items"] == []
+    assert normalized["candidate_ref"]["candidate_row_id"] == "test|u1|i3"

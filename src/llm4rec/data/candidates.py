@@ -7,6 +7,12 @@ import random
 from typing import Any
 
 
+def candidate_row_id(*, user_id: str, target_item: str, split: str = "test") -> str:
+    """Return a stable candidate-row identifier for prediction references."""
+
+    return f"{split}|{user_id}|{target_item}"
+
+
 def build_candidate_sets(
     labeled_interactions: list[dict[str, Any]],
     item_ids: list[str],
@@ -33,6 +39,11 @@ def build_candidate_sets(
         )
         rows.append(
             {
+                "candidate_row_id": candidate_row_id(
+                    user_id=str(row["user_id"]),
+                    target_item=target,
+                    split=str(row["split"]),
+                ),
                 "user_id": str(row["user_id"]),
                 "target_item": target,
                 "split": row["split"],
