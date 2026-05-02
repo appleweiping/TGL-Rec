@@ -23,6 +23,10 @@ evaluation:
   metrics: [Recall@5, Recall@10, NDCG@10, MRR@10, coverage, novelty, diversity, long_tail_ratio]
   segment_metrics: [domain, user_sparsity, item_popularity]
   candidate_protocol: fixed_shared_candidates
+scoring:
+  shared_pool_config: configs/scoring/shared_pool.yaml
+  shared_pool_scoring: true
+  candidate_output_mode: compact_ref
 experiment:
   run_mode: paper
   reportable: true

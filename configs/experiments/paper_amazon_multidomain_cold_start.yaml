@@ -21,6 +21,10 @@ evaluation:
   metrics: [Recall@10, NDCG@10, MRR@10, novelty, item_coverage]
   segment_metrics: [cold_start_user, cold_start_item, domain]
   candidate_protocol: fixed_shared_candidates
+scoring:
+  shared_pool_config: configs/scoring/shared_pool.yaml
+  shared_pool_scoring: true
+  candidate_output_mode: compact_ref
 experiment:
   run_mode: paper
   reportable: true

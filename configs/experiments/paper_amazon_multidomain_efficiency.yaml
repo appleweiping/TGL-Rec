@@ -21,6 +21,10 @@ evaluation:
   metrics: [latency_ms, throughput, gpu_memory_mb, disk_gb, Recall@10, NDCG@10]
   segment_metrics: [method, domain]
   candidate_protocol: fixed_shared_candidates
+scoring:
+  shared_pool_config: configs/scoring/shared_pool.yaml
+  shared_pool_scoring: true
+  candidate_output_mode: compact_ref
 experiment:
   run_mode: paper
   reportable: true

@@ -1,0 +1,14 @@
+candidate_output_mode: compact_ref
+batch_size: 512
+top_n_to_save: 100
+max_candidate_size: 1000
+device: auto
+score_dtype: float32
+verify_candidate_checksum: true
+tie_break: item_id_ascending
+save_full_scores: false
+save_top_evidence_only: true
+max_batch_candidate_scores_memory_mb: 512
+max_prediction_file_size_gb_warning: 2
+flush_every_n_rows: 1000
+progress_every_n_batches: 20

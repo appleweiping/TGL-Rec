@@ -26,6 +26,8 @@ def main() -> int:
     parser.add_argument("--candidate-output-mode", choices=["expanded", "compact_ref"], default="expanded")
     parser.add_argument("--max-expanded-candidate-items", type=int, default=200)
     parser.add_argument("--rerun-failed-only", action="store_true")
+    parser.add_argument("--shared-pool-scoring", action="store_true")
+    parser.add_argument("--scoring-config", type=Path, default=Path("configs/scoring/shared_pool.yaml"))
     args = parser.parse_args()
     run_dir = run_paper_matrix(
         PaperMatrixRequest(
@@ -39,6 +41,8 @@ def main() -> int:
             candidate_output_mode="compact_ref_v1" if args.candidate_output_mode == "compact_ref" else "expanded",
             max_expanded_candidate_items=int(args.max_expanded_candidate_items),
             rerun_failed_only=bool(args.rerun_failed_only),
+            shared_pool_scoring=bool(args.shared_pool_scoring),
+            scoring_config_path=args.scoring_config,
         )
     )
     print(f"paper matrix completed: {run_dir}")

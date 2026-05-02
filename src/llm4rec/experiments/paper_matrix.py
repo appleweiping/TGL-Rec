@@ -30,6 +30,18 @@ from llm4rec.io.artifacts import ensure_dir, read_jsonl, write_csv_rows, write_j
 from llm4rec.metrics.long_tail import long_tail_items
 from llm4rec.metrics.novelty import item_novelty
 from llm4rec.models.sasrec import SASRecModel, TORCH_AVAILABLE as SASREC_TORCH_AVAILABLE
+from llm4rec.rankers.bm25_shared_pool import BM25SharedPoolScorer
+from llm4rec.rankers.mf_shared_pool import MFSharedPoolScorer
+from llm4rec.rankers.sasrec_shared_pool import SASRecSharedPoolScorer
+from llm4rec.rankers.temporal_graph_shared_pool import TemporalGraphSharedPoolScorer
+from llm4rec.rankers.time_graph_evidence_shared_pool import TimeGraphEvidenceSharedPoolScorer
+from llm4rec.scoring.candidate_batch import CandidateBatchIterator
+from llm4rec.scoring.prediction_writer import CompactTopKPredictionWriter
+from llm4rec.scoring.vectorized import (
+    adjusted_batch_size,
+    estimate_score_tensor_memory_mb,
+    load_shared_pool_scoring_config,
+)
 from llm4rec.trainers.sasrec import build_item_mappings, left_pad
 from llm4rec.utils.env import collect_environment, current_git_commit
 
@@ -56,6 +68,14 @@ SUPPORTED_METHODS = {
     "time_graph_evidence",
     "time_graph_evidence_dynamic",
 }
+SHARED_POOL_METHODS = {
+    "bm25",
+    "mf_bpr",
+    "sasrec",
+    "temporal_graph_encoder",
+    "time_graph_evidence",
+    "time_graph_evidence_dynamic",
+}
 TOP_K = 10
 METRIC_KS = (1, 5, 10)
 
@@ -74,6 +94,8 @@ class PaperMatrixRequest:
     candidate_output_mode: str = "expanded"
     max_expanded_candidate_items: int = 200
     rerun_failed_only: bool = False
+    shared_pool_scoring: bool = False
+    scoring_config_path: Path | None = None
 
 
 @dataclass
@@ -205,13 +227,18 @@ def run_paper_matrix(request: PaperMatrixRequest) -> Path:
     _assert_manifest_safety(manifest, experiments, request)
     output_dir = ensure_dir(resolve_path(request.output_dir))
     _write_root_manifest(output_dir, manifest, request, experiments)
+    requested_keys = {
+        (dataset, normalize_method(method))
+        for dataset in request.datasets
+        for method in request.methods
+    }
     preserved_status = [
         row for row in _read_csv(output_dir / "method_status.csv")
-        if row.get("dataset") not in set(request.datasets)
+        if (row.get("dataset", ""), row.get("method", "")) not in requested_keys
     ]
     preserved_metrics = [
         row for row in _read_csv(output_dir / "metrics_by_method.csv")
-        if row.get("dataset") not in set(request.datasets)
+        if (row.get("dataset", ""), row.get("method", "")) not in requested_keys
     ]
 
     dataset_bundles = {
@@ -370,9 +397,9 @@ def _run_one_method(
     request: PaperMatrixRequest,
 ) -> dict[str, Any]:
     context = MethodContext(method, request.seed, method_dir)
-    _fit_method(bundle, context)
+    _fit_method(bundle, context, request)
     predictions_path = method_dir / "predictions.jsonl"
-    metrics = _write_predictions_and_metrics(bundle, context, predictions_path)
+    metrics = _write_predictions_and_metrics(bundle, context, predictions_path, request)
     if context.training_metrics is not None:
         write_json(method_dir / "training_metrics.json", context.training_metrics)
     write_json(
@@ -391,9 +418,9 @@ def _run_one_method(
     }
 
 
-def _fit_method(bundle: DatasetBundle, context: MethodContext) -> None:
+def _fit_method(bundle: DatasetBundle, context: MethodContext, request: PaperMatrixRequest) -> None:
     method = context.method
-    _resource_guard(bundle, method)
+    _resource_guard(bundle, method, shared_pool_scoring=request.shared_pool_scoring)
     if method == "popularity":
         context.state["popularity"] = Counter(str(row["item_id"]) for row in bundle.train_rows)
         if bundle.candidate_pool:
@@ -403,8 +430,14 @@ def _fit_method(bundle: DatasetBundle, context: MethodContext) -> None:
             )
         _write_method_artifact(context.run_dir, "popularity_counts.json", dict(context.state["popularity"]))
     elif method == "bm25":
-        context.state["bm25"] = _build_bm25_state(bundle)
-        _write_method_artifact(context.run_dir, "bm25_metadata.json", context.state["bm25"]["metadata"])
+        if _requires_shared_pool_vectorized(bundle, method):
+            scorer = BM25SharedPoolScorer()
+            scorer.fit(bundle.train_rows, bundle.item_rows)
+            context.state["bm25_shared_pool"] = scorer
+            _write_method_artifact(context.run_dir, "bm25_metadata.json", scorer.metadata)
+        else:
+            context.state["bm25"] = _build_bm25_state(bundle)
+            _write_method_artifact(context.run_dir, "bm25_metadata.json", context.state["bm25"]["metadata"])
     elif method == "mf_bpr":
         _fit_bpr(bundle, context)
     elif method == "sasrec":
@@ -434,7 +467,16 @@ def _write_predictions_and_metrics(
     bundle: DatasetBundle,
     context: MethodContext,
     predictions_path: Path,
+    request: PaperMatrixRequest,
 ) -> dict[str, Any]:
+    if _use_shared_pool_vectorized(bundle, context.method, request):
+        return _write_shared_pool_predictions_and_metrics(bundle, context, predictions_path, request)
+    if _requires_shared_pool_vectorized(bundle, context.method):
+        raise RuntimeError(
+            "Refusing old per-row scorer for compact shared-pool candidates: "
+            f"dataset={bundle.name} method={context.method} candidate_size={_bundle_candidate_size(bundle)}. "
+            "Pass --shared-pool-scoring to use vectorized shared-pool scorers."
+        )
     accumulator = MetricAccumulator(
         item_catalog=bundle.item_catalog,
         item_popularity=bundle.item_popularity,
@@ -531,6 +573,169 @@ def _write_predictions_and_metrics(
     return metrics
 
 
+def _write_shared_pool_predictions_and_metrics(
+    bundle: DatasetBundle,
+    context: MethodContext,
+    predictions_path: Path,
+    request: PaperMatrixRequest,
+) -> dict[str, Any]:
+    scoring_config = load_shared_pool_scoring_config(
+        request.scoring_config_path or Path("configs/scoring/shared_pool.yaml")
+    )
+    candidate_size = _bundle_candidate_size(bundle)
+    if candidate_size > int(scoring_config.max_candidate_size):
+        raise ValueError(
+            f"candidate_size={candidate_size} exceeds max_candidate_size={scoring_config.max_candidate_size}"
+        )
+    batch_size = adjusted_batch_size(
+        requested_batch_size=scoring_config.batch_size,
+        candidate_size=candidate_size,
+        score_dtype=scoring_config.score_dtype,
+        max_memory_mb=scoring_config.max_batch_candidate_scores_memory_mb,
+    )
+    if batch_size != int(scoring_config.batch_size):
+        _append_log(
+            context.run_dir,
+            "shared_pool_batch_size_reduced "
+            f"requested={scoring_config.batch_size} adjusted={batch_size} "
+            f"candidate_size={candidate_size} dtype={scoring_config.score_dtype}",
+        )
+    scorer = _shared_pool_scorer(bundle, context)
+    scorer_metadata = dict(getattr(scorer, "metadata", {}))
+    scorer_metadata.update(
+        {
+            "batch_size": batch_size,
+            "candidate_pool_size": candidate_size,
+            "max_batch_candidate_scores_memory_mb": scoring_config.max_batch_candidate_scores_memory_mb,
+            "score_tensor_memory_mb": estimate_score_tensor_memory_mb(
+                batch_size=batch_size,
+                candidate_size=candidate_size,
+                score_dtype=scoring_config.score_dtype,
+            ),
+            "top_n_to_save": scoring_config.top_n_to_save,
+        }
+    )
+    _write_shared_pool_scorer_metadata(context.run_dir, context.method, scorer_metadata)
+    iterator = CandidateBatchIterator(
+        candidate_artifact_path=bundle.candidate_artifact,
+        candidate_artifact_sha256=str(bundle.artifact_checksums["candidate_sha256"]),
+        candidate_pool_path=bundle.candidate_pool_artifact,
+        candidate_pool_sha256=bundle.artifact_checksums.get("candidate_pool_sha256"),
+        history_by_user=bundle.history_by_user,
+        timestamp_by_user=bundle.test_timestamp_by_user,
+        batch_size=batch_size,
+        verify_candidate_checksum=scoring_config.verify_candidate_checksum,
+        artifact_id=f"{bundle.name}_candidates_protocol_v1",
+    )
+    accumulator = MetricAccumulator(
+        item_catalog=bundle.item_catalog,
+        item_popularity=bundle.item_popularity,
+        long_tail=bundle.long_tail,
+        candidate_protocol=bundle.candidate_protocol,
+    )
+    domain_accumulators: dict[str, MetricAccumulator] = {}
+    started = time.perf_counter()
+    prediction_count = 0
+    batch_count = 0
+    base_metadata = {
+        "candidate_artifact": str(bundle.candidate_artifact),
+        "history_source": "train_split_only",
+        "protocol_version": "protocol_v1",
+        "ranked_cutoff": TOP_K,
+        "seed": context.seed,
+        "shared_pool_scoring": True,
+        "split": "test",
+    }
+
+    def row_metadata(row_index: int, top_items: list[str], top_scores: list[float]) -> dict[str, Any]:
+        if hasattr(scorer, "metadata_for_top_items"):
+            return scorer.metadata_for_top_items(
+                top_items=top_items,
+                top_scores=top_scores,
+                limit=min(scoring_config.top_n_to_save, TOP_K),
+            )
+        return {}
+
+    with CompactTopKPredictionWriter(
+        predictions_path,
+        method=context.method,
+        top_n_to_save=scoring_config.top_n_to_save,
+        flush_every_n_rows=scoring_config.flush_every_n_rows,
+        base_metadata=base_metadata,
+    ) as writer:
+        for batch in iterator:
+            score_matrix = scorer.score_batch(batch)
+            compact_rows = writer.write_batch(
+                batch=batch,
+                score_matrix=score_matrix,
+                scorer_name=str(getattr(scorer, "name", context.method)),
+                row_metadata_fn=row_metadata,
+            )
+            for row in compact_rows:
+                metric_row = {
+                    "candidate_items": _minimal_metric_candidates(row["predicted_items"], row["target_item"]),
+                    "domain": row.get("domain"),
+                    "metadata": row.get("metadata", {}),
+                    "method": context.method,
+                    "predicted_items": row["predicted_items"],
+                    "raw_output": None,
+                    "scores": row["scores"],
+                    "target_item": row["target_item"],
+                    "user_id": row["user_id"],
+                }
+                accumulator.add(metric_row)
+                domain = str(row.get("domain") or "unknown")
+                if domain not in domain_accumulators:
+                    domain_accumulators[domain] = MetricAccumulator(
+                        item_catalog=bundle.item_catalog,
+                        item_popularity=bundle.item_popularity,
+                        long_tail=bundle.long_tail,
+                        candidate_protocol=bundle.candidate_protocol,
+                    )
+                domain_accumulators[domain].add(metric_row)
+                prediction_count += 1
+            batch_count += 1
+            if batch_count % int(scoring_config.progress_every_n_batches) == 0:
+                _append_log(
+                    context.run_dir,
+                    "shared_pool_progress "
+                    f"batches={batch_count} predictions_written={prediction_count} "
+                    f"elapsed_seconds={time.perf_counter() - started:.2f}",
+                )
+    prediction_size_gb = predictions_path.stat().st_size / float(1024**3)
+    if prediction_size_gb > float(scoring_config.max_prediction_file_size_gb_warning):
+        _append_log(
+            context.run_dir,
+            f"prediction_file_size_warning_gb={prediction_size_gb:.3f}",
+        )
+    overall = accumulator.metrics()
+    by_domain = {domain: acc.metrics() for domain, acc in sorted(domain_accumulators.items())}
+    return {
+        "artifact_checksums": bundle.artifact_checksums,
+        "by_domain": by_domain,
+        "by_method": {context.method: dict(overall)},
+        "candidate_protocol": bundle.candidate_protocol,
+        "candidate_schema": CANDIDATE_SCHEMA_COMPACT_REF,
+        "candidate_artifact_path": str(bundle.candidate_artifact),
+        "candidate_artifact_sha256": bundle.artifact_checksums.get("candidate_sha256"),
+        "candidate_pool_artifact_path": str(bundle.candidate_pool_artifact or ""),
+        "candidate_pool_sha256": bundle.artifact_checksums.get("candidate_pool_sha256"),
+        "dataset": bundle.name,
+        "matrix": "main_accuracy",
+        "num_predictions": prediction_count,
+        "overall": overall,
+        "protocol_version": "protocol_v1",
+        "scoring": {
+            **scorer_metadata,
+            "candidate_output_mode": "compact_ref",
+            "compact_predictions": True,
+            "save_full_scores": False,
+        },
+        "seed": context.seed,
+        "split_strategy": bundle.split_strategy,
+    }
+
+
 def _rank_top_k(
     bundle: DatasetBundle,
     context: MethodContext,
@@ -581,6 +786,88 @@ def _rank_top_k(
             },
         )
     raise ValueError(f"unsupported method: {method}")
+
+
+def _use_shared_pool_vectorized(
+    bundle: DatasetBundle,
+    method: str,
+    request: PaperMatrixRequest,
+) -> bool:
+    return bool(request.shared_pool_scoring and _requires_shared_pool_vectorized(bundle, method))
+
+
+def _requires_shared_pool_vectorized(bundle: DatasetBundle, method: str) -> bool:
+    return (
+        normalize_method(method) in SHARED_POOL_METHODS
+        and bundle.candidate_pool is not None
+        and _candidate_output_mode(bundle) == CANDIDATE_SCHEMA_COMPACT_REF
+        and _bundle_candidate_size(bundle) > int(bundle.max_expanded_candidate_items)
+    )
+
+
+def _shared_pool_scorer(bundle: DatasetBundle, context: MethodContext) -> Any:
+    method = context.method
+    if method == "bm25":
+        if "bm25_shared_pool" not in context.state:
+            scorer = BM25SharedPoolScorer.from_state(context.state["bm25"])
+            context.state["bm25_shared_pool"] = scorer
+        return context.state["bm25_shared_pool"]
+    if method == "mf_bpr":
+        return MFSharedPoolScorer.from_context(context)
+    if method == "sasrec":
+        return SASRecSharedPoolScorer.from_context(context)
+    if method == "temporal_graph_encoder":
+        return TemporalGraphSharedPoolScorer.from_context(context)
+    if method == "time_graph_evidence":
+        return TimeGraphEvidenceSharedPoolScorer.from_state(
+            context.state["evidence"],
+            candidate_pool_items=_shared_pool_items(bundle),
+            negative_pool_items=_shared_pool_negative_items(bundle),
+        )
+    if method == "time_graph_evidence_dynamic":
+        dynamic = TemporalGraphSharedPoolScorer.from_context(context)
+        return TimeGraphEvidenceSharedPoolScorer.from_state(
+            context.state["evidence"],
+            dynamic_scorer=dynamic,
+            candidate_pool_items=_shared_pool_items(bundle),
+            negative_pool_items=_shared_pool_negative_items(bundle),
+        )
+    raise ValueError(f"unsupported shared-pool method: {method}")
+
+
+def _write_shared_pool_scorer_metadata(
+    method_dir: Path,
+    method: str,
+    metadata: dict[str, Any],
+) -> None:
+    if method == "bm25":
+        _write_method_artifact(method_dir, "bm25_metadata.json", metadata)
+    elif method in {"time_graph_evidence", "time_graph_evidence_dynamic"}:
+        _write_method_artifact(method_dir, "evidence_metadata.json", metadata)
+    else:
+        _write_method_artifact(method_dir, "shared_pool_scorer_metadata.json", metadata)
+
+
+def _shared_pool_items(bundle: DatasetBundle) -> list[str]:
+    if not bundle.candidate_pool:
+        return []
+    return [
+        str(item)
+        for item in bundle.candidate_pool.get("_candidate_items_list", bundle.candidate_pool.get("candidate_items", []))
+    ]
+
+
+def _shared_pool_negative_items(bundle: DatasetBundle) -> list[str]:
+    if not bundle.candidate_pool:
+        return []
+    pool = _shared_pool_items(bundle)
+    return [
+        str(item)
+        for item in bundle.candidate_pool.get(
+            "_negative_pool_list",
+            bundle.candidate_pool.get("negative_pool_for_targets_outside_pool", pool[:-1]),
+        )
+    ]
 
 
 def _top_k_from_pairs(score_item_pairs: list[tuple[float, str]]) -> list[str]:
@@ -1389,6 +1676,10 @@ def _write_root_manifest(
             "python_executable": sys.executable,
             "rerun_failed_only": request.rerun_failed_only,
             "seed": request.seed,
+            "shared_pool_scoring": request.shared_pool_scoring,
+            "scoring_config_path": str(resolve_path(request.scoring_config_path))
+            if request.scoring_config_path is not None
+            else str(resolve_path("configs/scoring/shared_pool.yaml")),
         },
     )
 
@@ -1403,10 +1694,14 @@ def _prepare_method_dir(
     ensure_dir(method_dir)
     ensure_dir(method_dir / "checkpoints")
     for stale_name in (
+        "artifact_checksums.json",
+        "environment.json",
         "failure_report.json",
+        "logs.txt",
         "metrics.csv",
         "metrics.json",
         "predictions.jsonl",
+        "resolved_config.yaml",
         "runtime.json",
         "training_metrics.json",
     ):
@@ -1418,9 +1713,20 @@ def _prepare_method_dir(
                 / time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
             )
             stale.replace(archive_dir / stale.name)
+    checkpoint_dir = method_dir / "checkpoints"
+    if checkpoint_dir.is_dir() and any(checkpoint_dir.iterdir()):
+        archive_dir = ensure_dir(
+            method_dir
+            / "failed_attempts"
+            / time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+            / "checkpoints"
+        )
+        for checkpoint in checkpoint_dir.iterdir():
+            checkpoint.replace(archive_dir / checkpoint.name)
     resolved = {
         "api_calls_allowed": False,
         "candidate_artifact": str(bundle.candidate_artifact),
+        "candidate_output_mode": request.candidate_output_mode,
         "candidate_protocol": bundle.candidate_protocol,
         "dataset": bundle.name,
         "dataset_config": str(bundle.config_path),
@@ -1433,6 +1739,10 @@ def _prepare_method_dir(
         "output_dir": str(method_dir),
         "protocol_version": "protocol_v1",
         "seed": request.seed,
+        "shared_pool_scoring": request.shared_pool_scoring,
+        "scoring_config_path": str(resolve_path(request.scoring_config_path))
+        if request.scoring_config_path is not None
+        else str(resolve_path("configs/scoring/shared_pool.yaml")),
         "split_artifact": str(bundle.split_artifact),
     }
     save_resolved_config(resolved, method_dir / "resolved_config.yaml")
@@ -1604,17 +1914,12 @@ def _require_torch(label: str) -> Any:
     return torch
 
 
-def _resource_guard(bundle: DatasetBundle, method: str) -> None:
+def _resource_guard(bundle: DatasetBundle, method: str, *, shared_pool_scoring: bool = False) -> None:
     if os.environ.get("LLM4REC_ALLOW_AMAZON_HEAVY_LOCAL") == "1":
         return
-    heavy_shared_pool_methods = {
-        "bm25",
-        "mf_bpr",
-        "sasrec",
-        "temporal_graph_encoder",
-        "time_graph_evidence",
-        "time_graph_evidence_dynamic",
-    }
+    if shared_pool_scoring and _requires_shared_pool_vectorized(bundle, method):
+        return
+    heavy_shared_pool_methods = SHARED_POOL_METHODS
     if (
         bundle.name == "amazon_multidomain_filtered_iterative_k3"
         and method in heavy_shared_pool_methods
