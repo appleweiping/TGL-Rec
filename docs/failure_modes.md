@@ -1,12 +1,16 @@
-# Pilot Failure Modes
+# Failure Modes
 
-Phase 7 captures failures instead of hiding them.
+Paper-scale launch preparation separates code readiness from data readiness.
 
-Failure categories:
+Tracked failure categories:
 
-- `skipped_dependency`: optional dependency such as PyTorch is unavailable.
-- `validation_error`: config, schema, split, candidate, or leakage validation failed.
-- `runtime_error`: method execution failed.
+- missing full datasets;
+- partial dataset schema or timestamp quality;
+- missing protocol manifests;
+- paper config safety violations;
+- API-enabled or LoRA-enabled jobs in paper configs;
+- job queue rows not marked `planned`;
+- planned output directories already containing result artifacts;
+- incomplete runs requested for result locking.
 
-Every pilot run writes `failure_report.json`. A failure in pilot does not create a paper claim; it
-creates a readiness task.
+Phase 8 failure reports are launch blockers only. They are not experimental results.

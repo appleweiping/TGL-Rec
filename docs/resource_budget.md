@@ -1,13 +1,22 @@
 # Resource Budget
 
-Phase 7 resource estimates are written before pilot execution.
+Resource estimates are planning artifacts, not guarantees.
 
-The pilot budget forbids:
+Phase 7 writes NON_REPORTABLE pilot estimates before pilot execution. Phase 8 writes paper launch
+estimates before any paper-scale job is allowed to run:
 
-- real API calls;
-- LoRA/QLoRA training;
-- full MovieLens/Amazon runs;
-- paper-scale seed sweeps.
+```bash
+python scripts/estimate_paper_resources.py --manifest outputs/launch/paper_v1/launch_manifest.json
+```
 
-The estimator writes candidate-score counts, method counts, memory estimates, and NON_REPORTABLE
-status to `resource_estimate.json`.
+The Phase 8 budget estimates:
+
+- number of planned jobs;
+- trainable and eval-only jobs;
+- CPU and GPU hours;
+- disk usage;
+- prediction, checkpoint, and table storage;
+- API calls, which must be `0`;
+- LoRA training jobs, which must be `0`.
+
+Every Phase 8 budget file records `NO_EXPERIMENTS_EXECUTED_IN_PHASE_8 = true`.

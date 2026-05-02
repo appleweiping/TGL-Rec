@@ -1,12 +1,14 @@
 # Reportable Rules
 
-- Smoke outputs are never reportable.
-- Pilot outputs are marked `NON_REPORTABLE` and `pilot_reportable=false`.
-- Mock methods are never reportable.
-- Stub methods are never reportable.
-- Diagnostic-only artifacts are never reportable.
-- Sampled pilot data cannot be used by reportable configs unless a future protocol explicitly
-  allows a labeled pilot-reportable study.
-- API calls must be disabled by default.
-- LoRA/QLoRA training must be disabled for pilot configs.
-- Paper tables must be generated from metrics files, not manually typed.
+Reportability rules for launch:
+
+- smoke runs are `reportable=false`;
+- pilot runs are `pilot_reportable=false`;
+- Phase 8 launch artifacts are plans, not results;
+- paper configs may be `reportable=true` only when they are safe to launch later;
+- mock, stub, skeleton, and Markov smoke methods are never reportable;
+- diagnostic-only artifacts are never reportable;
+- real API calls and LoRA training are disabled in Phase 8 paper configs;
+- no paper table can contain manually typed metric values.
+
+Pilot outputs and Phase 8 launch artifacts must not be cited as paper results.

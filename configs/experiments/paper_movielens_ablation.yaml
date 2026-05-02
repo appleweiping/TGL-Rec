@@ -1,0 +1,43 @@
+manifest:
+  dataset: movielens_full
+  split_strategy: leave_one_out
+  candidate_strategy: fixed_shared_candidates
+  methods: [full, w_o_temporal_graph, w_o_transition_edges, w_o_time_window_edges, w_o_time_gap_tags, w_o_semantic_similarity, w_o_dynamic_encoder, graph_only, text_only]
+  seeds: [0, 1, 2, 3, 4]
+  metrics: [Recall@5, Recall@10, NDCG@10, MRR@10, coverage, novelty, diversity, long_tail_ratio]
+  output_dir: outputs/paper_runs/protocol_v1/paper_movielens_ablation
+  run_mode: paper
+  reportable: true
+protocol_version: protocol_v1
+dataset:
+  name: movielens_full
+  config_path: configs/datasets/movielens_full.yaml
+  split_strategy: leave_one_out
+  candidate_protocol: fixed_shared_candidates
+split_artifact: outputs/artifacts/protocol_v1/movielens_full/splits.jsonl
+candidate_artifact: outputs/artifacts/protocol_v1/movielens_full/candidates.jsonl
+methods: [full, w_o_temporal_graph, w_o_transition_edges, w_o_time_window_edges, w_o_time_gap_tags, w_o_semantic_similarity, w_o_dynamic_encoder, graph_only, text_only]
+ablation:
+  names: [full, w_o_temporal_graph, w_o_transition_edges, w_o_time_window_edges, w_o_time_gap_tags, w_o_semantic_similarity, w_o_dynamic_encoder, graph_only, text_only]
+evaluation:
+  metrics: [Recall@5, Recall@10, NDCG@10, MRR@10, coverage, novelty, diversity, long_tail_ratio]
+  segment_metrics: [domain, user_sparsity, item_popularity]
+  candidate_protocol: fixed_shared_candidates
+experiment:
+  run_mode: paper
+  reportable: true
+  seeds: [0, 1, 2, 3, 4]
+  output_dir: outputs/paper_runs/protocol_v1/paper_movielens_ablation
+resume_policy: resume_from_checkpoints_and_predictions
+failure_policy: continue_and_audit
+resource_budget:
+  estimated_runtime_hours: 20
+  estimated_gpu_hours: 10
+  estimated_disk_gb: 10
+api_calls_allowed: false
+lora_training_enabled: false
+training:
+  enable_lora_training: false
+llm:
+  provider: none
+  allow_api_calls: false

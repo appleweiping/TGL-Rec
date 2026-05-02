@@ -16,10 +16,17 @@
 - [x] Frozen protocol docs for datasets, splits, candidates, metrics, reportability, leakage.
 - [x] NON_REPORTABLE pilot matrix and ablation pilot outputs.
 - [x] Pilot resource estimate, failure audit, and table export.
+- [x] Phase 8 launch package generation without executing jobs.
+- [x] Dataset readiness checks report missing data cleanly.
+- [x] Protocol version dry-run freeze.
+- [x] Paper table shells are planned without metric values.
 - [ ] Real GRU4Rec/BERT4Rec/TiSASRec implementations.
-- [ ] Protocol freeze before reportable runs.
+- [x] Protocol freeze metadata before reportable runs.
 - [ ] Paper-scale experiments.
 
 Phase 6 smoke outputs are non-reportable. Markov remains smoke-only and must not be reported as
 SASRec/GRU4Rec. If PyTorch is unavailable, SASRec and TemporalGraphEncoder smoke commands must
 record `skipped_pytorch_unavailable`.
+
+Phase 8 launch artifacts are not results. They prepare dataset checks, protocol manifests, job
+queues, resource budgets, failure policies, and go/no-go validation for a later explicit launch.

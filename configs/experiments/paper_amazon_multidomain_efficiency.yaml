@@ -1,0 +1,41 @@
+manifest:
+  dataset: amazon_multidomain_full
+  split_strategy: leave_one_out
+  candidate_strategy: fixed_shared_candidates
+  methods: [popularity, bm25, mf, sasrec, temporal_graph_encoder, time_graph_evidence, time_graph_evidence_dynamic]
+  seeds: [0, 1, 2, 3, 4]
+  metrics: [latency_ms, throughput, gpu_memory_mb, disk_gb, Recall@10, NDCG@10]
+  output_dir: outputs/paper_runs/protocol_v1/paper_amazon_multidomain_efficiency
+  run_mode: paper
+  reportable: true
+protocol_version: protocol_v1
+dataset:
+  name: amazon_multidomain_full
+  config_path: configs/datasets/amazon_multidomain_full.yaml
+  split_strategy: leave_one_out
+  candidate_protocol: fixed_shared_candidates
+split_artifact: outputs/artifacts/protocol_v1/amazon_multidomain_full/splits.jsonl
+candidate_artifact: outputs/artifacts/protocol_v1/amazon_multidomain_full/candidates.jsonl
+methods: [popularity, bm25, mf, sasrec, temporal_graph_encoder, time_graph_evidence, time_graph_evidence_dynamic]
+evaluation:
+  metrics: [latency_ms, throughput, gpu_memory_mb, disk_gb, Recall@10, NDCG@10]
+  segment_metrics: [method, domain]
+  candidate_protocol: fixed_shared_candidates
+experiment:
+  run_mode: paper
+  reportable: true
+  seeds: [0, 1, 2, 3, 4]
+  output_dir: outputs/paper_runs/protocol_v1/paper_amazon_multidomain_efficiency
+resume_policy: resume_from_checkpoints_and_predictions
+failure_policy: continue_and_audit
+resource_budget:
+  estimated_runtime_hours: 30
+  estimated_gpu_hours: 18
+  estimated_disk_gb: 20
+api_calls_allowed: false
+lora_training_enabled: false
+training:
+  enable_lora_training: false
+llm:
+  provider: none
+  allow_api_calls: false

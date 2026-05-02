@@ -8,12 +8,13 @@ This repository is intended to become a top-tier recommendation-systems research
 
 ## Current phase
 
-Current status: **Phase 7, protocol freeze and NON_REPORTABLE pilot matrix**.
+Current status: **Phase 8, paper-scale launch preparation without execution**.
 The codebase now supports pre-experiment infrastructure, a non-reportable `TimeGraphEvidenceRec`
 skeleton, a real SASRec-style baseline when PyTorch is installed, and a lightweight trainable
-`TemporalGraphEncoder` option, plus frozen protocol docs, resource estimates, failure audits, and
-pilot table export. No paper-scale experiments have been run, no real API calls should be made yet,
-and no paper conclusions are claimed.
+`TemporalGraphEncoder` option, plus frozen protocol docs, resource estimates, failure audits,
+pilot table export, and a paper launch package generator. No paper-scale experiments have been run,
+no real API calls should be made yet, no LoRA training should run, and no paper conclusions are
+claimed.
 
 ## Core hypothesis
 
@@ -211,6 +212,25 @@ Pilot tables include a `NON_REPORTABLE` marker. Pilot data is sampled/fixture-st
 validation and must not be used as paper-scale evidence.
 
 These commands are pre-experiment checks. They do not establish paper results.
+
+## Phase 8 paper launch preparation
+
+Phase 8 prepares the launch package only. It checks dataset readiness, freezes protocol metadata,
+creates planned job queues, estimates resources, and writes table shells without numbers:
+
+```bash
+python scripts/check_dataset_readiness.py --config configs/datasets/movielens_full.yaml
+python scripts/check_dataset_readiness.py --config configs/datasets/amazon_multidomain_full.yaml
+python scripts/freeze_protocol.py --version protocol_v1 --dry-run
+python scripts/create_launch_manifest.py --output outputs/launch/paper_v1/launch_manifest.json
+python scripts/create_job_queue.py --manifest outputs/launch/paper_v1/launch_manifest.json --output-dir outputs/launch/paper_v1
+python scripts/estimate_paper_resources.py --manifest outputs/launch/paper_v1/launch_manifest.json
+python scripts/plan_paper_tables.py --manifest outputs/launch/paper_v1/launch_manifest.json --output outputs/launch/paper_v1/table_plan.json
+python scripts/check_launch_readiness.py --manifest outputs/launch/paper_v1/launch_manifest.json
+```
+
+Every Phase 8 launch artifact records `NO_EXPERIMENTS_EXECUTED_IN_PHASE_8 = true`. Job rows remain
+`status=planned`; they are not executed until an explicit later confirmation.
 
 ## Phase 1 smoke run
 

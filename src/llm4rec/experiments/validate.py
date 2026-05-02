@@ -5,12 +5,34 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from llm4rec.data.readiness import NO_EXECUTION_FLAG
 from llm4rec.experiments.config import load_yaml_config, resolve_path
 from llm4rec.experiments.manifest import REQUIRED_EXPERIMENT_FIELDS, manifest_from_config
+from llm4rec.experiments.protocol_version import DEFAULT_PAPER_CONFIGS
 
 
 class ExperimentValidationError(ValueError):
     """Raised when an experiment config is not ready."""
+
+
+PAPER_ALLOWED_METHODS = {
+    "bm25",
+    "full",
+    "graph_only",
+    "mf",
+    "popularity",
+    "sasrec",
+    "temporal_graph_encoder",
+    "text_only",
+    "time_graph_evidence",
+    "time_graph_evidence_dynamic",
+    "w_o_dynamic_encoder",
+    "w_o_semantic_similarity",
+    "w_o_temporal_graph",
+    "w_o_time_gap_tags",
+    "w_o_time_window_edges",
+    "w_o_transition_edges",
+}
 
 
 def validate_experiment_config(config_path: str | Path) -> dict[str, Any]:
@@ -61,13 +83,15 @@ def validate_experiment_config(config_path: str | Path) -> dict[str, Any]:
         errors.append("reportable configs cannot use mock LLM")
     if manifest.reportable and bool(llm.get("allow_api_calls", False)):
         errors.append("reportable configs cannot enable API calls by default")
+    if data.get("run_mode") == "paper" or experiment.get("run_mode") == "paper":
+        _validate_paper_config(config, data, methods, errors)
     if errors:
         raise ExperimentValidationError("; ".join(errors))
     return {"config_path": str(resolve_path(config_path)), "manifest": data, "status": "pass"}
 
 
 def validate_project(root: str | Path = ".") -> dict[str, Any]:
-    """Validate required Phase 4 project files and safety defaults."""
+    """Validate required project files, safety defaults, and launch package when present."""
 
     repo = Path(root).resolve()
     required = [
@@ -136,6 +160,39 @@ def validate_project(root: str | Path = ".") -> dict[str, Any]:
         "src/llm4rec/rankers/temporal_graph.py",
         "src/llm4rec/encoders/base.py",
         "src/llm4rec/encoders/temporal_graph_encoder.py",
+        "configs/datasets/movielens_full.yaml",
+        "configs/datasets/amazon_multidomain_full.yaml",
+        "configs/datasets/amazon_multidomain_sampled.yaml",
+        "configs/experiments/paper_movielens_accuracy.yaml",
+        "configs/experiments/paper_movielens_ablation.yaml",
+        "configs/experiments/paper_movielens_long_tail.yaml",
+        "configs/experiments/paper_movielens_efficiency.yaml",
+        "configs/experiments/paper_amazon_multidomain_accuracy.yaml",
+        "configs/experiments/paper_amazon_multidomain_ablation.yaml",
+        "configs/experiments/paper_amazon_multidomain_cold_start.yaml",
+        "configs/experiments/paper_amazon_multidomain_efficiency.yaml",
+        "docs/dataset_readiness.md",
+        "docs/protocol_versions.md",
+        "docs/paper_table_plan.md",
+        "scripts/check_dataset_readiness.py",
+        "scripts/freeze_data_artifacts.py",
+        "scripts/freeze_protocol.py",
+        "scripts/create_launch_manifest.py",
+        "scripts/create_job_queue.py",
+        "scripts/estimate_paper_resources.py",
+        "scripts/plan_paper_tables.py",
+        "scripts/lock_results.py",
+        "scripts/check_launch_readiness.py",
+        "src/llm4rec/data/readiness.py",
+        "src/llm4rec/data/artifact_freeze.py",
+        "src/llm4rec/experiments/protocol_version.py",
+        "src/llm4rec/experiments/artifact_registry.py",
+        "src/llm4rec/experiments/launch_manifest.py",
+        "src/llm4rec/experiments/job_queue.py",
+        "src/llm4rec/experiments/resume.py",
+        "src/llm4rec/experiments/resource_budget.py",
+        "src/llm4rec/evaluation/result_lock.py",
+        "src/llm4rec/evaluation/table_plan.py",
     ]
     missing = [path for path in required if not (repo / path).exists()]
     llm_config = load_yaml_config(repo / "configs/llm/openai_compatible.yaml")
@@ -147,15 +204,65 @@ def validate_project(root: str | Path = ".") -> dict[str, Any]:
         errors.append("outputs/ must be gitignored")
     pilot_output_checks = _pilot_output_checks(repo)
     errors.extend(pilot_output_checks["errors"])
+    if (repo / "outputs/launch/paper_v1").exists():
+        for config_path in DEFAULT_PAPER_CONFIGS:
+            try:
+                validate_experiment_config(repo / config_path)
+            except Exception as exc:
+                errors.append(f"{config_path}: {exc}")
+    launch_checks = _launch_output_checks(repo)
+    errors.extend(launch_checks["errors"])
     if errors:
         raise ExperimentValidationError("; ".join(errors))
     optional_dependencies = {"torch": _dependency_available("torch")}
     return {
         "checked_files": required,
+        "launch_output_checks": launch_checks,
         "optional_dependencies": optional_dependencies,
         "pilot_output_checks": pilot_output_checks,
         "status": "pass",
     }
+
+
+def _validate_paper_config(
+    config: dict[str, Any],
+    manifest_data: dict[str, Any],
+    methods: list[Any],
+    errors: list[str],
+) -> None:
+    if not bool(manifest_data.get("reportable", False)):
+        errors.append("paper configs must set reportable=true")
+    if config.get("protocol_version") in (None, ""):
+        errors.append("paper configs must declare protocol_version")
+    if bool(config.get("api_calls_allowed", False)):
+        errors.append("paper configs cannot allow API calls")
+    if bool(config.get("lora_training_enabled", False)):
+        errors.append("paper configs cannot enable LoRA training")
+    if bool(config.get("training", {}).get("enable_lora_training", False)):
+        errors.append("paper configs cannot enable LoRA training")
+    if bool(config.get("llm", {}).get("allow_api_calls", False)):
+        errors.append("paper configs cannot allow API calls")
+    if config.get("split_artifact") in (None, ""):
+        errors.append("paper configs must declare split_artifact")
+    if config.get("candidate_artifact") in (None, ""):
+        errors.append("paper configs must declare candidate_artifact")
+    forbidden_paths = [
+        str(manifest_data.get("output_dir", "")),
+        str(config.get("split_artifact", "")),
+        str(config.get("candidate_artifact", "")),
+    ]
+    if any("phase7" in value or "pilot" in value for value in forbidden_paths):
+        errors.append("paper configs cannot use pilot output paths")
+    for method in methods:
+        text = str(method.get("name", method)) if isinstance(method, dict) else str(method)
+        lowered = text.lower()
+        if lowered not in PAPER_ALLOWED_METHODS:
+            errors.append(f"unknown or unapproved paper method: {text}")
+        if "mock" in lowered or "stub" in lowered or "skeleton" in lowered or "markov" in lowered:
+            errors.append("paper configs cannot use mock/stub/skeleton/Markov methods")
+    readiness_path = _readiness_path_for_dataset(str(manifest_data.get("dataset", "")))
+    if not readiness_path.is_file():
+        errors.append(f"dataset readiness status missing: {readiness_path}")
 
 
 def _dependency_available(module_name: str) -> bool:
@@ -197,3 +304,61 @@ def _pilot_output_checks(repo: Path) -> dict[str, Any]:
         if not checks["ablation_non_reportable_table"]:
             errors.append("phase7 ablation table missing NON_REPORTABLE marker")
     return {"checks": checks, "errors": errors}
+
+
+def _launch_output_checks(repo: Path) -> dict[str, Any]:
+    launch = repo / "outputs/launch/paper_v1"
+    checks = {
+        "go_no_go_checklist": False,
+        "job_queue": False,
+        "launch_manifest": False,
+        "launch_readiness": False,
+        "no_jobs_executed": False,
+        "protocol_manifest": False,
+        "resource_budget": False,
+        "table_plan": False,
+    }
+    errors: list[str] = []
+    if not launch.exists():
+        return {"checks": checks, "errors": errors}
+    required = {
+        "go_no_go_checklist": launch / "go_no_go_checklist.md",
+        "job_queue": launch / "jobs.jsonl",
+        "launch_manifest": launch / "launch_manifest.json",
+        "launch_readiness": launch / "validation" / "launch_readiness.json",
+        "protocol_manifest": launch / "protocol" / "protocol_manifest.json",
+        "resource_budget": launch / "resource_budget.json",
+        "table_plan": launch / "table_plan.json",
+    }
+    for key, path in required.items():
+        checks[key] = path.is_file()
+        if not checks[key]:
+            errors.append(f"missing Phase 8 launch artifact: {path}")
+    jobs_path = launch / "jobs.jsonl"
+    if jobs_path.is_file():
+        import json
+
+        statuses = []
+        for line in jobs_path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            statuses.append(row.get("status"))
+            if row.get("allow_api_calls") is not False:
+                errors.append("Phase 8 job queue contains an API-enabled job")
+                break
+            if row.get(NO_EXECUTION_FLAG) is not True:
+                errors.append("Phase 8 job queue missing no-execution flag")
+                break
+        checks["no_jobs_executed"] = all(status == "planned" for status in statuses) if statuses else False
+        if not checks["no_jobs_executed"]:
+            errors.append("Phase 8 job queue contains executed/non-planned jobs")
+    return {"checks": checks, "errors": errors}
+
+
+def _readiness_path_for_dataset(dataset_name: str) -> Path:
+    if dataset_name == "movielens_full":
+        return resolve_path("outputs/launch/paper_v1/dataset_readiness/movielens_full_readiness.json")
+    if dataset_name == "amazon_multidomain_full":
+        return resolve_path("outputs/launch/paper_v1/dataset_readiness/amazon_multidomain_full_readiness.json")
+    return resolve_path(f"outputs/launch/paper_v1/dataset_readiness/{dataset_name}_readiness.json")

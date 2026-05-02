@@ -1,7 +1,7 @@
 # Frozen Experiment Protocol
 
-Phase 7 freezes the pre-experiment protocol. This document defines the comparison contract before
-paper-scale runs are launched.
+Phase 7 froze the pre-experiment comparison contract. Phase 8 records the launch metadata under
+`protocol_v1` before paper-scale runs are launched.
 
 ## Datasets
 
@@ -42,8 +42,9 @@ and metrics.
 ## Reportability
 
 Smoke runs are `reportable=false`. Pilot runs are `pilot_reportable=false`. Paper-scale configs may
-be `reportable=true` only after protocol freeze and readiness checks. Mock methods, stub methods,
-and diagnostic-only artifacts are never reportable.
+be `reportable=true` only after protocol freeze and readiness checks. Phase 8 paper configs are
+launchable plans, not completed results. Mock methods, stub methods, Markov smoke baselines, and
+diagnostic-only artifacts are never reportable.
 
 ## Leakage Rules
 

@@ -75,3 +75,33 @@ llm:
     )
     with pytest.raises(ExperimentValidationError, match="API"):
         validate_experiment_config(config)
+
+
+def test_paper_api_enabled_is_rejected(tmp_path):
+    config = tmp_path / "bad_paper.yaml"
+    config.write_text(
+        """
+manifest:
+  dataset: movielens_full
+  split_strategy: leave_one_out
+  candidate_strategy: fixed_shared_candidates
+  methods: [popularity]
+  seeds: [0, 1, 2, 3, 4]
+  metrics: [Recall@10]
+  output_dir: outputs/paper_runs/protocol_v1/bad
+  run_mode: paper
+  reportable: true
+protocol_version: protocol_v1
+split_artifact: outputs/artifacts/protocol_v1/movielens_full/splits.jsonl
+candidate_artifact: outputs/artifacts/protocol_v1/movielens_full/candidates.jsonl
+api_calls_allowed: true
+lora_training_enabled: false
+training:
+  enable_lora_training: false
+llm:
+  allow_api_calls: false
+""",
+        encoding="utf-8",
+    )
+    with pytest.raises(ExperimentValidationError, match="API"):
+        validate_experiment_config(config)
