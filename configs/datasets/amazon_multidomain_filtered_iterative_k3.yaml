@@ -29,3 +29,15 @@ filtering:
 readiness:
   allow_download: false
   output_path: outputs/launch/paper_v1/dataset_readiness/amazon_multidomain_filtered_iterative_k3_readiness.json
+paper_artifacts:
+  protocol_version: protocol_v1
+  output_dir: outputs/artifacts/protocol_v1/amazon_multidomain_filtered_iterative_k3
+  split_artifact: outputs/artifacts/protocol_v1/amazon_multidomain_filtered_iterative_k3/splits.jsonl
+  candidate_artifact: outputs/artifacts/protocol_v1/amazon_multidomain_filtered_iterative_k3/candidates.jsonl
+  candidate_pool_artifact: outputs/artifacts/protocol_v1/amazon_multidomain_filtered_iterative_k3/candidate_pool.json
+  split_protocol: leave_one_out
+  candidate_protocol: fixed_sampled
+  candidate_storage: shared_pool
+  candidate_size: 1000
+  candidate_scope: global
+  seed: 0

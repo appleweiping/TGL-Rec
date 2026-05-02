@@ -14,3 +14,13 @@ dataset:
 readiness:
   allow_download: false
   output_path: outputs/launch/paper_v1/dataset_readiness/movielens_full_readiness.json
+paper_artifacts:
+  protocol_version: protocol_v1
+  output_dir: outputs/artifacts/protocol_v1/movielens_full
+  split_artifact: outputs/artifacts/protocol_v1/movielens_full/splits.jsonl
+  candidate_artifact: outputs/artifacts/protocol_v1/movielens_full/candidates.jsonl
+  split_protocol: leave_one_out
+  candidate_protocol: full_catalog
+  candidate_size: full
+  candidate_scope: full_catalog
+  seed: 0

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -47,6 +48,7 @@ def check_launch_readiness(manifest_path: str | Path) -> dict[str, object]:
     ]:
         if not (launch_dir / rel).is_file():
             errors.append(f"missing launch artifact: {rel}")
+    errors.extend(_materialized_artifact_errors(launch_dir))
 
     readiness_reports = sorted((launch_dir / "dataset_readiness").glob("*_readiness.json"))
     manifest_datasets = {str(dataset) for dataset in manifest.get("datasets", [])}
@@ -116,6 +118,51 @@ def check_launch_readiness(manifest_path: str | Path) -> dict[str, object]:
         },
     )
     return report
+
+
+def _materialized_artifact_errors(launch_dir: Path) -> list[str]:
+    errors: list[str] = []
+    for rel, key in [
+        ("protocol/frozen_split_manifest.json", "split_artifacts"),
+        ("protocol/frozen_candidate_manifest.json", "candidate_artifacts"),
+    ]:
+        path = launch_dir / rel
+        if not path.is_file():
+            continue
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not bool(data.get("materialized")):
+            continue
+        entries = data.get(key) or data.get("planned_" + key) or []
+        for entry in entries:
+            artifact_path = resolve_path(str(entry.get("path", "")))
+            if not artifact_path.is_file():
+                errors.append(f"materialized artifact missing: {artifact_path}")
+                continue
+            expected_sha = entry.get("sha256")
+            if expected_sha and _sha256(artifact_path) != expected_sha:
+                errors.append(f"materialized artifact checksum mismatch: {artifact_path}")
+            expected_rows = entry.get("rows")
+            if expected_rows is not None and int(expected_rows) <= 0:
+                errors.append(f"materialized artifact has no rows: {artifact_path}")
+            if entry.get("artifact_type") == "candidate":
+                if entry.get("target_included_rows") != entry.get("rows"):
+                    errors.append(f"candidate artifact has rows without target item: {artifact_path}")
+                pool = entry.get("candidate_pool_artifact")
+                if isinstance(pool, dict) and pool.get("path"):
+                    pool_path = resolve_path(str(pool.get("path")))
+                    if not pool_path.is_file():
+                        errors.append(f"candidate pool artifact missing: {pool_path}")
+                    elif pool.get("sha256") and _sha256(pool_path) != pool.get("sha256"):
+                        errors.append(f"candidate pool checksum mismatch: {pool_path}")
+    return errors
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 if __name__ == "__main__":

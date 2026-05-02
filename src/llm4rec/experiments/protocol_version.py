@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -47,6 +48,7 @@ def freeze_protocol(
 
     output = ensure_dir(resolve_path(output_dir))
     manifest_path = output / "protocol_manifest.json"
+    preserved = _preserve_existing_materialized_protocol(output, version, dry_run=dry_run)
     if manifest_path.exists() and not dry_run and not force_new_version:
         raise ProtocolFreezeError(
             f"Refusing to overwrite existing protocol manifest without --force-new-version: {manifest_path}"
@@ -80,6 +82,8 @@ def freeze_protocol(
         "split_protocol": "leave_one_out",
         "status": "DRY_RUN_ONLY" if dry_run else "FROZEN_METADATA",
     }
+    if preserved is not None:
+        return {**manifest, "preserved_existing_materialization": True}
     split_manifest = {
         NO_EXECUTION_FLAG: True,
         "materialized": bool(materialize) and not dry_run,
@@ -98,6 +102,37 @@ def freeze_protocol(
     write_json(output / "frozen_split_manifest.json", split_manifest)
     write_json(output / "frozen_candidate_manifest.json", candidate_manifest)
     return manifest
+
+
+def _preserve_existing_materialized_protocol(
+    output: Path,
+    version: str,
+    *,
+    dry_run: bool,
+) -> dict[str, Any] | None:
+    """Avoid downgrading materialized Phase 9 manifests during dry-run checks."""
+
+    if not dry_run:
+        return None
+    manifest_path = output / "protocol_manifest.json"
+    split_path = output / "frozen_split_manifest.json"
+    candidate_path = output / "frozen_candidate_manifest.json"
+    if not (manifest_path.is_file() and split_path.is_file() and candidate_path.is_file()):
+        return None
+    try:
+        current = json.loads(manifest_path.read_text(encoding="utf-8"))
+        split = json.loads(split_path.read_text(encoding="utf-8"))
+        candidate = json.loads(candidate_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    if (
+        str(current.get("protocol_version")) == str(version)
+        and bool(current.get("materialized"))
+        and bool(split.get("materialized"))
+        and bool(candidate.get("materialized"))
+    ):
+        return current
+    return None
 
 
 def _experiment_entry(path: str | Path) -> dict[str, Any]:
