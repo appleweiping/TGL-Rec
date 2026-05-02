@@ -1,6 +1,7 @@
 dataset:
   name: amazon_multidomain_sampled
   adapter: generic_jsonl
+  source_config: configs/datasets/amazon_reviews_2023.yaml
   split_strategy: leave_one_out
   candidate_protocol: sampled_fixed
   seed: 0
@@ -12,9 +13,15 @@ dataset:
     max_users: 1000
     max_items: 5000
     max_interactions: 50000
+    max_interactions_per_domain: 1000
+    max_items_per_domain: 1000
+  interactions_path: data/processed/amazon_multidomain_sampled/interactions.jsonl
+  items_path: data/processed/amazon_multidomain_sampled/items.jsonl
+  conversion_report_path: data/processed/amazon_multidomain_sampled/conversion_report.json
   paths:
-    interactions: data/raw/amazon_multidomain/interactions.jsonl
-    items: data/raw/amazon_multidomain/items.jsonl
+    interactions: data/processed/amazon_multidomain_sampled/interactions.jsonl
+    items: data/processed/amazon_multidomain_sampled/items.jsonl
+    conversion_report: data/processed/amazon_multidomain_sampled/conversion_report.json
 readiness:
   allow_download: false
   output_path: outputs/launch/paper_v1/dataset_readiness/amazon_multidomain_sampled_readiness.json

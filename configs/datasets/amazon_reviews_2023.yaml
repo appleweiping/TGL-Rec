@@ -1,0 +1,15 @@
+dataset:
+  name: amazon_reviews_2023
+  adapter: amazon_reviews_2023
+  raw_domains:
+    Beauty: data/raw/amazon_reviews_2023_beauty
+    Digital_Music: data/raw/amazon_reviews_2023_digital_music
+    Handmade: data/raw/amazon_reviews_2023_handmade
+    Health: data/raw/amazon_reviews_2023_health
+    Video_Games: data/raw/amazon_reviews_2023_video_games
+conversion:
+  output_full_dir: data/raw/amazon_multidomain
+  output_sampled_dir: data/processed/amazon_multidomain_sampled
+  allow_full_materialization_without_confirmation: false
+readiness:
+  schema_report_path: outputs/launch/paper_v1/dataset_readiness/amazon_reviews_2023_schema_report.json

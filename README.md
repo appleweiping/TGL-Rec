@@ -232,6 +232,17 @@ python scripts/check_launch_readiness.py --manifest outputs/launch/paper_v1/laun
 Every Phase 8 launch artifact records `NO_EXPERIMENTS_EXECUTED_IN_PHASE_8 = true`. Job rows remain
 `status=planned`; they are not executed until an explicit later confirmation.
 
+Amazon Reviews 2023 multidomain ingestion is a preparation step only:
+
+```bash
+python scripts/check_amazon_schema.py --config configs/datasets/amazon_reviews_2023.yaml
+python scripts/prepare_amazon_multidomain.py --config configs/datasets/amazon_multidomain_sampled.yaml --dry-run
+python scripts/prepare_amazon_multidomain.py --config configs/datasets/amazon_multidomain_sampled.yaml --materialize
+```
+
+Full Amazon conversion writes to `data/raw/amazon_multidomain/` and should be launched only after
+explicit confirmation if the raw files are large.
+
 ## Phase 1 smoke run
 
 Phase 1 adds a separate `llm4rec` experiment skeleton next to the legacy `tglrec` package. The

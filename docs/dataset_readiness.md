@@ -22,3 +22,14 @@ The checker validates users, items, interactions, domains, timestamp range, spar
 timestamps, duplicate interactions, users with too few events, and item metadata text coverage.
 
 No data is downloaded automatically. Provide paths in the dataset config and rerun readiness.
+
+For Amazon Reviews 2023 multidomain setup, first inspect and convert local raw domains with:
+
+```bash
+python scripts/check_amazon_schema.py --config configs/datasets/amazon_reviews_2023.yaml
+python scripts/prepare_amazon_multidomain.py --config configs/datasets/amazon_multidomain_sampled.yaml --materialize
+```
+
+Full Amazon readiness uses `data/raw/amazon_multidomain/interactions.jsonl` and
+`data/raw/amazon_multidomain/items.jsonl`. Sampled conversion uses
+`data/processed/amazon_multidomain_sampled/`.

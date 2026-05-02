@@ -1,6 +1,7 @@
 dataset:
   name: amazon_multidomain_full
   adapter: generic_jsonl
+  source_config: configs/datasets/amazon_reviews_2023.yaml
   split_strategy: leave_one_out
   candidate_protocol: fixed_shared_candidates
   seed: 0
@@ -8,9 +9,21 @@ dataset:
   output_dir: outputs/processed/amazon_multidomain_full
   required_interaction_columns: [user_id, item_id, timestamp, rating_or_interaction, domain]
   required_item_columns: [item_id, text_field, domain]
+  interactions_path: data/raw/amazon_multidomain/interactions.jsonl
+  items_path: data/raw/amazon_multidomain/items.jsonl
+  conversion_report_path: data/raw/amazon_multidomain/conversion_report.json
   paths:
     interactions: data/raw/amazon_multidomain/interactions.jsonl
     items: data/raw/amazon_multidomain/items.jsonl
+    conversion_report: data/raw/amazon_multidomain/conversion_report.json
+    conversion_preflight: data/raw/amazon_multidomain/conversion_preflight.json
+    domain_counts: data/raw/amazon_multidomain/domain_counts.json
+    schema_report: data/raw/amazon_multidomain/schema_report.json
+    progress_log: data/raw/amazon_multidomain/conversion_progress.log
+conversion:
+  overwrite_existing: false
+  resume: true
+  drop_missing_text_items: false
 readiness:
   allow_download: false
   output_path: outputs/launch/paper_v1/dataset_readiness/amazon_multidomain_full_readiness.json
