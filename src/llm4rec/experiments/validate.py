@@ -164,6 +164,10 @@ def validate_project(root: str | Path = ".") -> dict[str, Any]:
         "configs/datasets/amazon_reviews_2023.yaml",
         "configs/datasets/amazon_multidomain_full.yaml",
         "configs/datasets/amazon_multidomain_sampled.yaml",
+        "configs/datasets/amazon_multidomain_filtered_k3.yaml",
+        "configs/datasets/amazon_multidomain_filtered_k5.yaml",
+        "configs/datasets/amazon_multidomain_filtered_iterative_k3.yaml",
+        "configs/datasets/amazon_multidomain_filtered_iterative_k5.yaml",
         "configs/experiments/paper_movielens_accuracy.yaml",
         "configs/experiments/paper_movielens_ablation.yaml",
         "configs/experiments/paper_movielens_long_tail.yaml",
@@ -174,12 +178,14 @@ def validate_project(root: str | Path = ".") -> dict[str, Any]:
         "configs/experiments/paper_amazon_multidomain_efficiency.yaml",
         "docs/dataset_readiness.md",
         "docs/amazon_data_setup.md",
+        "docs/amazon_filtering_policy.md",
         "docs/protocol_versions.md",
         "docs/paper_table_plan.md",
         "scripts/check_dataset_readiness.py",
         "scripts/check_amazon_schema.py",
         "scripts/freeze_data_artifacts.py",
         "scripts/prepare_amazon_multidomain.py",
+        "scripts/filter_amazon_multidomain.py",
         "scripts/freeze_protocol.py",
         "scripts/create_launch_manifest.py",
         "scripts/create_job_queue.py",
@@ -191,6 +197,9 @@ def validate_project(root: str | Path = ".") -> dict[str, Any]:
         "src/llm4rec/data/artifact_freeze.py",
         "src/llm4rec/data/amazon_reviews_2023.py",
         "src/llm4rec/data/amazon_converter.py",
+        "src/llm4rec/data/amazon_filtering.py",
+        "src/llm4rec/data/filtering.py",
+        "src/llm4rec/data/kcore.py",
         "src/llm4rec/data/schema_validation.py",
         "src/llm4rec/experiments/protocol_version.py",
         "src/llm4rec/experiments/artifact_registry.py",
@@ -368,4 +377,8 @@ def _readiness_path_for_dataset(dataset_name: str) -> Path:
         return resolve_path("outputs/launch/paper_v1/dataset_readiness/movielens_full_readiness.json")
     if dataset_name == "amazon_multidomain_full":
         return resolve_path("outputs/launch/paper_v1/dataset_readiness/amazon_multidomain_full_readiness.json")
+    if dataset_name == "amazon_multidomain_filtered_iterative_k3":
+        return resolve_path(
+            "outputs/launch/paper_v1/dataset_readiness/amazon_multidomain_filtered_iterative_k3_readiness.json"
+        )
     return resolve_path(f"outputs/launch/paper_v1/dataset_readiness/{dataset_name}_readiness.json")

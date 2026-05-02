@@ -80,6 +80,7 @@ def _validate_tables(
     items: list[dict[str, Any]],
 ) -> dict[str, Any]:
     min_user_interactions = int(dataset.get("min_user_interactions", 3))
+    min_item_interactions = int(dataset.get("min_item_interactions", 1))
     interaction_fields = set().union(*(row.keys() for row in interactions)) if interactions else set()
     item_fields = set().union(*(row.keys() for row in items)) if items else set()
     required_interactions = _required_list(
@@ -103,12 +104,27 @@ def _validate_tables(
             missing_fields.append(field)
 
     user_counts = Counter(str(row.get("user_id")) for row in interactions if row.get("user_id") not in (None, ""))
-    item_ids = {str(row.get("item_id")) for row in interactions if row.get("item_id") not in (None, "")}
-    metadata_item_ids = {str(row.get("item_id")) for row in items if row.get("item_id") not in (None, "")}
+    use_domain_keys = "domain" in interaction_fields or "domain" in item_fields
+    item_ids = {
+        _domain_item_key(row) if use_domain_keys else str(row.get("item_id"))
+        for row in interactions
+        if row.get("item_id") not in (None, "")
+    }
+    metadata_item_ids = {
+        _domain_item_key(row) if use_domain_keys else str(row.get("item_id"))
+        for row in items
+        if row.get("item_id") not in (None, "")
+    }
+    item_counts = Counter(
+        _domain_item_key(row) if use_domain_keys else str(row.get("item_id"))
+        for row in interactions
+        if row.get("item_id") not in (None, "")
+    )
     timestamps = [_to_float(row.get("timestamp")) for row in interactions if _to_float(row.get("timestamp")) is not None]
     missing_timestamps = sum(1 for row in interactions if row.get("timestamp") in (None, ""))
     duplicate_count = _duplicate_interactions(interactions)
     users_too_few = sum(1 for count in user_counts.values() if count < min_user_interactions)
+    items_too_few = sum(1 for count in item_counts.values() if count < min_item_interactions)
     items_without_text = sum(1 for row in items if not _has_item_text(row))
     domains = sorted({str(row.get("domain")) for row in interactions + items if row.get("domain") not in (None, "")})
 
@@ -125,6 +141,8 @@ def _validate_tables(
         issues.append("duplicate interactions detected")
     if users_too_few:
         issues.append("users with too few interactions detected")
+    if items_too_few:
+        issues.append("items with too few interactions detected")
     if item_ids - metadata_item_ids:
         issues.append("some interacted items have no item metadata")
     if items_without_text:
@@ -149,6 +167,8 @@ def _validate_tables(
         "domains": domains,
         "duplicate_interactions": duplicate_count,
         "items_without_text_fields": items_without_text,
+        "items_with_too_few_interactions": items_too_few,
+        "leave_one_out_feasible": users_too_few == 0 and missing_timestamps == 0 and bool(interactions),
         "missing_fields": missing_fields,
         "missing_timestamps": missing_timestamps,
         "paths": dict(dataset.get("paths", {})),
@@ -183,15 +203,21 @@ def _missing_report(name: str, dataset: dict[str, Any], message: str) -> dict[st
 
 
 def _duplicate_interactions(interactions: list[dict[str, Any]]) -> int:
+    use_domain = any("domain" in row for row in interactions)
     counts = Counter(
         (
             str(row.get("user_id")),
             str(row.get("item_id")),
             str(row.get("timestamp")),
+            str(row.get("domain")) if use_domain else "",
         )
         for row in interactions
     )
     return sum(count - 1 for count in counts.values() if count > 1)
+
+
+def _domain_item_key(row: dict[str, Any]) -> tuple[str, str]:
+    return (str(row.get("domain") or ""), str(row.get("item_id")))
 
 
 def _has_item_text(row: dict[str, Any]) -> bool:

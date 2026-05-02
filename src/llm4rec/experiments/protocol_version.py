@@ -25,7 +25,7 @@ DEFAULT_PAPER_CONFIGS = [
 
 DEFAULT_DATASET_CONFIGS = [
     "configs/datasets/movielens_full.yaml",
-    "configs/datasets/amazon_multidomain_full.yaml",
+    "configs/datasets/amazon_multidomain_filtered_iterative_k3.yaml",
 ]
 
 

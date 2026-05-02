@@ -7,6 +7,7 @@ The readiness command is metadata-only:
 ```bash
 python scripts/check_dataset_readiness.py --config configs/datasets/movielens_full.yaml
 python scripts/check_dataset_readiness.py --config configs/datasets/amazon_multidomain_full.yaml
+python scripts/check_dataset_readiness.py --config configs/datasets/amazon_multidomain_filtered_iterative_k3.yaml
 ```
 
 It writes JSON under `outputs/launch/paper_v1/dataset_readiness/` and always records
@@ -33,3 +34,8 @@ python scripts/prepare_amazon_multidomain.py --config configs/datasets/amazon_mu
 Full Amazon readiness uses `data/raw/amazon_multidomain/interactions.jsonl` and
 `data/raw/amazon_multidomain/items.jsonl`. Sampled conversion uses
 `data/processed/amazon_multidomain_sampled/`.
+
+Phase 8D preserves full converted Amazon as raw conversion data and uses a separate paper-ready
+filtered dataset under `data/processed/amazon_multidomain_filtered/`. The default paper Amazon
+launch configs point to `configs/datasets/amazon_multidomain_filtered_iterative_k3.yaml`, which
+requires iterative user/item k-core filtering with `k=3`.

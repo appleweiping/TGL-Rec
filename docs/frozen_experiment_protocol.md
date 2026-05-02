@@ -9,7 +9,9 @@ Phase 7 froze the pre-experiment comparison contract. Phase 8 records the launch
 - MovieLens-style sampled: pilot only, `pilot_reportable=false`.
 - MovieLens full: paper-scale later.
 - Amazon multi-domain sampled: pilot later.
-- Amazon multi-domain full: paper-scale later.
+- Amazon multi-domain full: preserved raw converted conversion artifact.
+- Amazon multi-domain iterative k-core `k=3`: default paper-scale Amazon dataset after Phase 8D
+  readiness.
 
 ## Splits
 
@@ -17,6 +19,9 @@ The default split is leave-one-out. Temporal split remains optional and must be 
 Timestamp ties are resolved by timestamp and item id for deterministic ordering. User history must
 exclude the target item and any event at or after the prediction timestamp. Split artifacts are
 saved and reused across methods.
+
+Amazon paper configs use the filtered iterative k-core `k=3` dataset. Filtering is applied before
+split and candidate construction, and the filtering report is part of the dataset provenance.
 
 ## Candidate Protocol
 

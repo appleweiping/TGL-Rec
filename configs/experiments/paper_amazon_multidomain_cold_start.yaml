@@ -1,5 +1,5 @@
 manifest:
-  dataset: amazon_multidomain_full
+  dataset: amazon_multidomain_filtered_iterative_k3
   split_strategy: leave_one_out
   candidate_strategy: fixed_shared_candidates
   methods: [popularity, bm25, mf, sasrec, temporal_graph_encoder, time_graph_evidence, time_graph_evidence_dynamic]
@@ -10,12 +10,12 @@ manifest:
   reportable: true
 protocol_version: protocol_v1
 dataset:
-  name: amazon_multidomain_full
-  config_path: configs/datasets/amazon_multidomain_full.yaml
+  name: amazon_multidomain_filtered_iterative_k3
+  config_path: configs/datasets/amazon_multidomain_filtered_iterative_k3.yaml
   split_strategy: leave_one_out
   candidate_protocol: fixed_shared_candidates
-split_artifact: outputs/artifacts/protocol_v1/amazon_multidomain_full/splits.jsonl
-candidate_artifact: outputs/artifacts/protocol_v1/amazon_multidomain_full/candidates.jsonl
+split_artifact: outputs/artifacts/protocol_v1/amazon_multidomain_filtered_iterative_k3/splits.jsonl
+candidate_artifact: outputs/artifacts/protocol_v1/amazon_multidomain_filtered_iterative_k3/candidates.jsonl
 methods: [popularity, bm25, mf, sasrec, temporal_graph_encoder, time_graph_evidence, time_graph_evidence_dynamic]
 evaluation:
   metrics: [Recall@10, NDCG@10, MRR@10, novelty, item_coverage]

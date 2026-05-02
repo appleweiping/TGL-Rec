@@ -49,14 +49,24 @@ def check_launch_readiness(manifest_path: str | Path) -> dict[str, object]:
             errors.append(f"missing launch artifact: {rel}")
 
     readiness_reports = sorted((launch_dir / "dataset_readiness").glob("*_readiness.json"))
+    manifest_datasets = {str(dataset) for dataset in manifest.get("datasets", [])}
     readiness = []
+    extra_readiness = []
+    seen_manifest_datasets: set[str] = set()
     for path in readiness_reports:
         data = json.loads(path.read_text(encoding="utf-8"))
-        readiness.append({"dataset": data.get("dataset"), "status": data.get("status"), "blocker": data.get("blocker")})
-        if data.get("status") != "READY":
-            warnings.append(f"dataset {data.get('dataset')} is {data.get('status')}")
+        row = {"dataset": data.get("dataset"), "status": data.get("status"), "blocker": data.get("blocker")}
+        if str(data.get("dataset")) in manifest_datasets:
+            readiness.append(row)
+            seen_manifest_datasets.add(str(data.get("dataset")))
+            if data.get("status") != "READY":
+                warnings.append(f"dataset {data.get('dataset')} is {data.get('status')}")
+        else:
+            extra_readiness.append(row)
     if not readiness_reports:
         errors.append("no dataset readiness reports found")
+    for dataset in sorted(manifest_datasets - seen_manifest_datasets):
+        errors.append(f"dataset readiness report missing for manifest dataset: {dataset}")
 
     jobs = read_jsonl(launch_dir / "jobs.jsonl") if (launch_dir / "jobs.jsonl").is_file() else []
     executed_jobs = [job for job in jobs if job.get("status") != "planned"]
@@ -88,6 +98,7 @@ def check_launch_readiness(manifest_path: str | Path) -> dict[str, object]:
         NO_EXECUTION_FLAG: True,
         "dataset_readiness": readiness,
         "errors": errors,
+        "extra_readiness_reports": extra_readiness,
         "jobs_planned": len(jobs),
         "manifest": str(manifest_file),
         "status": status,
