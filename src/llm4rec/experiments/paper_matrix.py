@@ -1615,11 +1615,9 @@ def _assert_manifest_safety(
     request: PaperMatrixRequest,
 ) -> None:
     if str(manifest.get("protocol_version")) != "protocol_v1":
-        raise ValueError("Phase 9B requires protocol_version=protocol_v1")
-    if request.seed != 0:
-        raise ValueError("Phase 9B is seed=0 only")
+        raise ValueError("paper matrix requires protocol_version=protocol_v1")
     if request.matrix != "main_accuracy":
-        raise ValueError("Phase 9B runner only supports matrix=main_accuracy")
+        raise ValueError("paper matrix runner only supports matrix=main_accuracy")
     if int(manifest.get("api_calls_planned", 0)) != 0:
         raise ValueError("manifest plans API calls")
     if int(manifest.get("lora_training_jobs_planned", 0)) != 0:
@@ -1631,7 +1629,8 @@ def _assert_manifest_safety(
             raise ValueError(f"{dataset} allows API calls")
         if bool(experiment.get("lora_training_enabled", True)):
             raise ValueError(f"{dataset} enables LoRA training")
-        if request.seed not in {int(seed) for seed in experiment.get("seeds", [])}:
+        allowed_seeds = {int(seed) for seed in experiment.get("seeds", [])}
+        if request.seed not in allowed_seeds:
             raise ValueError(f"{dataset} does not include seed={request.seed}")
 
 
