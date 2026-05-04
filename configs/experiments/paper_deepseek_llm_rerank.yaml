@@ -1,0 +1,73 @@
+protocol_version: protocol_v1
+phase: Phase 9D
+llm_config_path: configs/llm/deepseek_v4_flash.yaml
+datasets:
+  - movielens_full
+  - amazon_multidomain_filtered_iterative_k3
+dataset_artifacts:
+  movielens_full:
+    split_artifact: outputs/artifacts/protocol_v1/movielens_full/splits.jsonl
+    candidate_artifact: outputs/artifacts/protocol_v1/movielens_full/candidates.jsonl
+  amazon_multidomain_filtered_iterative_k3:
+    split_artifact: outputs/artifacts/protocol_v1/amazon_multidomain_filtered_iterative_k3/splits.jsonl
+    candidate_artifact: outputs/artifacts/protocol_v1/amazon_multidomain_filtered_iterative_k3/candidates.jsonl
+    candidate_pool_artifact: outputs/artifacts/protocol_v1/amazon_multidomain_filtered_iterative_k3/candidate_pool.json
+selection:
+  top_m_candidates_for_llm: 50
+  upstream_method: time_graph_evidence
+  upstream_run_dir: outputs/paper_runs/protocol_v1/main_accuracy_multiseed/seed_0
+  top_m_selection_policy: upstream_predictions_then_frozen_candidates
+  shared_pool_scoring_note: shared-pool scoring is an efficiency fix, not a protocol change.
+prompt_variants:
+  - history_only
+  - history_with_order
+  - history_with_time_buckets
+  - history_with_transition_evidence
+  - history_with_contrastive_evidence
+  - time_graph_evidence_prompt
+concurrency:
+  max_concurrency: 32
+  adaptive_concurrency: true
+  min_concurrency: 4
+  max_concurrency_hard_cap: 128
+  backoff_initial_seconds: 2
+  backoff_max_seconds: 60
+  jitter: true
+experiment:
+  run_mode: diagnostic_api
+  reportable: true
+  api_calls_allowed: true
+  lora_training_enabled: false
+  stage: pilot
+  dry_run_output_dir: outputs/paper_runs/protocol_v1/deepseek_llm/dry_run
+  pilot_output_dir: outputs/paper_runs/protocol_v1/deepseek_llm/pilot
+  full_output_dir: outputs/paper_runs/protocol_v1/deepseek_llm/full
+  dry_run:
+    max_users_per_dataset: 20
+    max_requests: 240
+  pilot:
+    max_users_per_dataset: 500
+    max_requests: 3000
+  full:
+    max_users_per_dataset: null
+    max_requests: 20000
+  error_budget: 50
+outputs:
+  separate_api_llm_table: true
+  do_not_merge_into_main_accuracy_table: true
+  required_files:
+    - resolved_config.yaml
+    - environment.json
+    - api_requests.jsonl
+    - api_raw_outputs.jsonl
+    - predictions.jsonl
+    - metrics.json
+    - metrics.csv
+    - cost_latency.json
+    - cache_report.json
+    - failure_report.json
+    - grounding_report.csv
+    - hallucination_cases.jsonl
+    - parse_failures.jsonl
+    - table_deepseek_llm.csv
+    - table_deepseek_llm.tex

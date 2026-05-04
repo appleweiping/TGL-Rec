@@ -1,0 +1,20 @@
+llm:
+  provider: deepseek
+  base_url: https://api.deepseek.com
+  model: deepseek-v4-flash
+  api_key_env: DEEPSEEK_API_KEY
+  temperature: 0
+  top_p: 1
+  max_tokens: 256
+  stream: false
+  thinking: disabled
+  timeout: 120
+  max_retries: 8
+  retry_on_status: [429, 500, 502, 503, 504]
+  cache_enabled: true
+  resume: true
+  pricing:
+    input_cache_hit_per_1m: 0.028
+    input_cache_miss_per_1m: 0.14
+    output_per_1m: 0.28
+    source: https://api-docs.deepseek.com/quick_start/pricing

@@ -1,0 +1,10 @@
+model:
+  base_model_path: path/to/local/8b/model
+  model_family: other
+  tokenizer_path: null
+  trust_remote_code: false
+  torch_dtype: auto
+  device_map: auto
+  max_seq_length: 2048
+  use_flash_attention: false
+  gradient_checkpointing: true

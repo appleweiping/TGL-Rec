@@ -30,7 +30,11 @@ dev = [
 models = [
   "torch",
   "sentence-transformers",
-  "lightgbm"
+  "lightgbm",
+  "transformers",
+  "peft",
+  "datasets",
+  "bitsandbytes"
 ]
 
 [project.scripts]

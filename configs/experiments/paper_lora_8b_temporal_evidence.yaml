@@ -1,0 +1,60 @@
+protocol_version: protocol_v1
+phase: Phase 9E
+model:
+  base_model_path: path/to/local/8b/model
+  model_family: other
+  tokenizer_path: null
+  trust_remote_code: false
+  torch_dtype: auto
+  device_map: auto
+  max_seq_length: 2048
+  use_flash_attention: false
+  gradient_checkpointing: true
+training:
+  use_qlora: true
+  load_in_4bit: true
+  load_in_8bit: false
+  bnb_4bit_quant_type: nf4
+  bnb_4bit_compute_dtype: bfloat16
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+  bias: none
+  task_type: CAUSAL_LM
+  per_device_train_batch_size: 1
+  gradient_accumulation_steps: 16
+  learning_rate: 0.0002
+  weight_decay: 0.0
+  warmup_ratio: 0.03
+  num_train_epochs: 1
+  max_steps: null
+  logging_steps: 10
+  save_steps: 200
+  eval_steps: 200
+  save_total_limit: 2
+  bf16: true
+  fp16: false
+  gradient_checkpointing: true
+  max_grad_norm: 1.0
+  seed: 2026
+dataset_artifacts:
+  movielens_full:
+    split_artifact: outputs/artifacts/protocol_v1/movielens_full/splits.jsonl
+    candidate_artifact: outputs/artifacts/protocol_v1/movielens_full/candidates.jsonl
+  amazon_multidomain_filtered_iterative_k3:
+    split_artifact: outputs/artifacts/protocol_v1/amazon_multidomain_filtered_iterative_k3/splits.jsonl
+    candidate_artifact: outputs/artifacts/protocol_v1/amazon_multidomain_filtered_iterative_k3/candidates.jsonl
+sft:
+  variant: temporal_evidence_sft
+  output_root: data/processed/lora_sft/protocol_v1
+  dry_run_output_dir: outputs/paper_runs/protocol_v1/lora_8b/dry_run_sft
+  max_train_examples: 20000
+  valid_ratio: 0.05
+  data_dir: data/processed/lora_sft/protocol_v1/movielens_full/temporal_evidence_sft
+candidate_policy:
+  candidate_size_train: 20
+  include_target: true
+  seed: 2026
+training_run:
+  output_dir: outputs/paper_runs/protocol_v1/lora_8b

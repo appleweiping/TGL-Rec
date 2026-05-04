@@ -1,0 +1,12 @@
+protocol_version: protocol_v1
+phase: Phase 9E
+evaluation_run:
+  output_dir: outputs/paper_runs/protocol_v1/lora_8b/eval
+  adapter_paths:
+    - outputs/paper_runs/protocol_v1/lora_8b/history_only_sft/adapter
+    - outputs/paper_runs/protocol_v1/lora_8b/temporal_evidence_sft/adapter
+  datasets:
+    - movielens_full
+    - amazon_multidomain_filtered_iterative_k3
+  top_m_candidates_for_local_lora: 50
+  do_not_merge_into_main_accuracy_table: true
