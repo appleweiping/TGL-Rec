@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -46,8 +47,9 @@ class LocalLoRAReranker:
             parse_success = True
             invalid = parsed.invalid_item_ids
         except LLMJSONParseError:
-            ranked = list(example.candidate_items)
-            parse_success = False
+            recovered = _recover_item_ids(response.raw_output, example.candidate_items)
+            ranked = _complete(recovered, example.candidate_items)
+            parse_success = bool(recovered)
             invalid = []
         return {
             "metadata": {"parse_success": parse_success, "variant": self.variant},
@@ -84,4 +86,17 @@ def _complete(items: list[str], candidates: list[str]) -> list[str]:
         if item not in seen:
             output.append(item)
             seen.add(item)
+    return output
+
+
+def _recover_item_ids(raw_output: str, candidates: list[str]) -> list[str]:
+    candidate_set = set(candidates)
+    output: list[str] = []
+    seen: set[str] = set()
+    for token in re.findall(r"[A-Za-z]*\d+[A-Za-z0-9]*", str(raw_output)):
+        item = token if token.startswith("i") or token.startswith("B") else f"i{token}"
+        if item not in candidate_set or item in seen:
+            continue
+        seen.add(item)
+        output.append(item)
     return output
