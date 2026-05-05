@@ -61,11 +61,19 @@ class LocalLoRAReranker:
 def _prompt(example: LocalLoRARerankExample, variant: str) -> str:
     evidence = ""
     if variant == "temporal_evidence_sft":
-        evidence = "\nUse temporal transition, time-window, and contrastive evidence when ranking."
+        evidence = (
+            "\nTime buckets: recent history items are later in the sequence."
+            "\nTransition evidence: rank candidates likely to follow the recent history."
+            "\nContrastive evidence: distinguish semantic similarity from next-need transitions."
+        )
+    user_prompt = (
+        "Rank candidate item IDs for the next recommendation. Return JSON only.\n"
+        f"History: {example.history}\nCandidates: {example.candidate_items}{evidence}"
+    )
     return (
-        "Return JSON only with ranked_item_ids.\n"
-        f"History: {example.history}\nCandidates: {example.candidate_items}{evidence}\n"
-        + json.dumps({"ranked_item_ids": example.candidate_items[:10]})
+        "system: You are a recommendation reranker. Output strict JSON only.\n"
+        f"user: {user_prompt}\n"
+        "assistant: "
     )
 
 
