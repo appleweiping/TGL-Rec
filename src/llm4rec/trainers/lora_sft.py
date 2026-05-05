@@ -66,9 +66,10 @@ def _run_transformers_training(
 ) -> None:
     """Run optional HF/PEFT training. Imports stay local so tests do not require these packages."""
 
+    import torch
     from datasets import Dataset
     from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
-    from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments
+    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, Trainer, TrainingArguments
 
     sft_dir = resolve_path(config["sft"]["data_dir"])
     train_rows = [json.loads(line) for line in (sft_dir / "train.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -79,10 +80,26 @@ def _run_transformers_training(
     )
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+    quantization_config = None
+    if training_config.load_in_4bit or training_config.load_in_8bit:
+        compute_dtype = getattr(torch, training_config.bnb_4bit_compute_dtype)
+        quantization_config = BitsAndBytesConfig(
+            load_in_4bit=training_config.load_in_4bit,
+            load_in_8bit=training_config.load_in_8bit,
+            bnb_4bit_quant_type=training_config.bnb_4bit_quant_type,
+            bnb_4bit_compute_dtype=compute_dtype,
+        )
+    model_kwargs = {
+        "device_map": model_config.device_map,
+        "trust_remote_code": model_config.trust_remote_code,
+    }
+    if quantization_config is not None:
+        model_kwargs["quantization_config"] = quantization_config
+    else:
+        model_kwargs["torch_dtype"] = model_config.torch_dtype
     model = AutoModelForCausalLM.from_pretrained(
         model_config.base_model_path,
-        device_map=model_config.device_map,
-        trust_remote_code=model_config.trust_remote_code,
+        **model_kwargs,
     )
     if training_config.use_qlora:
         model = prepare_model_for_kbit_training(model)

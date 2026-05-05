@@ -21,6 +21,8 @@ class HFLocalProviderConfig:
     trust_remote_code: bool = False
     max_new_tokens: int = 256
     temperature: float = 0.0
+    load_in_4bit: bool = False
+    bnb_4bit_compute_dtype: str = "bfloat16"
 
 
 class HFLocalProvider:
@@ -69,6 +71,7 @@ class HFLocalProvider:
         base = Path(self.config.base_model_path).expanduser()
         if not base.exists():
             raise FileNotFoundError(f"Local base model path does not exist: {base}")
+        import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
         self.tokenizer = AutoTokenizer.from_pretrained(
@@ -76,11 +79,22 @@ class HFLocalProvider:
             local_files_only=True,
             trust_remote_code=self.config.trust_remote_code,
         )
+        model_kwargs: dict[str, Any] = {
+            "device_map": "auto",
+            "local_files_only": True,
+            "trust_remote_code": self.config.trust_remote_code,
+        }
+        if self.config.load_in_4bit:
+            from transformers import BitsAndBytesConfig
+
+            model_kwargs["quantization_config"] = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=getattr(torch, self.config.bnb_4bit_compute_dtype),
+            )
         self.model = AutoModelForCausalLM.from_pretrained(
             self.config.base_model_path,
-            device_map="auto",
-            local_files_only=True,
-            trust_remote_code=self.config.trust_remote_code,
+            **model_kwargs,
         )
         if self.config.adapter_path:
             from peft import PeftModel

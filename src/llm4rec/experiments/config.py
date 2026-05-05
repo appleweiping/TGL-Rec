@@ -104,20 +104,58 @@ def _simple_yaml_load(text: str) -> dict[str, Any]:
             continue
         indent = len(raw_line) - len(raw_line.lstrip(" "))
         line = raw_line.strip()
+        if line.startswith("- "):
+            if not stack:
+                raise ValueError(f"Unsupported top-level YAML list item: {raw_line!r}")
+            current = stack[-1][1]
+            if "__pending_parent__" in current and "__pending_key__" in current:
+                parent = current["__pending_parent__"]
+                list_key = str(current["__pending_key__"])
+                values = parent.setdefault(list_key, [])
+                if not isinstance(values, list):
+                    raise ValueError(f"YAML key already has non-list value: {list_key}")
+                values.append(_parse_simple_scalar(line[2:].strip()))
+                continue
+            list_key = current.pop("__list_key__", None)
+            if not list_key:
+                raise ValueError(f"Unsupported YAML list item without parent key: {raw_line!r}")
+            values = current.setdefault(list_key, [])
+            if not isinstance(values, list):
+                raise ValueError(f"YAML key already has non-list value: {list_key}")
+            values.append(_parse_simple_scalar(line[2:].strip()))
+            current["__list_key__"] = list_key
+            continue
         if ":" not in line:
             raise ValueError(f"Unsupported YAML line without key/value separator: {raw_line!r}")
         key, value = line.split(":", 1)
         key = key.strip()
         value = value.strip()
         while stack and indent <= stack[-1][0]:
+            pending = stack[-1][1]
+            if "__pending_parent__" in pending and "__pending_key__" in pending:
+                parent = pending["__pending_parent__"]
+                pending_key = str(pending["__pending_key__"])
+                if pending_key not in parent:
+                    parent[pending_key] = {}
             stack.pop()
         current = stack[-1][1]
+        if "__pending_parent__" in current and "__pending_key__" in current:
+            parent = current["__pending_parent__"]
+            pending_key = str(current["__pending_key__"])
+            parent[pending_key] = current
+            current.pop("__pending_parent__", None)
+            current.pop("__pending_key__", None)
         if value == "":
-            child: dict[str, Any] = {}
-            current[key] = child
+            child = {"__pending_parent__": current, "__pending_key__": key}
+            current.pop("__list_key__", None)
             stack.append((indent, child))
+        elif value == "[]":
+            current[key] = []
+            current["__list_key__"] = key
         else:
             current[key] = _parse_simple_scalar(value)
+            current.pop("__list_key__", None)
+    _strip_list_markers(root)
     return root
 
 
@@ -147,3 +185,15 @@ def _parse_simple_scalar(value: str) -> Any:
         return float(value)
     except ValueError:
         return value
+
+
+def _strip_list_markers(value: Any) -> None:
+    if isinstance(value, dict):
+        value.pop("__list_key__", None)
+        value.pop("__pending_parent__", None)
+        value.pop("__pending_key__", None)
+        for child in value.values():
+            _strip_list_markers(child)
+    elif isinstance(value, list):
+        for child in value:
+            _strip_list_markers(child)
