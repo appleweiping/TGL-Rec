@@ -70,6 +70,9 @@ def validate_prediction_row(
     normalized["raw_output"] = row.get("raw_output")
     normalized["metadata"] = metadata
     normalized["schema_version"] = str(row.get("schema_version", PREDICTION_SCHEMA_V2))
+    for optional in ("event_id", "source_event_id", "split"):
+        if optional in row and row[optional] is not None:
+            normalized[optional] = str(row[optional])
     return normalized
 
 

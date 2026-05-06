@@ -129,7 +129,10 @@ def _build_examples(
             {
                 "candidate_items": limited,
                 "domain": row.get("domain"),
-                "history": histories.get(str(row["user_id"]), []),
+                "event_id": row.get("event_id"),
+                "history": row.get("history") if isinstance(row.get("history"), list) else histories.get(str(row["user_id"]), []),
+                "source_event_id": row.get("source_event_id"),
+                "split": row.get("split", split),
                 "target_item": target,
                 "user_id": str(row["user_id"]),
             }
@@ -221,11 +224,14 @@ def _rank_dataset(
                 "candidate_items": example["candidate_items"],
                 "dataset": dataset,
                 "domain": example["domain"],
+                "event_id": example.get("event_id"),
                 "metadata": result.get("metadata", {}),
                 "method": adapter["method"],
                 "predicted_items": result["predicted_items"],
                 "raw_output": result.get("raw_output"),
                 "scores": result.get("scores", []),
+                "source_event_id": example.get("source_event_id"),
+                "split": example.get("split"),
                 "target_item": example["target_item"],
                 "user_id": example["user_id"],
             }

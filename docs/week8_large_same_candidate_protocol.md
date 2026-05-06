@@ -106,6 +106,16 @@ external task package into the TGL-Rec interfaces:
 7. Rebuild LoRA SFT datasets from training-only data.
 8. Evaluate every baseline with the shared evaluator and same candidate sets.
 
+Importer entrypoint:
+
+```bash
+python scripts/import_week8_same_candidate.py \
+  --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/books_large10000_100neg_test_same_candidate \
+  --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/electronics_large10000_100neg_test_same_candidate \
+  --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/movies_large10000_100neg_test_same_candidate \
+  --protocol-version protocol_week8_large10000_same_candidate
+```
+
 The prediction JSONL schema should be extended, without breaking existing
 fields, to carry:
 

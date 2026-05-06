@@ -34,6 +34,10 @@ The Phase 9E local LoRA pipeline is operational:
 - LoRA SFT training no longer pads every sample to `max_seq_length` during
   tokenization. It now uses a dynamic padding collator, and tracked 8B LoRA
   training templates use `max_seq_length: 1024`.
+- Week8 large same-candidate task import support exists in
+  `src/llm4rec/data/week8_same_candidate.py`, with the CLI wrapper
+  `scripts/import_week8_same_candidate.py`. It preserves external event IDs,
+  source event IDs, candidate sets, and split labels.
 
 Registered SFT variants:
 
@@ -220,8 +224,9 @@ After the two control adapters are retrained and diagnostics look sane:
 3. Index the `references/` papers into lightweight notes.
 4. Map each selected paper to one LoRA variant family or add a new variant only
    when the method requires a genuinely distinct signal.
-5. Add an importer for the Week8 large same-candidate protocol from
-   `pony-rec-rescue-shadow-v6`, preserving `event_id/source_event_id`,
-   `user_id`, `item_id`, `split`, and exact candidate sets.
+5. Use `scripts/import_week8_same_candidate.py` to import the Week8 large
+   same-candidate protocol from `pony-rec-rescue-shadow-v6`, preserving
+   `event_id/source_event_id`, `user_id`, `item_id`, `split`, and exact
+   candidate sets.
 6. Build/train/evaluate reference-style LoRA baselines under the same framework
    on the frozen large same-candidate protocol.

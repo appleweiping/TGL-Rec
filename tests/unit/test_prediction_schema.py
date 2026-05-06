@@ -71,3 +71,22 @@ def test_prediction_schema_accepts_compact_candidate_ref() -> None:
 
     assert normalized["candidate_items"] == []
     assert normalized["candidate_ref"]["candidate_row_id"] == "test|u1|i3"
+
+
+def test_prediction_schema_preserves_event_fields() -> None:
+    row = {
+        "candidate_items": ["i1", "i2"],
+        "event_id": "e1",
+        "predicted_items": ["i2", "i1"],
+        "scores": [1.0, 0.5],
+        "source_event_id": "src1",
+        "split": "test",
+        "target_item": "i2",
+        "user_id": "u1",
+    }
+
+    normalized = validate_prediction_row(row, candidate_protocol="fixed_sampled")
+
+    assert normalized["event_id"] == "e1"
+    assert normalized["source_event_id"] == "src1"
+    assert normalized["split"] == "test"
