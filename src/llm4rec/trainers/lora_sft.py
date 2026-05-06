@@ -141,10 +141,39 @@ def _run_transformers_training(
 
 
 def _tokenize_sft(row: dict[str, Any], tokenizer: Any, max_seq_length: int) -> dict[str, Any]:
-    text = "\n".join(f"{msg['role']}: {msg['content']}" for msg in row["messages"])
-    encoded = tokenizer(text, truncation=True, max_length=max_seq_length, padding="max_length")
-    encoded["labels"] = list(encoded["input_ids"])
+    prefix, assistant = _split_sft_text(row)
+    eos_token = getattr(tokenizer, "eos_token", None)
+    if eos_token:
+        assistant = f"{assistant}{eos_token}"
+    full_text = f"{prefix}{assistant}"
+    encoded = tokenizer(full_text, truncation=True, max_length=max_seq_length, padding="max_length")
+    prefix_encoded = tokenizer(prefix, truncation=True, max_length=max_seq_length, padding=False)
+    input_ids = list(encoded["input_ids"])
+    labels = list(input_ids)
+    prefix_length = min(len(prefix_encoded["input_ids"]), len(labels))
+    for index in range(prefix_length):
+        labels[index] = -100
+    attention_mask = encoded.get("attention_mask")
+    pad_token_id = getattr(tokenizer, "pad_token_id", None)
+    for index, token_id in enumerate(input_ids):
+        if attention_mask is not None and int(attention_mask[index]) == 0:
+            labels[index] = -100
+        elif pad_token_id is not None and token_id == pad_token_id:
+            labels[index] = -100
+    encoded["labels"] = labels
     return encoded
+
+
+def _split_sft_text(row: dict[str, Any]) -> tuple[str, str]:
+    messages = list(row["messages"])
+    if not messages or messages[-1].get("role") != "assistant":
+        raise ValueError("SFT row must end with an assistant message")
+    prefix_messages = messages[:-1]
+    assistant_message = messages[-1]
+    prefix = "".join(f"{msg['role']}: {msg['content']}\n" for msg in prefix_messages)
+    prefix = f"{prefix}assistant: "
+    assistant = str(assistant_message["content"])
+    return prefix, assistant
 
 
 def _append_log(output_dir: Path, message: str) -> None:

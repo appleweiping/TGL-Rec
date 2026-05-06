@@ -101,8 +101,50 @@ under this candidate protocol.
 
 ## Next Step
 
-Stop scaling this LoRA variant as a paper-winning result unless a targeted
-diagnostic identifies a correctable issue. The next useful engineering step is
-to compare the LoRA outputs against the frozen candidate sets and training labels
-to determine whether the poor ranking is caused by prompt continuation behavior,
-adapter objective mismatch, or candidate construction.
+Stop scaling the already-trained adapters as paper-winning results. A targeted
+diagnostic found two correctable implementation issues:
+
+- the original SFT tokenization trained on the full `system/user/assistant`
+  dialogue text instead of masking prompt tokens, which encouraged prompt
+  continuation behavior during inference;
+- the local LoRA `top_m=50` diagnostic previously took the first catalog items
+  and appended or retained the target near the end, rather than using a sampled
+  diagnostic candidate set.
+
+The next server run should retrain adapters after the SFT label-mask fix, then
+rerun a small LoRA diagnostic before spending another full evaluation budget.
+
+Recommended server sequence after pulling the fix:
+
+```bash
+cd ~/projects/TGL-Rec
+git pull
+
+CUDA_VISIBLE_DEVICES=0 nohup python -u scripts/train_lora_8b.py \
+  --config configs/experiments/server_lora_8b_history_only.yaml \
+  > outputs/paper_runs/protocol_v1/lora_8b/history_only_sft/train_labelmask.nohup.log 2>&1 &
+
+CUDA_VISIBLE_DEVICES=0 nohup python -u scripts/train_lora_8b.py \
+  --config configs/experiments/server_lora_8b_temporal_evidence.yaml \
+  > outputs/paper_runs/protocol_v1/lora_8b/temporal_evidence_sft/train_labelmask.nohup.log 2>&1 &
+```
+
+After both training jobs succeed, run a small diagnostic first:
+
+```bash
+mv outputs/paper_runs/protocol_v1/lora_8b/eval \
+  outputs/paper_runs/protocol_v1/lora_8b/eval_before_labelmask_fix_$(date +%Y%m%d_%H%M%S)
+
+CUDA_VISIBLE_DEVICES=0 python -u scripts/run_lora_rerank_eval.py \
+  --config configs/experiments/paper_lora_8b_rerank_eval.yaml \
+  --base-model-path /home/ajifang/models/Qwen/Qwen3-8B \
+  --limit 20 \
+  --top-m 50
+
+python scripts/diagnose_lora_predictions.py \
+  --predictions outputs/paper_runs/protocol_v1/lora_8b/eval/predictions.jsonl \
+  --output-dir outputs/paper_runs/protocol_v1/lora_8b/eval/diagnostics
+```
+
+Proceed to `--limit 200` only if prompt-continuation rate drops substantially
+and parse success remains high.

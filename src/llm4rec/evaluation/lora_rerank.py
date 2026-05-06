@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 from collections import defaultdict
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
@@ -72,6 +73,7 @@ def run_lora_rerank_eval(
     manifest = {
         "base_model_path": str(base_model_path),
         "candidate_limit": candidate_limit,
+        "candidate_selection": "stable_hash_sampled_with_target",
         "dry_run": dry_run,
         "limit_per_dataset_adapter": limit,
         "num_predictions": len(rows),
@@ -117,7 +119,12 @@ def _build_examples(
         candidates = _candidate_items(row, artifact_dir)
         if target not in candidates:
             raise ValueError(f"target missing from candidates: dataset={dataset} target={target}")
-        limited = _limit_candidates(candidates, target=target, limit=candidate_limit)
+        limited = _limit_candidates(
+            candidates,
+            target=target,
+            limit=candidate_limit,
+            seed_key=f"{dataset}|{split}|{row['user_id']}|{target}",
+        )
         examples.append(
             {
                 "candidate_items": limited,
@@ -162,13 +169,33 @@ def _candidate_items(row: dict[str, Any], artifact_dir: Path) -> list[str]:
     return [*negatives, target]
 
 
-def _limit_candidates(candidates: list[str], *, target: str, limit: int) -> list[str]:
+def _limit_candidates(
+    candidates: list[str],
+    *,
+    target: str,
+    limit: int,
+    seed_key: str | None = None,
+) -> list[str]:
+    """Create a deterministic sampled candidate subset while preserving the target."""
+
     if limit <= 0 or len(candidates) <= limit:
-        return candidates
-    selected = candidates[:limit]
-    if target not in selected:
-        selected[-1] = target
-    return selected
+        return list(candidates)
+    seed = str(seed_key or target)
+    negatives = [item for item in candidates if item != target]
+    sampled = sorted(negatives, key=lambda item: _stable_sample_key(seed, item))[: max(limit - 1, 0)]
+    insert_at = _stable_position(seed, limit)
+    selected = list(sampled)
+    selected.insert(insert_at, target)
+    return selected[:limit]
+
+
+def _stable_sample_key(seed_key: str, item: str) -> str:
+    return sha256(f"{seed_key}|{item}".encode("utf-8")).hexdigest()
+
+
+def _stable_position(seed_key: str, limit: int) -> int:
+    digest = sha256(f"{seed_key}|target_position".encode("utf-8")).hexdigest()
+    return int(digest[:8], 16) % max(limit, 1)
 
 
 def _rank_dataset(
