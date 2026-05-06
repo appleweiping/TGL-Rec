@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import json
 import re
 from dataclasses import dataclass
 from typing import Any
 
 from llm4rec.llm.base import BaseLLMProvider, LLMRequest
 from llm4rec.llm.json_parser import LLMJSONParseError, parse_rerank_json
+from llm4rec.trainers.sft_variants import get_sft_variant
 
 
 @dataclass(frozen=True)
@@ -61,13 +61,7 @@ class LocalLoRAReranker:
 
 
 def _prompt(example: LocalLoRARerankExample, variant: str) -> str:
-    evidence = ""
-    if variant == "temporal_evidence_sft":
-        evidence = (
-            "\nTime buckets: recent history items are later in the sequence."
-            "\nTransition evidence: rank candidates likely to follow the recent history."
-            "\nContrastive evidence: distinguish semantic similarity from next-need transitions."
-        )
+    evidence = get_sft_variant(variant).evidence_block()
     user_prompt = (
         "Rank candidate item IDs for the next recommendation. Return JSON only.\n"
         f"History: {example.history}\nCandidates: {example.candidate_items}{evidence}"

@@ -11,9 +11,10 @@ from typing import Any
 
 from llm4rec.experiments.config import load_yaml_config, resolve_path
 from llm4rec.io.artifacts import ensure_dir, iter_jsonl, sha256_file, write_json, write_jsonl
+from llm4rec.trainers.sft_variants import get_sft_variant, sft_variant_names
 
 
-SFT_VARIANTS = {"history_only_sft", "temporal_evidence_sft"}
+SFT_VARIANTS = set(sft_variant_names())
 
 
 @dataclass(frozen=True)
@@ -37,8 +38,7 @@ def build_lora_sft_data(
         raise ValueError("Specify exactly one of dry_run or materialize.")
     config = load_yaml_config(config_path)
     variant = str(config["sft"]["variant"])
-    if variant not in SFT_VARIANTS:
-        raise ValueError(f"Unsupported SFT variant: {variant}")
+    get_sft_variant(variant)
     results: list[SFTBuildResult] = []
     for dataset, artifacts in dict(config["dataset_artifacts"]).items():
         results.append(_build_dataset(config, str(dataset), dict(artifacts), variant, dry_run=dry_run))
@@ -188,13 +188,8 @@ def _sft_row(
     variant: str,
     source_split: str = "train",
 ) -> dict[str, Any]:
-    evidence = ""
-    if variant == "temporal_evidence_sft":
-        evidence = (
-            "\nTime buckets: recent history items are later in the sequence."
-            "\nTransition evidence: rank candidates likely to follow the recent history."
-            "\nContrastive evidence: distinguish semantic similarity from next-need transitions."
-        )
+    variant_spec = get_sft_variant(variant)
+    evidence = variant_spec.evidence_block()
     user_prompt = (
         "Rank candidate item IDs for the next recommendation. Return JSON only.\n"
         f"History: {history}\nCandidates: {candidates}{evidence}"
@@ -207,6 +202,7 @@ def _sft_row(
             "candidate_source": "train_negative_sampling",
             "constructed_from": "train_only",
             "protocol_version": "protocol_v1",
+            "sft_family": variant_spec.family,
             "source_split": source_split,
             "target_item": target,
             "user_id": user_id,

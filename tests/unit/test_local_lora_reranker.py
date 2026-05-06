@@ -1,5 +1,5 @@
 from llm4rec.llm.hf_local_provider import HFLocalProvider, HFLocalProviderConfig
-from llm4rec.rankers.local_lora_reranker import LocalLoRARerankExample, LocalLoRAReranker
+from llm4rec.rankers.local_lora_reranker import LocalLoRARerankExample, LocalLoRAReranker, _prompt
 
 
 def test_local_lora_reranker_dry_run_ranks_candidates():
@@ -17,3 +17,18 @@ def test_local_lora_reranker_dry_run_ranks_candidates():
 
     assert result["predicted_items"][0] == "i1"
     assert result["metadata"]["parse_success"] is True
+
+
+def test_local_lora_reranker_prompt_uses_reference_variant_registry():
+    prompt = _prompt(
+        LocalLoRARerankExample(
+            user_id="u1",
+            history=["i0"],
+            target_item="i1",
+            candidate_items=["i1", "i2"],
+        ),
+        "reference_preference_sft",
+    )
+
+    assert "Preference evidence" in prompt
+    assert "Control evidence" in prompt
