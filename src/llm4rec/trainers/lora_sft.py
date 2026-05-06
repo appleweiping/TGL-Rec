@@ -90,7 +90,7 @@ def _run_transformers_training(
             bnb_4bit_compute_dtype=compute_dtype,
         )
     model_kwargs = {
-        "device_map": model_config.device_map,
+        "device_map": _training_device_map(model_config.device_map),
         "trust_remote_code": model_config.trust_remote_code,
     }
     if quantization_config is not None:
@@ -138,6 +138,15 @@ def _run_transformers_training(
     model.save_pretrained(output_dir / "adapter")
     tokenizer.save_pretrained(output_dir / "tokenizer")
     write_json(output_dir / "training_metrics.json", result.metrics)
+
+
+def _training_device_map(device_map: str) -> str | dict[str, int]:
+    """Keep LoRA training on the visible GPU instead of CPU/GPU sharding."""
+
+    normalized = str(device_map).strip().lower()
+    if normalized in {"auto", "balanced", "balanced_low_0", "sequential"}:
+        return {"": 0}
+    return device_map
 
 
 def _tokenize_sft(row: dict[str, Any], tokenizer: Any, max_seq_length: int) -> dict[str, Any]:

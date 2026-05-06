@@ -1,4 +1,4 @@
-from llm4rec.trainers.lora_sft import _split_sft_text, _tokenize_sft
+from llm4rec.trainers.lora_sft import _split_sft_text, _tokenize_sft, _training_device_map
 
 
 class TinyTokenizer:
@@ -35,3 +35,9 @@ def test_tokenize_sft_masks_prompt_tokens_and_padding():
     assert encoded["labels"][prefix_length] != -100
     assert encoded["input_ids"][prefix_length] == ord("{")
     assert encoded["labels"][-1] == -100
+
+
+def test_training_device_map_forces_auto_to_visible_gpu():
+    assert _training_device_map("auto") == {"": 0}
+    assert _training_device_map("balanced_low_0") == {"": 0}
+    assert _training_device_map("cuda:0") == "cuda:0"
