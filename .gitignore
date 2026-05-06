@@ -17,3 +17,8 @@ outputs/
 data/raw/
 data/processed/
 *.log
+*.tgz
+references/**/*.pdf
+references/**/*.zip
+TGL_Rec_Project_Experiment_Plan_CN_EN.md
+configs/experiments/server_lora_8b_*.yaml
