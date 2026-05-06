@@ -69,7 +69,14 @@ def _run_transformers_training(
     import torch
     from datasets import Dataset
     from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
-    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, Trainer, TrainingArguments
+    from transformers import (
+        AutoModelForCausalLM,
+        AutoTokenizer,
+        BitsAndBytesConfig,
+        DataCollatorForSeq2Seq,
+        Trainer,
+        TrainingArguments,
+    )
 
     sft_dir = resolve_path(config["sft"]["data_dir"])
     train_rows = [json.loads(line) for line in (sft_dir / "train.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -133,7 +140,14 @@ def _run_transformers_training(
         max_grad_norm=training_config.max_grad_norm,
         report_to=[],
     )
-    trainer = Trainer(model=model, args=args, train_dataset=train_dataset, eval_dataset=eval_dataset)
+    data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model, label_pad_token_id=-100, padding=True)
+    trainer = Trainer(
+        model=model,
+        args=args,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
+        data_collator=data_collator,
+    )
     result = trainer.train()
     model.save_pretrained(output_dir / "adapter")
     tokenizer.save_pretrained(output_dir / "tokenizer")
@@ -155,7 +169,7 @@ def _tokenize_sft(row: dict[str, Any], tokenizer: Any, max_seq_length: int) -> d
     if eos_token:
         assistant = f"{assistant}{eos_token}"
     full_text = f"{prefix}{assistant}"
-    encoded = tokenizer(full_text, truncation=True, max_length=max_seq_length, padding="max_length")
+    encoded = tokenizer(full_text, truncation=True, max_length=max_seq_length, padding=False)
     prefix_encoded = tokenizer(prefix, truncation=True, max_length=max_seq_length, padding=False)
     input_ids = list(encoded["input_ids"])
     labels = list(input_ids)

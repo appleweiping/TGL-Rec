@@ -18,7 +18,7 @@ class TinyTokenizer:
         return {"attention_mask": attention, "input_ids": tokens}
 
 
-def test_tokenize_sft_masks_prompt_tokens_and_padding():
+def test_tokenize_sft_masks_prompt_tokens_without_fixed_padding():
     row = {
         "messages": [
             {"role": "system", "content": "rules"},
@@ -34,7 +34,8 @@ def test_tokenize_sft_masks_prompt_tokens_and_padding():
     assert all(label == -100 for label in encoded["labels"][:prefix_length])
     assert encoded["labels"][prefix_length] != -100
     assert encoded["input_ids"][prefix_length] == ord("{")
-    assert encoded["labels"][-1] == -100
+    assert len(encoded["input_ids"]) < 128
+    assert encoded["labels"][-1] == ord("|")
 
 
 def test_training_device_map_forces_auto_to_visible_gpu():
