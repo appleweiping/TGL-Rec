@@ -17,6 +17,12 @@ under the same local small-model setting:
 This makes the comparison a framework-controlled experiment rather than a
 literature-number comparison.
 
+Current status: these baselines are selected as framework families, but the
+reference methods have not all been fully mapped, trained, or evaluated yet.
+Do not report them as completed baselines until each family has a concrete
+paper-method mapping, SFT construction policy, server run, metrics, and
+diagnostics.
+
 ## Current Reference Inputs
 
 Local reference material is stored under:
@@ -58,6 +64,12 @@ reportable baseline only after a specific reference paper is mapped to it with:
 The main question is not only whether our variant beats baselines. We must also
 test whether the observed phenomenon appears in other LoRA baselines.
 
+The observation is not yet complete or proven. The fixed-label-mask
+`history_only_sft` and `temporal_evidence_sft` adapters must be retrained before
+any LoRA result is trusted, and the reference-style baselines must be evaluated
+under the same candidate protocol before claiming whether the phenomenon is
+specific to our method or broader across Qwen3-8B LoRA recommenders.
+
 For every Qwen3-8B LoRA variant, report:
 
 - ranking metrics: Recall, NDCG, HitRate, MRR;
@@ -80,6 +92,14 @@ should be treated as preliminary. The later conference-grade dataset generated
 by the adjacent server project should be integrated as a new frozen protocol
 version rather than patched into existing results.
 
+The planned large protocol is documented in
+`docs/week8_large_same_candidate_protocol.md`. It comes from
+`~/projects/pony-rec-rescue-shadow-v6` and currently targets `books`,
+`electronics`, and `movies` with up to 10,000 users per domain, 1 positive plus
+100 popularity-sampled negatives per event, and same-candidate ranking tasks.
+The user also has a complete `beauty` domain on the server. Import these data as
+immutable protocol inputs; do not resample users or negatives.
+
 Expected future integration steps:
 
 1. Convert the new dataset into the project interaction/item schema.
@@ -97,4 +117,6 @@ Expected future integration steps:
 3. Retrain the fixed-label-mask LoRA variants before trusting any LoRA result.
 4. Run `limit=20` diagnostics first, then `limit=200` only after output behavior
    is stable.
-5. Defer paper-scale claims until the stronger dataset is available and frozen.
+5. Add the Week8 same-candidate importer and freeze it as a new protocol.
+6. Defer paper-scale claims until the stronger dataset is available, imported,
+   and evaluated with aligned event/candidate IDs.
