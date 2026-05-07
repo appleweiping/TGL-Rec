@@ -57,6 +57,8 @@ Reference baseline plan:
 - See `docs/reference_lora_baseline_plan.md`.
 - See `docs/reference_baseline_fidelity.md` before describing any reference
   variant as a senior-recommended original baseline.
+- See `docs/reference_method_adaptation_map.md` for the selected concrete
+  reference methods to implement first.
 - Reference PDFs are local research material under `references/NH/` and
   `references/NR/`.
 - Do not commit PDFs or copied paper text.

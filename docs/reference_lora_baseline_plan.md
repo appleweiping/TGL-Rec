@@ -29,7 +29,8 @@ Current status: these baselines are candidate scaffolds, not original
 senior-recommended baselines yet. Do not report them as completed baselines
 until each one has a concrete paper-method mapping, SFT construction policy,
 server run, metrics, and diagnostics. See
-`docs/reference_baseline_fidelity.md`.
+`docs/reference_baseline_fidelity.md` and
+`docs/reference_method_adaptation_map.md`.
 
 ## Current Reference Inputs
 
@@ -127,9 +128,11 @@ Expected future integration steps:
 
 ## Near-Term Plan
 
-1. Finish reference paper indexing into lightweight notes.
-2. Map each selected paper to one of the registered variant families or add a
-   new variant only when the paper requires a genuinely different signal.
+1. Finish method extraction for the selected papers in
+   `docs/reference_method_adaptation_map.md`.
+2. Implement each selected baseline as its own faithful adaptation. Use one of
+   the registered SFT containers only if the original method is truly SFT/prompt
+   based; otherwise add a dedicated trainer/ranker/scorer.
 3. Retrain the fixed-label-mask LoRA variants before trusting any LoRA result.
 4. Run `limit=20` diagnostics first, then `limit=200` only after output behavior
    is stable.

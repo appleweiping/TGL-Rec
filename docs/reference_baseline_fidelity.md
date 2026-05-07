@@ -115,3 +115,8 @@ baselines after method extraction:
     Language Models for Recommendation.
 
 This list is only an inspection queue. It is not yet a completed baseline map.
+
+The selected adaptation map is maintained in
+`docs/reference_method_adaptation_map.md`. That map still does not make a
+baseline reportable; it only fixes which original methods should be implemented
+first.
