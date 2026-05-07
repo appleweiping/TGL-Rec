@@ -84,6 +84,22 @@ SFT_VARIANT_REGISTRY: dict[str, SFTVariantSpec] = {
         reference_group="references",
         observation_axes=("long_tail", "popularity_bias", "candidate_grounding"),
     ),
+    "reference_collaborative_sft": SFTVariantSpec(
+        name="reference_collaborative_sft",
+        family="reference_baseline",
+        description=(
+            "Reference-style collaborative-signal LoRA reranker; use for papers or baselines whose "
+            "core signal is item co-occurrence, user-neighborhood preference, or sequential "
+            "collaborative filtering rather than explicit semantic evidence."
+        ),
+        evidence_lines=(
+            "Collaborative evidence: rank candidates that frequently co-occur with the user's history.",
+            "Neighborhood evidence: prefer candidates supported by similar users or adjacent sequences.",
+            "Sequence-collaboration check: separate collaborative transition support from plain popularity.",
+        ),
+        reference_group="references",
+        observation_axes=("collaborative_signal", "cooccurrence", "candidate_grounding", "popularity_bias"),
+    ),
 }
 
 

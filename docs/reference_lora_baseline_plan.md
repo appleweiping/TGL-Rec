@@ -46,6 +46,7 @@ Initial reference-style LoRA variants are registered in
 | `reference_preference_sft` | reference baseline | preference alignment, controllability, instruction preference |
 | `reference_semantic_sft` | reference baseline | semantic/text/multimodal matching |
 | `reference_long_tail_sft` | reference baseline | long-tail and popularity-bias mitigation |
+| `reference_collaborative_sft` | reference baseline | item co-occurrence, neighborhood preference, sequential collaborative filtering |
 
 These are not paper claims yet. They are framework slots. A variant becomes a
 reportable baseline only after a specific reference paper is mapped to it with:
@@ -76,8 +77,8 @@ For every Qwen3-8B LoRA variant, report:
 - output quality: parse success, validity, hallucination, candidate adherence;
 - diagnostic behavior: prompt continuation rate, JSON-like rate, bare-ID rate;
 - observation axes when available: temporal transition sensitivity, semantic
-  similarity reliance, long-tail behavior, popularity bias, and candidate
-  grounding.
+  similarity reliance, collaborative co-occurrence reliance, long-tail behavior,
+  popularity bias, and candidate grounding.
 
 If a phenomenon appears in reference baselines too, the paper should describe it
 as a broader LLM4Rec behavior rather than claiming it is unique to our method.

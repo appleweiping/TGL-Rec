@@ -6,6 +6,7 @@ evaluation_run:
     - outputs/paper_runs/protocol_v1/lora_8b/reference_preference_sft/adapter
     - outputs/paper_runs/protocol_v1/lora_8b/reference_semantic_sft/adapter
     - outputs/paper_runs/protocol_v1/lora_8b/reference_long_tail_sft/adapter
+    - outputs/paper_runs/protocol_v1/lora_8b/reference_collaborative_sft/adapter
   datasets:
     - movielens_full
     - amazon_multidomain_filtered_iterative_k3

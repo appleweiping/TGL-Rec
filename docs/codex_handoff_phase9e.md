@@ -49,6 +49,8 @@ Registered SFT variants:
   matching papers.
 - `reference_long_tail_sft`: reference baseline slot for long-tail and
   popularity-bias papers.
+- `reference_collaborative_sft`: reference baseline slot for item co-occurrence,
+  neighborhood preference, and sequential collaborative-filtering papers.
 
 Reference baseline plan:
 
