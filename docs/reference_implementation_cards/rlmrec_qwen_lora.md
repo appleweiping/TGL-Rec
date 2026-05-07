@@ -16,7 +16,7 @@
 
 - Use Qwen3-generated profiles/embeddings where faithful.
 - Preserve representation-alignment scoring logic.
-- Evaluate under shared splits and candidate sets.
+- Evaluate under shared splits, candidate sets, prediction schema, and evaluator.
 
 ## Implementation Status
 

@@ -2,6 +2,8 @@ protocol_version: protocol_v1
 phase: Phase 9E
 baseline_contract:
   status: candidate_scaffold_eval_not_reportable
+  scaffold_only: true
+  scaffold_eval_policy: local_lora_adapter_container_not_official_baseline_scorer
   intended_reference_method_ids:
     - review_pref_reasoning_qwen_lora
     - rlmrec_qwen_lora
@@ -18,6 +20,12 @@ baseline_contract:
   adapter_training_policy: preserve_each_official_baseline_algorithm
   scoring_policy: preserve_each_official_baseline_scoring_logic
   protocol_controls: [data, candidate_sets, splits, metrics, prediction_schema]
+  promotion_required_before_main_table:
+    - official_code_adapter
+    - method_specific_training_or_adapter_policy
+    - method_specific_scoring_export
+    - shared_prediction_schema
+    - shared_evaluator
 evaluation_run:
   output_dir: outputs/paper_runs/protocol_v1/lora_8b/reference_eval
   checkpoint_or_adapter_paths:

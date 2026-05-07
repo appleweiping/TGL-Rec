@@ -18,7 +18,7 @@
 - Preserve the official teacher-student distillation objective and training
   path.
 - Use TGL-Rec frozen splits and candidates.
-- Output shared prediction JSONL.
+- Output shared prediction JSONL and evaluate only through the shared evaluator.
 
 ## Implementation Status
 

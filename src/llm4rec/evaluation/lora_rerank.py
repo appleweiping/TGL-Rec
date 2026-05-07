@@ -10,10 +10,11 @@ from typing import Any
 
 from llm4rec.baselines.reference_methods import reference_method_metadata
 from llm4rec.evaluation.lora_evaluator import evaluate_lora_predictions
-from llm4rec.experiments.config import load_yaml_config, resolve_path
+from llm4rec.experiments.config import load_yaml_config, resolve_path, save_resolved_config
 from llm4rec.io.artifacts import ensure_dir, iter_jsonl, write_csv_rows, write_json, write_jsonl
 from llm4rec.llm.hf_local_provider import HFLocalProvider, HFLocalProviderConfig
 from llm4rec.rankers.local_lora_reranker import LocalLoRARerankExample, LocalLoRAReranker
+from llm4rec.utils.env import collect_environment, current_git_commit
 
 
 def run_lora_rerank_eval(
@@ -31,6 +32,9 @@ def run_lora_rerank_eval(
     eval_config = dict(config["evaluation_run"])
     baseline_contract = dict(config.get("baseline_contract", {}))
     run_dir = ensure_dir(resolve_path(eval_config["output_dir"]))
+    save_resolved_config(config, run_dir / "resolved_config.yaml")
+    write_json(run_dir / "environment.json", collect_environment(resolve_path(".")))
+    write_json(run_dir / "git_info.json", _git_info())
     configured_top_m = int(eval_config.get("top_m_candidates_for_local_lora", 50))
     candidate_selection = str(eval_config.get("candidate_selection", "stable_hash_sampled_with_target"))
     candidate_limit = _candidate_limit(
@@ -214,6 +218,7 @@ def _build_examples(
                 "domain": row.get("domain"),
                 "event_id": row.get("event_id"),
                 "history": row.get("history") if isinstance(row.get("history"), list) else histories.get(str(row["user_id"]), []),
+                "protocol_version": protocol_version,
                 "source_event_id": row.get("source_event_id"),
                 "split": row.get("split", split),
                 "target_item": target,
@@ -344,7 +349,9 @@ def _rank_dataset(
                 "metadata": metadata,
                 "method": adapter["method"],
                 "predicted_items": result["predicted_items"],
+                "protocol_version": example.get("protocol_version"),
                 "raw_output": result.get("raw_output"),
+                "schema_version": "prediction_v1",
                 "scores": result.get("scores", []),
                 "source_event_id": example.get("source_event_id"),
                 "split": example.get("split"),
@@ -353,6 +360,12 @@ def _rank_dataset(
             }
         )
     return rows
+
+
+def _git_info() -> dict[str, Any]:
+    return {
+        "commit": current_git_commit(resolve_path(".")),
+    }
 
 
 def _metrics_by_method(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:

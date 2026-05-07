@@ -58,3 +58,25 @@ def test_four_domain_plan_can_write_shell_runbook(tmp_path: Path) -> None:
     assert "set -euo pipefail" in text
     assert "git pull" in text
     assert "import_week8_same_candidate.py" in text
+
+
+def test_four_domain_plan_includes_week8_sft_merge_train_and_eval(tmp_path: Path) -> None:
+    external = tmp_path / "external_tasks"
+    (external / "beauty_large10000_100neg_test_same_candidate").mkdir(parents=True)
+    (external / "books_large10000_100neg_test_same_candidate").mkdir(parents=True)
+
+    plan = build_four_domain_server_plan(
+        external_root=external,
+        domains=["beauty", "books"],
+        splits=["test"],
+    )
+
+    commands = plan["commands"]
+    assert "build_week8_lora_sft" in commands
+    assert "merge_week8_lora_sft" in commands
+    assert "train_week8_lora_controls" in commands
+    assert "evaluate_week8_lora_controls" in commands
+    assert "merge_lora_sft_data.py" in commands["merge_week8_lora_sft"][0]
+    assert "four_domain/history_only_sft" in commands["merge_week8_lora_sft"][0]
+    assert "--datasets beauty books" in commands["merge_week8_lora_sft"][0]
+    assert "week8_lora_8b_rerank_eval.yaml" in commands["evaluate_week8_lora_controls"][0]

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import random
 import time
 from pathlib import Path
 from typing import Any
@@ -76,7 +77,21 @@ def _run_transformers_training(
         DataCollatorForSeq2Seq,
         Trainer,
         TrainingArguments,
+        set_seed,
     )
+
+    seed = int(config.get("training", {}).get("seed", 2026))
+    random.seed(seed)
+    try:
+        import numpy as np
+
+        np.random.seed(seed)
+    except ModuleNotFoundError:
+        pass
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    set_seed(seed)
 
     sft_dir = resolve_path(config["sft"]["data_dir"])
     train_rows = [json.loads(line) for line in (sft_dir / "train.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -139,6 +154,8 @@ def _run_transformers_training(
         gradient_checkpointing=training_config.gradient_checkpointing,
         max_grad_norm=training_config.max_grad_norm,
         report_to=[],
+        seed=seed,
+        data_seed=seed,
     )
     data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model, label_pad_token_id=-100, padding=True)
     trainer = Trainer(

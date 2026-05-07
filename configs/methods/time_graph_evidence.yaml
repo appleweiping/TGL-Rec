@@ -13,10 +13,20 @@ retrieval:
 translator:
   mode: prompt_ready_json
 scoring:
+  mode: need_gate
   transition_weight: 1.0
+  transition_probability_weight: 1.0
+  pmi_weight: 0.5
+  lift_weight: 0.1
+  direction_asymmetry_weight: 0.25
   window_weight: 0.5
   semantic_weight: 0.25
   recency_weight: 0.1
+  contrastive_transition_weight: 0.5
+  drift_weight: 0.35
+  semantic_trap_penalty: 0.1
+  gate_bias: 0.0
+  gate_temperature: 1.0
   dynamic_encoder_weight: 0.25
 time_window:
   window_seconds: 86400

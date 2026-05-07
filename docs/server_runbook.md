@@ -100,11 +100,32 @@ python scripts/build_lora_sft_data.py \
   --materialize
 ```
 
-The build step materializes one SFT directory per imported domain. The current
-`week8_lora_8b_*` training configs set `sft.data_dir` to the `books` directory
-as a conservative server smoke path. For a true four-domain LoRA run, first add
-or generate a merged train/valid SFT directory and point `sft.data_dir` to it, or
-train one adapter per domain and evaluate them separately.
+The build step materializes one SFT directory per imported domain. Merge those
+domain artifacts before training; the Week8 training configs point to these
+`four_domain/<variant>` directories:
+
+```bash
+python scripts/merge_lora_sft_data.py \
+  --input-root data/processed/lora_sft/protocol_week8_large10000_same_candidate \
+  --output-dir data/processed/lora_sft/protocol_week8_large10000_same_candidate/four_domain/history_only_sft \
+  --variant history_only_sft \
+  --datasets beauty books electronics movies \
+  --protocol-version protocol_week8_large10000_same_candidate
+
+python scripts/merge_lora_sft_data.py \
+  --input-root data/processed/lora_sft/protocol_week8_large10000_same_candidate \
+  --output-dir data/processed/lora_sft/protocol_week8_large10000_same_candidate/four_domain/temporal_evidence_sft \
+  --variant temporal_evidence_sft \
+  --datasets beauty books electronics movies \
+  --protocol-version protocol_week8_large10000_same_candidate
+```
+
+Check the merge manifests:
+
+```bash
+cat data/processed/lora_sft/protocol_week8_large10000_same_candidate/four_domain/history_only_sft/sft_merge_manifest.json
+cat data/processed/lora_sft/protocol_week8_large10000_same_candidate/four_domain/temporal_evidence_sft/sft_merge_manifest.json
+```
 
 Then train adapters, adjusting private server configs only if needed:
 
@@ -127,7 +148,20 @@ CUDA_VISIBLE_DEVICES=0 python -u scripts/run_lora_rerank_eval.py \
 ```
 
 `week8_lora_8b_rerank_eval.yaml` uses
-`candidate_selection: preserve_external_candidates`.
+`candidate_selection: preserve_external_candidates` and keeps
+`do_not_merge_into_main_accuracy_table: true` until Week8 baselines exist under
+the same protocol.
+
+Once a baseline or our full framework run also emits shared prediction JSONL,
+compare aligned events without mixing protocols:
+
+```bash
+python scripts/compare_prediction_runs.py \
+  --run history_or_temporal=outputs/paper_runs/protocol_week8_large10000_same_candidate/lora_8b/eval/predictions.jsonl \
+  --run baseline=outputs/paper_runs/protocol_week8_large10000_same_candidate/main_accuracy_seed0/predictions.jsonl \
+  --baseline baseline \
+  --output-dir outputs/paper_runs/protocol_week8_large10000_same_candidate/paired_compare/lora_vs_baseline
+```
 
 ## 6. Reportability Reminder
 

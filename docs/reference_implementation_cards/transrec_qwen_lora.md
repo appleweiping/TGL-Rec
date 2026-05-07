@@ -16,6 +16,7 @@
 - Use a Qwen3-8B-compatible generation path only where faithful.
 - Preserve the official identifier and grounding design.
 - Ground outputs to the shared candidate set.
+- Emit the shared prediction schema and use the shared evaluator.
 - Report validity and hallucination diagnostics.
 
 ## Implementation Status

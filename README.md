@@ -8,7 +8,7 @@ This repository is intended to become a top-tier recommendation-systems research
 
 ## Current phase
 
-Current status: **Phase 9E, local Qwen3-8B recommendation adaptation and official-baseline
+Current status: **Phase 10, four-domain same-candidate protocol and stronger TGL-Rec framework
 integration**.
 
 The project has moved beyond the earlier Phase 8 launch-preparation state. The current active work is
@@ -24,6 +24,10 @@ What is already implemented:
 - Fixed SFT label masking: prompt tokens are masked and only assistant answer tokens are supervised.
 - Faster LoRA SFT batching: dynamic padding replaces fixed padding to max length.
 - Week8 large same-candidate importer: `scripts/import_week8_same_candidate.py`.
+- Four-domain SFT merger: `scripts/merge_lora_sft_data.py`.
+- Need-gated TDIG evidence scorer: transition probability, PMI, lift, direction asymmetry,
+  recency, drift, contrastive evidence, and semantic-trap penalty are exposed as auditable
+  factor scores.
 - Reference baseline registry and reportability guard:
   `src/llm4rec/baselines/reference_methods.py`.
 - Reference implementation cards:
@@ -40,6 +44,35 @@ What is not yet a paper result:
 - No senior-recommended official reference baseline is reportable yet. The `reference_*_sft` variants
   are scaffolds only until mapped to official code and implemented faithfully.
 - No paper conclusion should be written from diagnostic runs.
+
+Phase 10 server path now expects the large four-domain same-candidate package:
+
+- domains: `beauty`, `books`, `electronics`, `movies`;
+- each event: one positive plus 100 negatives;
+- all methods use the same event IDs, candidates, splits, metrics, and evaluator;
+- Qwen3-8B is the shared base model where a reference method can be faithfully adapted;
+- LoRA/adapters/heads/losses/scorers follow each official baseline's own algorithm.
+
+After importing the external tasks, build per-domain SFT rows and merge them before training:
+
+```bash
+python scripts/build_lora_sft_data.py --config configs/experiments/week8_lora_8b_history_only.yaml --materialize
+python scripts/build_lora_sft_data.py --config configs/experiments/week8_lora_8b_temporal_evidence.yaml --materialize
+
+python scripts/merge_lora_sft_data.py \
+  --input-root data/processed/lora_sft/protocol_week8_large10000_same_candidate \
+  --output-dir data/processed/lora_sft/protocol_week8_large10000_same_candidate/four_domain/history_only_sft \
+  --variant history_only_sft \
+  --datasets beauty books electronics movies \
+  --protocol-version protocol_week8_large10000_same_candidate
+
+python scripts/merge_lora_sft_data.py \
+  --input-root data/processed/lora_sft/protocol_week8_large10000_same_candidate \
+  --output-dir data/processed/lora_sft/protocol_week8_large10000_same_candidate/four_domain/temporal_evidence_sft \
+  --variant temporal_evidence_sft \
+  --datasets beauty books electronics movies \
+  --protocol-version protocol_week8_large10000_same_candidate
+```
 
 ## Official Baseline Contract
 

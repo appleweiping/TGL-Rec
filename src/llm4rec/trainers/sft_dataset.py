@@ -211,7 +211,9 @@ def _sft_row(
     source_split: str = "train",
 ) -> dict[str, Any]:
     variant_spec = get_sft_variant(variant)
-    evidence = variant_spec.evidence_block()
+    evidence = _candidate_specific_evidence_block(variant, history=history, candidates=candidates)
+    if not evidence:
+        evidence = variant_spec.evidence_block()
     user_prompt = (
         "Rank candidate item IDs for the next recommendation. Return JSON only.\n"
         f"History: {history}\nCandidates: {candidates}{evidence}"
@@ -223,6 +225,7 @@ def _sft_row(
         "metadata": {
             "candidate_source": "train_negative_sampling",
             "constructed_from": "train_only",
+            "candidate_specific_evidence": bool(evidence),
             "protocol_version": protocol_version,
             "sft_family": variant_spec.family,
             "source_split": source_split,
@@ -236,6 +239,40 @@ def _sft_row(
         ],
         "variant": variant,
     }
+
+
+def _candidate_specific_evidence_block(
+    variant: str,
+    *,
+    history: list[str],
+    candidates: list[str],
+) -> str:
+    """Build deterministic candidate-level evidence for SFT prompts.
+
+    This is intentionally train-row local: it does not inspect validation/test
+    targets or future events. Full TDIG artifact features are injected by the
+    method ranker; this block makes the LoRA control aware of the same evidence
+    schema instead of receiving only a generic instruction.
+    """
+
+    if variant != "temporal_evidence_sft":
+        return ""
+    recent = list(history[-3:])
+    rows = []
+    for candidate in candidates:
+        rows.append(
+            {
+                "candidate": str(candidate),
+                "candidate_in_recent_history": str(candidate) in set(recent),
+                "recent_overlap_count": sum(1 for item in recent if item == str(candidate)),
+                "recent_sources": recent,
+            }
+        )
+    return "\nCandidate temporal evidence JSON: " + json.dumps(
+        rows,
+        ensure_ascii=True,
+        sort_keys=True,
+    )
 
 
 def _leakage_audit(rows: list[dict[str, Any]], forbidden: set[tuple[str, str]]) -> dict[str, Any]:

@@ -17,8 +17,9 @@
 - Use Qwen3-8B as the shared base model only where faithful.
 - Preserve the official collaborative ID-token, prompt, head, and regularization
   design.
-- Score the shared candidate set.
+- Score the shared candidate set under the frozen split and leakage protocol.
 - Output shared prediction JSONL and candidate-adherence diagnostics.
+- Evaluate only through the shared TGL-Rec evaluator.
 
 ## Implementation Status
 

@@ -12,4 +12,4 @@ evaluation_run:
     - movies
   candidate_selection: preserve_external_candidates
   top_m_candidates_for_local_lora: 101
-  do_not_merge_into_main_accuracy_table: false
+  do_not_merge_into_main_accuracy_table: true

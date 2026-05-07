@@ -2,6 +2,8 @@ protocol_version: protocol_v1
 phase: Phase 9E
 baseline_contract:
   status: candidate_scaffold_not_reportable
+  scaffold_only: true
+  scaffold_training_policy: generic_sft_container_not_official_algorithm
   reference_method_id: cllm4rec_qwen_lora
   official_algorithm_required: true
   official_code_required_for_main_baseline: true
@@ -11,8 +13,8 @@ baseline_contract:
   protocol_controls: [data, candidate_sets, splits, metrics, prediction_schema]
 model:
   base_model_name: Qwen/Qwen3-8B
-  base_model_path: path/to/local/8b/model
-  model_family: other
+  base_model_path: /home/ajifang/models/Qwen/Qwen3-8B
+  model_family: qwen3
   tokenizer_path: null
   trust_remote_code: false
   torch_dtype: auto
@@ -21,10 +23,12 @@ model:
   use_flash_attention: false
   gradient_checkpointing: true
 official_training:
-  policy: preserve_official_algorithm
+  policy: blocked_until_official_code_adapter
+  target_policy_after_promotion: preserve_official_algorithm
   qwen3_8b_base_model: where_faithful
   lora_or_adapter_required: method_specific
   implementation_status: candidate_scaffold_not_reportable
+  scaffold_only: true
   non_reportable_reason: requires_official_code_adapter_before_training
 dataset_artifacts:
   movielens_full:
@@ -34,6 +38,8 @@ dataset_artifacts:
     split_artifact: outputs/artifacts/protocol_v1/amazon_multidomain_filtered_iterative_k3/splits.jsonl
     candidate_artifact: outputs/artifacts/protocol_v1/amazon_multidomain_filtered_iterative_k3/candidates.jsonl
 sft:
+  scaffold_only: true
+  container_policy: generic_sft_rows_for_interface_smoke_not_official_baseline
   variant: reference_collaborative_sft
   output_root: data/processed/lora_sft/protocol_v1
   dry_run_output_dir: outputs/paper_runs/protocol_v1/lora_8b/dry_run_sft

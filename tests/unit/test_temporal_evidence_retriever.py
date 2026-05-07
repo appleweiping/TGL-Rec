@@ -7,9 +7,13 @@ def test_retriever_returns_candidate_grounded_evidence():
             "source_item": "i1",
             "target_item": "i2",
             "count": 3,
+            "direction_asymmetry": 1.0,
+            "lift": 2.0,
             "user_count": 2,
             "mean_time_gap": 3600,
             "median_time_gap": 1800,
+            "pmi": 0.69,
+            "transition_probability": 0.75,
             "bucket_counts": {"same_session": 3},
         }
     ]
@@ -46,3 +50,6 @@ def test_retriever_returns_candidate_grounded_evidence():
     assert {row.evidence_type for row in result.evidence} >= {"transition", "time_window", "history"}
     assert all(row.target_item == "i2" for row in result.evidence)
     assert result.metadata["constructed_from"] == "train_only"
+    transition = [row for row in result.evidence if row.evidence_type == "transition"][0]
+    assert transition.stats["transition_probability"] == 0.75
+    assert transition.stats["pmi"] == 0.69

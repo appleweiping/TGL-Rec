@@ -60,7 +60,11 @@ def transition_edge_to_evidence(
     target = str(edge["target_item"])
     gap_bucket = _dominant_bucket(edge.get("bucket_counts", {}))
     stats = {
+        "direction_asymmetry": float(edge.get("direction_asymmetry", 0.0) or 0.0),
+        "lift": float(edge.get("lift", 0.0) or 0.0),
+        "pmi": float(edge.get("pmi", 0.0) or 0.0),
         "transition_count": int(edge.get("count", 0)),
+        "transition_probability": float(edge.get("transition_probability", 0.0) or 0.0),
         "user_count": int(edge.get("user_count", 0)),
         "time_window_score": None,
         "semantic_similarity": None,
@@ -106,7 +110,11 @@ def time_window_edge_to_evidence(
     gap_bucket = _dominant_bucket(edge.get("bucket_counts", {}))
     weight = float(edge.get("weight", edge.get("time_decayed_weight", 0.0)) or 0.0)
     stats = {
+        "direction_asymmetry": float(edge.get("direction_asymmetry", 0.0) or 0.0),
+        "lift": float(edge.get("lift", 0.0) or 0.0),
+        "pmi": float(edge.get("pmi", 0.0) or 0.0),
         "transition_count": int(edge.get("count", 0)),
+        "transition_probability": float(edge.get("transition_probability", 0.0) or 0.0),
         "user_count": int(edge.get("user_count", 0)),
         "time_window_score": weight,
         "semantic_similarity": None,

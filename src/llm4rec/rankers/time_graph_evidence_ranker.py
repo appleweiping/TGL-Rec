@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from llm4rec.evidence.retriever import TemporalEvidenceRetriever
-from llm4rec.evidence.scorer import score_candidates
+from llm4rec.evidence.scorer import factorized_score_candidates, score_candidates
 from llm4rec.evidence.temporal_graph import build_temporal_graph_artifacts
 from llm4rec.evidence.translator import GraphToTextTranslator
 from llm4rec.experiments.config import resolve_path
@@ -104,11 +104,16 @@ class TimeGraphEvidenceRanker:
                 prediction_timestamp=example.metadata.get("prediction_timestamp"),
             )
 
-        scores_by_item = score_candidates(
-            evidence,
-            example.candidate_items,
-            dict(self.config.get("scoring", {})),
-        )
+        scoring_config = dict(self.config.get("scoring", {}))
+        scoring_mode = str(scoring_config.get("mode", "need_gate"))
+        factor_scores = {}
+        if scoring_mode == "need_gate":
+            factor_scores = factorized_score_candidates(evidence, example.candidate_items, scoring_config)
+            scores_by_item = {item: score.total_score for item, score in factor_scores.items()}
+        elif scoring_mode == "additive":
+            scores_by_item = score_candidates(evidence, example.candidate_items, scoring_config)
+        else:
+            raise ValueError(f"Unsupported time graph evidence scoring mode: {scoring_mode}")
         dynamic_scores: dict[str, float] = {}
         if self.ablation.use_dynamic_encoder and self.dynamic_encoder is not None:
             weight = float(self.config.get("scoring", {}).get("dynamic_encoder_weight", 0.0))
@@ -132,6 +137,9 @@ class TimeGraphEvidenceRanker:
                 "dynamic_encoder_status": self.dynamic_encoder_status,
                 "evidence_count": len(evidence),
                 "evidence_used": [row.to_dict() for row in evidence],
+                "factor_scores": {
+                    item: score.to_dict() for item, score in sorted(factor_scores.items())
+                },
                 "non_reportable_phase5": True,
                 "prompt_ready_evidence": self.translator.translate(evidence)
                 if self.ablation.use_explanation

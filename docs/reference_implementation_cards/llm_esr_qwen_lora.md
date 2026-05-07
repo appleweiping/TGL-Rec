@@ -18,6 +18,7 @@
 
 - Use Qwen3-derived semantic signals where faithful.
 - Preserve long-tail split/diagnostics under the shared candidate protocol.
+- Use the frozen shared split, candidate set, prediction schema, and evaluator.
 - Output shared prediction JSONL.
 
 ## Implementation Status
