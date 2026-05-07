@@ -14,7 +14,9 @@
 
 ## Shared Protocol Adaptation
 
-- Attach collaborative ID/prompt structure to Qwen3-8B LoRA where feasible.
+- Use Qwen3-8B as the shared base model only where faithful.
+- Preserve the official collaborative ID-token, prompt, head, and regularization
+  design.
 - Score the shared candidate set.
 - Output shared prediction JSONL and candidate-adherence diagnostics.
 

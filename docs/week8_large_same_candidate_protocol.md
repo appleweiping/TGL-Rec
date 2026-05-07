@@ -136,5 +136,5 @@ Current `protocol_v1` data (`movielens_full` and
 debugging, smoke tests, and diagnostics, but not for final paper-scale claims.
 
 The large same-candidate protocol should become the main evidence base before
-making claims about our observation, reference-style baselines, or cross-domain
+making claims about our observation, reference-paper baselines, or cross-domain
 behavior.

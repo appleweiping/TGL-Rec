@@ -13,7 +13,8 @@
 
 ## Shared Protocol Adaptation
 
-- Use Qwen3-8B LoRA for preference reasoning when faithful.
+- Use Qwen3-8B as the shared base model only where faithful.
+- Preserve the official preference extraction, reasoning, and reranking design.
 - Use shared splits/candidates/schema/evaluator.
 - Preserve review-derived evidence when the dataset provides reviews.
 

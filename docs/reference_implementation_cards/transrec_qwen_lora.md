@@ -13,7 +13,8 @@
 
 ## Shared Protocol Adaptation
 
-- Use Qwen3-8B LoRA for identifier generation if faithful.
+- Use a Qwen3-8B-compatible generation path only where faithful.
+- Preserve the official identifier and grounding design.
 - Ground outputs to the shared candidate set.
 - Report validity and hallucination diagnostics.
 

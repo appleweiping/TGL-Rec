@@ -90,3 +90,53 @@ def test_prediction_schema_preserves_event_fields() -> None:
     assert normalized["event_id"] == "e1"
     assert normalized["source_event_id"] == "src1"
     assert normalized["split"] == "test"
+
+
+def test_prediction_schema_validates_optional_baseline_provenance() -> None:
+    row = {
+        "candidate_items": ["i1", "i2"],
+        "metadata": {
+            "baseline_provenance": {
+                "adapter_training_policy": "preserve_official_algorithm",
+                "base_model_policy": "unified_qwen3_8b_base_model",
+                "baseline_id": "cllm4rec_qwen_lora",
+                "config_status": "candidate_scaffold_not_reportable",
+                "do_not_merge_into_main_accuracy_table": True,
+                "implementation_status": "not_implemented",
+                "official_code_status": "official_code_identified",
+                "protocol_controls": [
+                    "data",
+                    "candidate_sets",
+                    "splits",
+                    "metrics",
+                    "prediction_schema",
+                ],
+                "reportable_baseline": False,
+                "scoring_policy": "preserve_official_scoring_logic",
+            }
+        },
+        "predicted_items": ["i2", "i1"],
+        "scores": [1.0, 0.5],
+        "target_item": "i2",
+        "user_id": "u1",
+    }
+
+    normalized = validate_prediction_row(row, candidate_protocol="fixed_sampled")
+
+    provenance = normalized["metadata"]["baseline_provenance"]
+    assert provenance["baseline_id"] == "cllm4rec_qwen_lora"
+    assert provenance["do_not_merge_into_main_accuracy_table"] is True
+
+
+def test_prediction_schema_rejects_incomplete_baseline_provenance() -> None:
+    row = {
+        "candidate_items": ["i1", "i2"],
+        "metadata": {"baseline_provenance": {"baseline_id": "cllm4rec_qwen_lora"}},
+        "predicted_items": ["i2"],
+        "scores": [1.0],
+        "target_item": "i2",
+        "user_id": "u1",
+    }
+
+    with pytest.raises(PredictionSchemaError):
+        validate_prediction_row(row, candidate_protocol="fixed_sampled")

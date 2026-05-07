@@ -57,6 +57,11 @@ def validate_prediction_row(
         metadata = {}
     if not isinstance(metadata, dict):
         raise PredictionSchemaError("metadata must be an object")
+    if "baseline_provenance" in metadata:
+        metadata = dict(metadata)
+        metadata["baseline_provenance"] = validate_baseline_provenance(
+            metadata["baseline_provenance"]
+        )
     normalized = dict(row)
     normalized["user_id"] = str(row["user_id"])
     normalized["target_item"] = str(row["target_item"])
@@ -73,6 +78,57 @@ def validate_prediction_row(
     for optional in ("event_id", "source_event_id", "split"):
         if optional in row and row[optional] is not None:
             normalized[optional] = str(row[optional])
+    return normalized
+
+
+def validate_baseline_provenance(value: Any) -> dict[str, Any]:
+    """Validate optional official-reference baseline provenance metadata."""
+
+    if not isinstance(value, dict):
+        raise PredictionSchemaError("metadata.baseline_provenance must be an object")
+    required = {
+        "adapter_training_policy",
+        "base_model_policy",
+        "baseline_id",
+        "implementation_status",
+        "official_code_status",
+        "protocol_controls",
+        "reportable_baseline",
+        "scoring_policy",
+    }
+    missing = sorted(required - set(value))
+    if missing:
+        raise PredictionSchemaError(f"baseline_provenance missing required fields: {missing}")
+    normalized = dict(value)
+    for key in (
+        "adapter_training_policy",
+        "base_model_policy",
+        "baseline_id",
+        "implementation_status",
+        "official_code_status",
+        "scoring_policy",
+    ):
+        if normalized.get(key) in (None, ""):
+            raise PredictionSchemaError(f"baseline_provenance has empty field: {key}")
+        normalized[key] = str(normalized[key])
+    if not isinstance(normalized["reportable_baseline"], bool):
+        raise PredictionSchemaError("baseline_provenance.reportable_baseline must be bool")
+    controls = normalized["protocol_controls"]
+    if not isinstance(controls, list) or not all(isinstance(item, str) for item in controls):
+        raise PredictionSchemaError("baseline_provenance.protocol_controls must be list[str]")
+    for optional in (
+        "config_status",
+        "official_code_url",
+        "title",
+    ):
+        if optional in normalized and normalized[optional] is not None:
+            normalized[optional] = str(normalized[optional])
+    if "do_not_merge_into_main_accuracy_table" in normalized and not isinstance(
+        normalized["do_not_merge_into_main_accuracy_table"], bool
+    ):
+        raise PredictionSchemaError(
+            "baseline_provenance.do_not_merge_into_main_accuracy_table must be bool"
+        )
     return normalized
 
 

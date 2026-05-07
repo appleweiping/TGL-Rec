@@ -15,7 +15,8 @@
 
 ## Shared Protocol Adaptation
 
-- Use Qwen3-8B LoRA for instruction/control adaptation.
+- Use Qwen3-8B as the shared base model only where faithful.
+- Preserve the official instruction/control adaptation and alignment design.
 - Use shared splits, candidates, prediction schema, and evaluator.
 - Preserve control-condition evaluation when the data provides control labels.
 

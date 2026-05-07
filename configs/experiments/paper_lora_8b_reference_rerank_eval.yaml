@@ -1,8 +1,26 @@
 protocol_version: protocol_v1
 phase: Phase 9E
+baseline_contract:
+  status: candidate_scaffold_eval_not_reportable
+  intended_reference_method_ids:
+    - review_pref_reasoning_qwen_lora
+    - rlmrec_qwen_lora
+    - llm_esr_qwen_lora
+    - cllm4rec_qwen_lora
+  variant_reference_method_ids:
+    reference_preference_sft: review_pref_reasoning_qwen_lora
+    reference_semantic_sft: rlmrec_qwen_lora
+    reference_long_tail_sft: llm_esr_qwen_lora
+    reference_collaborative_sft: cllm4rec_qwen_lora
+  official_algorithm_required: true
+  official_code_required_for_main_baseline: true
+  base_model_policy: unified_qwen3_8b_base_model
+  adapter_training_policy: preserve_each_official_baseline_algorithm
+  scoring_policy: preserve_each_official_baseline_scoring_logic
+  protocol_controls: [data, candidate_sets, splits, metrics, prediction_schema]
 evaluation_run:
   output_dir: outputs/paper_runs/protocol_v1/lora_8b/reference_eval
-  adapter_paths:
+  checkpoint_or_adapter_paths:
     - outputs/paper_runs/protocol_v1/lora_8b/reference_preference_sft/adapter
     - outputs/paper_runs/protocol_v1/lora_8b/reference_semantic_sft/adapter
     - outputs/paper_runs/protocol_v1/lora_8b/reference_long_tail_sft/adapter

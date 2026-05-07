@@ -8,6 +8,7 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
+from llm4rec.baselines.reference_methods import reference_method_metadata
 from llm4rec.evaluation.lora_evaluator import evaluate_lora_predictions
 from llm4rec.experiments.config import load_yaml_config, resolve_path
 from llm4rec.io.artifacts import ensure_dir, iter_jsonl, write_csv_rows, write_json, write_jsonl
@@ -28,10 +29,11 @@ def run_lora_rerank_eval(
 
     config = load_yaml_config(config_path)
     eval_config = dict(config["evaluation_run"])
+    baseline_contract = dict(config.get("baseline_contract", {}))
     run_dir = ensure_dir(resolve_path(eval_config["output_dir"]))
     configured_top_m = int(eval_config.get("top_m_candidates_for_local_lora", 50))
     candidate_limit = int(top_m or configured_top_m)
-    adapters = _adapter_specs(eval_config)
+    adapters = _adapter_specs(eval_config, baseline_contract=baseline_contract)
     datasets = [str(value) for value in eval_config.get("datasets", [])]
     if not datasets:
         raise ValueError("evaluation_run.datasets must be non-empty")
@@ -71,6 +73,8 @@ def run_lora_rerank_eval(
     metric_rows = _metrics_by_method(rows)
     write_csv_rows(run_dir / "metrics" / "metrics_by_method.csv", metric_rows)
     manifest = {
+        "adapter_provenance": _adapter_provenance_for_manifest(adapters),
+        "baseline_contract": baseline_contract,
         "base_model_path": str(base_model_path),
         "candidate_limit": candidate_limit,
         "candidate_selection": "stable_hash_sampled_with_target",
@@ -85,15 +89,82 @@ def run_lora_rerank_eval(
     return {"manifest": manifest, "metrics": metrics, "predictions_path": str(predictions_path)}
 
 
-def _adapter_specs(eval_config: dict[str, Any]) -> list[dict[str, str]]:
+REFERENCE_VARIANT_TO_METHOD_ID = {
+    "reference_collaborative_sft": "cllm4rec_qwen_lora",
+    "reference_long_tail_sft": "llm_esr_qwen_lora",
+    "reference_preference_sft": "review_pref_reasoning_qwen_lora",
+    "reference_semantic_sft": "rlmrec_qwen_lora",
+}
+
+
+def _adapter_specs(
+    eval_config: dict[str, Any],
+    *,
+    baseline_contract: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     specs = []
-    for raw_path in eval_config.get("adapter_paths", []):
+    baseline_contract = dict(baseline_contract or {})
+    raw_paths = eval_config.get("checkpoint_or_adapter_paths", eval_config.get("adapter_paths", []))
+    for raw_path in raw_paths:
         path = str(raw_path)
         variant = Path(path).parent.name if Path(path).name == "adapter" else Path(path).name
-        specs.append({"adapter_path": path, "variant": variant, "method": f"local_8b_lora::{variant}"})
+        reference_method_id = _reference_method_id_for_variant(variant, baseline_contract)
+        spec = {"adapter_path": path, "variant": variant, "method": f"local_8b_lora::{variant}"}
+        if reference_method_id:
+            spec["reference_method_id"] = reference_method_id
+            spec["baseline_provenance"] = _baseline_provenance(
+                reference_method_id,
+                baseline_contract=baseline_contract,
+                eval_config=eval_config,
+            )
+        specs.append(spec)
     if not specs:
-        raise ValueError("evaluation_run.adapter_paths must be non-empty")
+        raise ValueError("evaluation_run.adapter_paths or checkpoint_or_adapter_paths must be non-empty")
     return specs
+
+
+def _reference_method_id_for_variant(
+    variant: str,
+    baseline_contract: dict[str, Any],
+) -> str | None:
+    reference_method_id = baseline_contract.get("reference_method_id")
+    if reference_method_id:
+        return str(reference_method_id)
+    variant_map = baseline_contract.get("variant_reference_method_ids", {})
+    if isinstance(variant_map, dict) and variant in variant_map:
+        return str(variant_map[variant])
+    return REFERENCE_VARIANT_TO_METHOD_ID.get(variant)
+
+
+def _baseline_provenance(
+    reference_method_id: str,
+    *,
+    baseline_contract: dict[str, Any],
+    eval_config: dict[str, Any],
+) -> dict[str, Any]:
+    provenance = reference_method_metadata(reference_method_id)
+    provenance["config_status"] = str(baseline_contract.get("status", "unspecified"))
+    provenance["do_not_merge_into_main_accuracy_table"] = bool(
+        eval_config.get("do_not_merge_into_main_accuracy_table", True)
+        or not provenance.get("reportable_baseline", False)
+        or provenance.get("official_code_status") != "official_code_identified"
+    )
+    return provenance
+
+
+def _adapter_provenance_for_manifest(adapters: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    output = []
+    for adapter in adapters:
+        output.append(
+            {
+                "adapter_path": adapter["adapter_path"],
+                "method": adapter["method"],
+                "reference_method_id": adapter.get("reference_method_id"),
+                "variant": adapter["variant"],
+                "baseline_provenance": adapter.get("baseline_provenance"),
+            }
+        )
+    return output
 
 
 def _build_examples(
@@ -203,7 +274,7 @@ def _stable_position(seed_key: str, limit: int) -> int:
 
 def _rank_dataset(
     reranker: LocalLoRAReranker,
-    adapter: dict[str, str],
+    adapter: dict[str, Any],
     dataset: str,
     examples: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
@@ -219,13 +290,16 @@ def _rank_dataset(
                 metadata={"dataset": dataset},
             )
         )
+        metadata = dict(result.get("metadata", {}))
+        if adapter.get("baseline_provenance"):
+            metadata["baseline_provenance"] = adapter["baseline_provenance"]
         rows.append(
             {
                 "candidate_items": example["candidate_items"],
                 "dataset": dataset,
                 "domain": example["domain"],
                 "event_id": example.get("event_id"),
-                "metadata": result.get("metadata", {}),
+                "metadata": metadata,
                 "method": adapter["method"],
                 "predicted_items": result["predicted_items"],
                 "raw_output": result.get("raw_output"),

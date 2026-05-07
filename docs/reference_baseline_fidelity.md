@@ -9,7 +9,8 @@ The governing principle is:
 
 ```text
 Training/scoring algorithm: preserve the baseline's own logic as much as possible.
-Experimental protocol: unify data, candidates, splits, metrics, and backbone.
+Experimental protocol: unify data, candidates, splits, metrics, prediction schema,
+and the Qwen3-8B base model where faithful.
 ```
 
 Do not make a baseline artificially weak by flattening its algorithm into a
@@ -25,20 +26,21 @@ Official implementation rule:
   senior-recommended baseline unless the user explicitly approves a
   non-official reproduction and it is labeled as such.
 - A local rewrite is allowed only for glue code: data conversion, candidate
-  alignment, Qwen3-8B backbone replacement, prediction-schema export, and metric
+  alignment, Qwen3-8B base-model adaptation, prediction-schema export, and metric
   evaluation.
 
-Fairness means every reportable reference baseline uses the same protocol
-backbone and evaluator:
+Fairness means every reportable reference baseline uses the same protocol base
+model and evaluator:
 
 - base model: Qwen3-8B;
-- adaptation: LoRA/QLoRA;
+- adaptation/training/head/scorer: preserve each official baseline algorithm
+  where possible;
 - same train/valid/test split;
 - same candidate sets;
 - same prediction schema;
 - same evaluator and diagnostics.
 
-But matching the backbone is not enough. A baseline is reportable only if its
+But matching the base model is not enough. A baseline is reportable only if its
 method signal comes from a concrete reference paper or project.
 
 ## What Should Be Preserved
@@ -55,14 +57,17 @@ possible:
 
 Only adapt the parts needed for a fair shared protocol:
 
-- replace the original backbone with Qwen3-8B LoRA/QLoRA when the method is
-  LLM-based or can be faithfully adapted to this backbone;
+- replace the original base model with Qwen3-8B when the method is LLM-based or
+  can be faithfully adapted to this base model;
+- preserve the official baseline's LoRA/adapter/head/scorer training policy
+  when it differs from our local SFT control group;
 - replace original data splits/candidates with our frozen protocol;
 - emit the shared prediction schema;
 - evaluate with the shared evaluator.
 
-If a paper's baseline cannot be faithfully adapted to Qwen3-8B LoRA without
-destroying its method, record that limitation instead of forcing a toy version.
+If a paper's baseline cannot be faithfully adapted to the shared Qwen3-8B
+base-model protocol without destroying its method, record that limitation
+instead of forcing a toy version.
 
 ## Current Status
 
@@ -93,9 +98,10 @@ the following are true:
 3. The official code path is identified, cloned or referenced, and its license
    or usage constraints are recorded.
 4. The adapted method signal is described concretely, not generically.
-5. The baseline's own training and scoring logic is preserved as much as the
-   shared Qwen3-8B LoRA protocol allows.
-6. The implementation still uses Qwen3-8B LoRA/QLoRA for fairness.
+5. The baseline's own training, adapter/head/loss, and scoring logic is
+   preserved as much as the shared data/candidate/evaluator protocol allows.
+6. The implementation uses Qwen3-8B as the base model only where faithful;
+   LoRA/QLoRA is method-specific, not mandatory.
 7. A smoke build verifies the data path and prompt fields.
 8. A server training run produces an adapter or baseline checkpoint.
 9. The adapter/checkpoint is evaluated with the shared evaluator.

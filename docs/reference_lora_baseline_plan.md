@@ -3,12 +3,13 @@
 ## Goal
 
 The `references/` papers should inform baseline methods, but their results must
-not be copied as external numbers. Each reference-style baseline should be
-reimplemented inside this project's framework and trained/evaluated under the
-same local small-model protocol:
+not be copied as external numbers. Each reference-paper baseline should be
+wrapped or faithfully adapted through official-code-compatible adapters and
+trained/evaluated under the same project protocol:
 
 - base model: Qwen3-8B;
-- adaptation: LoRA/QLoRA;
+- adaptation, LoRA/adapter training, heads, and scoring logic: preserved from
+  each official baseline where faithful;
 - data split: project `protocol_v1` or a later frozen protocol;
 - candidate construction: shared project candidate protocol;
 - output schema: shared `predictions.jsonl`;
@@ -23,12 +24,12 @@ the experimental protocol, not the method identity:
 - preserve each baseline's own training objective, input construction, and
   scoring/reranking logic where feasible;
 - unify data, candidate sets, splits, metrics, prediction schema, and Qwen3-8B
-  LoRA/QLoRA backbone.
+  base model.
 
 Current status: these baselines are candidate scaffolds, not original
 senior-recommended baselines yet. Do not report them as completed baselines
-until each one has a concrete paper-method mapping, SFT construction policy,
-server run, metrics, and diagnostics. See
+until each one has a concrete paper-method mapping, official-code adaptation
+policy, server run, metrics, and diagnostics. See
 `docs/reference_baseline_fidelity.md` and
 `docs/reference_method_adaptation_map.md`.
 
@@ -45,7 +46,7 @@ derived from them may be committed only as manually written summaries.
 
 ## Baseline Families To Adapt
 
-Initial reference-style LoRA containers are registered in
+Initial reference-style scaffold containers are registered in
 `src/llm4rec/trainers/sft_variants.py`:
 
 | Variant | Role | Intended Reference Family |
@@ -69,25 +70,27 @@ mapped to it with:
 - label construction policy when SFT is part of the original or faithful adapted method;
 - expected observation axes;
 - smoke run;
-- server LoRA run;
+- server training/evaluation run using the official or faithful adapted
+  training path;
 - saved metrics and diagnostics.
 
-Matching the Qwen3-8B LoRA backbone is required for fairness, but it is not
+Matching the Qwen3-8B base model is required for fairness, but it is not
 sufficient for baseline fidelity. The baseline's method signal must come from
 the original reference method rather than a generic prompt phrase.
 
 ## Observation-Aware Evaluation
 
 The main question is not only whether our variant beats baselines. We must also
-test whether the observed phenomenon appears in other LoRA baselines.
+test whether the observed phenomenon appears in other official-baseline
+adaptations.
 
 The observation is not yet complete or proven. The fixed-label-mask
 `history_only_sft` and `temporal_evidence_sft` adapters must be retrained before
 any LoRA result is trusted, and the reference-style baselines must be evaluated
 under the same candidate protocol before claiming whether the phenomenon is
-specific to our method or broader across Qwen3-8B LoRA recommenders.
+specific to our method or broader across Qwen3-8B-based recommenders.
 
-For every Qwen3-8B LoRA variant, report:
+For every reportable baseline or Qwen3-8B adaptation, report:
 
 - ranking metrics: Recall, NDCG, HitRate, MRR;
 - output quality: parse success, validity, hallucination, candidate adherence;
@@ -122,8 +125,11 @@ Expected future integration steps:
 1. Convert the new dataset into the project interaction/item schema.
 2. Run readiness checks and leakage audits.
 3. Freeze splits and candidates under a new protocol version.
-4. Rebuild all LoRA SFT variants from train split only.
-5. Train every baseline variant with the same Qwen3-8B LoRA settings.
+4. Rebuild SFT/adapter data only for methods that require it, using train split
+   only.
+5. Train each baseline with its official or faithful adapted training recipe,
+   while sharing frozen splits, candidates, IDs, prediction schema, evaluator,
+   and Qwen3-8B base model where faithful.
 6. Evaluate all variants with the same evaluator and diagnostic scripts.
 
 ## Near-Term Plan

@@ -1,6 +1,16 @@
 protocol_version: protocol_v1
 phase: Phase 9E
+baseline_contract:
+  status: candidate_scaffold_not_reportable
+  reference_method_id: review_pref_reasoning_qwen_lora
+  official_algorithm_required: true
+  official_code_required_for_main_baseline: true
+  base_model_policy: unified_qwen3_8b_base_model
+  adapter_training_policy: preserve_each_official_baseline_algorithm
+  scoring_policy: preserve_each_official_baseline_scoring_logic
+  protocol_controls: [data, candidate_sets, splits, metrics, prediction_schema]
 model:
+  base_model_name: Qwen/Qwen3-8B
   base_model_path: path/to/local/8b/model
   model_family: other
   tokenizer_path: null
@@ -10,34 +20,12 @@ model:
   max_seq_length: 1024
   use_flash_attention: false
   gradient_checkpointing: true
-training:
-  use_qlora: true
-  load_in_4bit: true
-  load_in_8bit: false
-  bnb_4bit_quant_type: nf4
-  bnb_4bit_compute_dtype: bfloat16
-  lora_r: 16
-  lora_alpha: 32
-  lora_dropout: 0.05
-  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
-  bias: none
-  task_type: CAUSAL_LM
-  per_device_train_batch_size: 1
-  gradient_accumulation_steps: 16
-  learning_rate: 0.0002
-  weight_decay: 0.0
-  warmup_ratio: 0.03
-  num_train_epochs: 1
-  max_steps: null
-  logging_steps: 10
-  save_steps: 200
-  eval_steps: 200
-  save_total_limit: 2
-  bf16: true
-  fp16: false
-  gradient_checkpointing: true
-  max_grad_norm: 1.0
-  seed: 2026
+official_training:
+  policy: preserve_official_algorithm
+  qwen3_8b_base_model: where_faithful
+  lora_or_adapter_required: method_specific
+  implementation_status: candidate_scaffold_not_reportable
+  non_reportable_reason: requires_official_code_adapter_before_training
 dataset_artifacts:
   movielens_full:
     split_artifact: outputs/artifacts/protocol_v1/movielens_full/splits.jsonl

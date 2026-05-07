@@ -8,13 +8,116 @@ This repository is intended to become a top-tier recommendation-systems research
 
 ## Current phase
 
-Current status: **Phase 8, paper-scale launch preparation without execution**.
-The codebase now supports pre-experiment infrastructure, a non-reportable `TimeGraphEvidenceRec`
-skeleton, a real SASRec-style baseline when PyTorch is installed, and a lightweight trainable
-`TemporalGraphEncoder` option, plus frozen protocol docs, resource estimates, failure audits,
-pilot table export, and a paper launch package generator. No paper-scale experiments have been run,
-no real API calls should be made yet, no LoRA training should run, and no paper conclusions are
-claimed.
+Current status: **Phase 9E, local Qwen3-8B recommendation adaptation and official-baseline
+integration**.
+
+The project has moved beyond the earlier Phase 8 launch-preparation state. The current active work is
+to make local Qwen3-8B recommendation experiments reproducible, diagnose whether temporal evidence
+helps beyond history-only prompting, and integrate senior-recommended reference baselines through
+their official implementations under a shared experimental protocol.
+
+What is already implemented:
+
+- Qwen3-8B LoRA/QLoRA training wrapper: `scripts/train_lora_8b.py`.
+- Local LoRA reranking/evaluation wrapper: `scripts/run_lora_rerank_eval.py`.
+- LoRA prediction diagnostics: `scripts/diagnose_lora_predictions.py`.
+- Fixed SFT label masking: prompt tokens are masked and only assistant answer tokens are supervised.
+- Faster LoRA SFT batching: dynamic padding replaces fixed padding to max length.
+- Week8 large same-candidate importer: `scripts/import_week8_same_candidate.py`.
+- Reference baseline registry and reportability guard:
+  `src/llm4rec/baselines/reference_methods.py`.
+- Reference implementation cards:
+  `docs/reference_implementation_cards/`.
+
+What is not yet a paper result:
+
+- The current `protocol_v1` data (`movielens_full` and
+  `amazon_multidomain_filtered_iterative_k3`) is useful for framework debugging and diagnostics, but
+  too preliminary for final paper claims.
+- `history_only_sft` and `temporal_evidence_sft` have been retrained on the server after the
+  label-mask fix, but their post-fix rerank diagnostics still need to be run successfully after GPU
+  memory is cleared.
+- No senior-recommended official reference baseline is reportable yet. The `reference_*_sft` variants
+  are scaffolds only until mapped to official code and implemented faithfully.
+- No paper conclusion should be written from diagnostic runs.
+
+## Official Baseline Contract
+
+Senior-recommended baselines must preserve the official algorithm. TGL-Rec controls the experiment
+protocol, not the baseline's method identity.
+
+Unified across all main baselines:
+
+- base model: Qwen3-8B;
+- data split and leakage policy;
+- candidate sets;
+- metrics and diagnostics;
+- prediction JSONL schema;
+- event/candidate IDs for paired comparison.
+
+Preserved from each official baseline where faithful:
+
+- LoRA/adapter strategy;
+- extra heads;
+- losses and training objective;
+- input/evidence construction;
+- scoring or reranking logic;
+- official code path.
+
+If official code is unavailable, the baseline cannot enter the main reportable set unless the user
+explicitly approves a labeled non-official reproduction. See:
+
+- `docs/reference_baseline_fidelity.md`
+- `docs/reference_method_adaptation_map.md`
+- `src/llm4rec/baselines/reference_methods.py`
+
+## Current Reference Baseline Queue
+
+Selected official-code candidates:
+
+- `slmrec_distill_qwen_lora`: SLMRec distillation.
+- `llm_esr_qwen_lora`: LLM-ESR long-tail sequential recommendation.
+- `cllm4rec_qwen_lora`: Collaborative LLM recommendation.
+- `rlmrec_qwen_lora`: LLM representation learning for recommendation.
+- `review_pref_reasoning_qwen_lora`: review-driven preference reasoning.
+
+Reference methods without identified official code are blocked from the main baseline set until
+resolved:
+
+- `controllable_rec_qwen_lora`
+- `transrec_qwen_lora`
+
+## Immediate Checklist
+
+1. Clear GPU memory on the server and rerun the small post-label-mask LoRA diagnostic:
+
+   ```bash
+   CUDA_VISIBLE_DEVICES=0 python -u scripts/run_lora_rerank_eval.py \
+     --config configs/experiments/paper_lora_8b_rerank_eval.yaml \
+     --base-model-path /home/ajifang/models/Qwen/Qwen3-8B \
+     --limit 20 \
+     --top-m 50
+
+   python scripts/diagnose_lora_predictions.py \
+     --predictions outputs/paper_runs/protocol_v1/lora_8b/eval/predictions.jsonl \
+     --output-dir outputs/paper_runs/protocol_v1/lora_8b/eval/diagnostics
+   ```
+
+2. If the small diagnostic is sane, rerun `--limit 200` for diagnostic comparison only.
+3. Import the Week8 large same-candidate protocol when the adjacent project finishes:
+
+   ```bash
+   python scripts/import_week8_same_candidate.py \
+     --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/books_large10000_100neg_test_same_candidate \
+     --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/electronics_large10000_100neg_test_same_candidate \
+     --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/movies_large10000_100neg_test_same_candidate \
+     --protocol-version protocol_week8_large10000_same_candidate
+   ```
+
+4. Wrap official reference baseline code with TGL-Rec adapters, starting with the baselines whose
+   official code is identified.
+5. Train/evaluate every reportable method under the same Qwen3-8B base model and same candidate
+   protocol.
 
 ## Core hypothesis
 
@@ -99,10 +202,12 @@ On this Windows workspace the verified interpreter was Python 3.12:
 py -3.12 -m pytest -q
 ```
 
-The current implemented package surface is CPU-only and covers deterministic config loading,
-seed utilities, artifact manifests, ranking metrics, and MovieLens-1M preprocessing.
+The early CPU-only surface covered deterministic config loading, seed utilities,
+artifact manifests, ranking metrics, and MovieLens-1M preprocessing. Later
+phases add GPU-gated SASRec, TemporalGraphEncoder, and local Qwen3-8B
+adaptation tooling.
 
-## Phase 4 pre-experiment validation
+## Historical Phase 4 pre-experiment validation
 
 Run the CI-style project validation:
 
@@ -135,7 +240,9 @@ Export table artifacts from saved metrics:
 python scripts/export_tables.py --input outputs/runs --output outputs/tables
 ```
 
-LoRA/QLoRA support is dry-run only at this stage:
+Historical Phase 4 note: LoRA/QLoRA support was dry-run only at that stage.
+Current Phase 9E local Qwen3-8B adapters use the dedicated GPU-gated scripts
+listed in the current-phase section above.
 
 ```bash
 python scripts/train.py --config configs/training/lora.yaml --dry-run
@@ -213,7 +320,7 @@ validation and must not be used as paper-scale evidence.
 
 These commands are pre-experiment checks. They do not establish paper results.
 
-## Phase 8 paper launch preparation
+## Historical Phase 8 paper launch preparation
 
 Phase 8 prepares the launch package only. It checks dataset readiness, freezes protocol metadata,
 creates planned job queues, estimates resources, and writes table shells without numbers:

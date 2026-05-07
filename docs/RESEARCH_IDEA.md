@@ -144,7 +144,7 @@ baselines. The diagnostics below are required before the final method is shaped.
 - hierarchical user profile;
 - recurrent user profile.
 
-## OursMethod Placeholder
+## Working Method Name
 
 Use the placeholder name `OursMethod` until the diagnostics justify a specific architecture.
 

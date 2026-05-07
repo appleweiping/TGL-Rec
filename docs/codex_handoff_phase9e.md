@@ -6,11 +6,17 @@ Branch: `codex/phase9e-lora-rerank-eval`
 
 Latest pushed commits:
 
+- `5e31e05 Require official code for reference baselines`
+- `29c0d48 Add reference baseline implementation cards`
+- `22b3cc2 Map concrete reference methods for adaptation`
+- `fe8391b Document algorithm-fidelity baseline principle`
+- `f928f8b Clarify reference baseline fidelity requirements`
+- `201de0e Add collaborative reference LoRA baseline`
+- `7d38a31 Add Week8 same-candidate importer`
+- `b2ee629 Document large same-candidate protocol handoff`
 - `3eca9a0 Speed up LoRA SFT batching`
 - `3f5ab54 Keep LoRA training on visible GPU`
 - `1b9ed07 Add Phase 9E Codex handoff notes`
-- `2cb71cb Add reference-style LoRA baseline variants`
-- `f49ca64 Fix LoRA SFT masking and add rerank diagnostics`
 
 This repository is being used as a research-grade LLM4Rec framework. Do not
 fabricate results, do not treat diagnostic runs as paper results, and do not
@@ -29,7 +35,7 @@ The Phase 9E local LoRA pipeline is operational:
   than taking the first catalog items and appending the target.
 - The old limit-200 LoRA evaluation was pulled back locally and documented in
   `docs/phase9e_lora_limit200_audit.md`.
-- Reference-style LoRA baseline slots were added in
+- Reference-paper scaffold slots were added in
   `src/llm4rec/trainers/sft_variants.py`.
 - LoRA SFT training no longer pads every sample to `max_seq_length` during
   tokenization. It now uses a dynamic padding collator, and tracked 8B LoRA
@@ -63,8 +69,9 @@ Reference baseline plan:
   `references/NR/`.
 - Do not commit PDFs or copied paper text.
 - The intended design is to adapt reference paper methods into this framework,
-  using the same Qwen3-8B LoRA setup, same splits, same candidate protocol, same
-  prediction schema, and same evaluator.
+  using the same Qwen3-8B base model, same splits, same candidate protocol,
+  same prediction schema, and same evaluator. LoRA/adapter/head/loss/scoring
+  logic must stay method-specific where the official algorithm requires it.
 - Current `reference_*_sft` variants are candidate scaffolds until mapped to
   concrete reference papers/projects. Do not call them original baselines until
   that mapping and implementation are complete.
@@ -75,18 +82,21 @@ The user clarified that the supervisor/senior-student recommended baselines are
 the paper projects inside the local `references/` folder, not merely traditional
 recommender baselines.
 
-All main baselines should be implemented through the project framework as
-Qwen3-8B LoRA variants where possible. The goal is to compare our observation
-against reference-style LoRA baselines fairly, and to test whether the observed
-phenomenon also appears in other baselines rather than only in our method.
+All main baselines should be implemented through the project framework with the
+Qwen3-8B base model where faithful. The goal is to compare our observation
+against faithful reference-paper baselines fairly, and to test whether the
+observed phenomenon also appears in other baselines rather than only in our
+method.
 
 Important baseline-fidelity principle: preserve each senior-recommended
 baseline's own training and scoring logic as much as possible; unify the
 experimental protocol instead. Shared controls are data, candidates, splits,
-metrics, prediction schema, and Qwen3-8B LoRA/QLoRA backbone. Do not turn
-reference baselines into generic prompt toys merely for uniformity.
+metrics, prediction schema, and Qwen3-8B base model. LoRA/adapter training,
+extra heads, losses, and scoring logic should follow each official baseline
+algorithm where faithful. Do not turn reference baselines into generic prompt
+toys merely for uniformity.
 Use official baseline code/projects whenever available. TGL-Rec should provide
-data/protocol/backbone/prediction-schema adapters around official code, not
+data/protocol/base-model/prediction-schema adapters around official code, not
 invent local lookalikes. If official code is not identified, keep that method
 out of the main baseline set unless the user explicitly approves a labeled
 non-official reproduction.
@@ -95,7 +105,7 @@ The observation has not been proven yet. The current status is: the hypothesis,
 LoRA framework, and diagnostic tooling exist, but old adapter results were
 diagnostic and affected by prompt-continuation behavior before the label-mask
 fix. Do not describe the observation as validated until the fixed-label-mask
-adapters and reference-style baselines are retrained and evaluated on frozen
+adapters and reference-paper baselines are trained and evaluated on frozen
 candidate protocols.
 
 The current datasets are still considered preliminary/toy-ish for final paper
@@ -142,13 +152,17 @@ Old limit-200 key finding:
 
 ## Immediate Next Step
 
-The next Codex should help the user retrain the fixed-label-mask control LoRA
-adapters:
+Server status reported by the user:
 
-1. `history_only_sft`
-2. `temporal_evidence_sft`
+- `history_only_sft` fixed-label-mask fast training succeeded in about 4h47m.
+- `temporal_evidence_sft` fixed-label-mask fast training succeeded in about
+  4h50m.
+- A small post-fix eval attempt failed with CUDA OOM because other processes were
+  occupying GPU 0. No `predictions.jsonl` was produced for that failed attempt.
 
-These are control groups for all later reference-style LoRA baselines.
+The next Codex should help the user clear GPU memory and run the small
+post-label-mask diagnostic eval, not retrain these two adapters again unless a
+new issue is found.
 
 On the server, use:
 
@@ -169,40 +183,14 @@ grep -n "max_seq_length" configs/experiments/server_lora_8b_*.yaml
 Set the server private LoRA training configs to `max_seq_length: 1024` before
 restarting if they still say `2048`.
 
-Then train `history_only_sft`:
-
-```bash
-cd ~/projects/TGL-Rec
-conda activate qwen_vllm
-
-CUDA_VISIBLE_DEVICES=0 nohup python -u scripts/train_lora_8b.py \
-  --config configs/experiments/server_lora_8b_history_only.yaml \
-  > outputs/paper_runs/protocol_v1/lora_8b/history_only_sft/train_labelmask.nohup.log 2>&1 &
-
-tail -f outputs/paper_runs/protocol_v1/lora_8b/history_only_sft/train_labelmask.nohup.log
-```
-
-After it succeeds, train `temporal_evidence_sft`:
-
-```bash
-cd ~/projects/TGL-Rec
-conda activate qwen_vllm
-
-CUDA_VISIBLE_DEVICES=0 nohup python -u scripts/train_lora_8b.py \
-  --config configs/experiments/server_lora_8b_temporal_evidence.yaml \
-  > outputs/paper_runs/protocol_v1/lora_8b/temporal_evidence_sft/train_labelmask.nohup.log 2>&1 &
-
-tail -f outputs/paper_runs/protocol_v1/lora_8b/temporal_evidence_sft/train_labelmask.nohup.log
-```
-
-After both succeed, run a small diagnostic before spending a large eval budget:
+Run the small diagnostic eval:
 
 ```bash
 cd ~/projects/TGL-Rec
 conda activate qwen_vllm
 
 mv outputs/paper_runs/protocol_v1/lora_8b/eval \
-  outputs/paper_runs/protocol_v1/lora_8b/eval_before_labelmask_fix_$(date +%Y%m%d_%H%M%S)
+  outputs/paper_runs/protocol_v1/lora_8b/eval_before_labelmask_fast_$(date +%Y%m%d_%H%M%S)
 
 CUDA_VISIBLE_DEVICES=0 python -u scripts/run_lora_rerank_eval.py \
   --config configs/experiments/paper_lora_8b_rerank_eval.yaml \
@@ -217,6 +205,10 @@ python scripts/diagnose_lora_predictions.py \
 
 Only proceed to `--limit 200` if prompt-continuation rate drops and parse
 success remains stable.
+
+If eval fails with CUDA OOM, inspect `nvidia-smi` and stop unrelated processes
+before rerunning. Do not run diagnostics unless
+`outputs/paper_runs/protocol_v1/lora_8b/eval/predictions.jsonl` exists.
 
 ## Files Not To Commit
 
@@ -248,5 +240,5 @@ After the two control adapters are retrained and diagnostics look sane:
    same-candidate protocol from `pony-rec-rescue-shadow-v6`, preserving
    `event_id/source_event_id`, `user_id`, `item_id`, `split`, and exact
    candidate sets.
-6. Build/train/evaluate reference-style LoRA baselines under the same framework
-   on the frozen large same-candidate protocol.
+6. Build/train/evaluate faithful reference-paper baselines under the same
+   framework on the frozen large same-candidate protocol.

@@ -14,8 +14,9 @@
 
 ## Shared Protocol Adaptation
 
-- Use Qwen3-8B LoRA/QLoRA as the controlled backbone where the original method
-  uses an LLM.
+- Use Qwen3-8B as the shared base model only where faithful.
+- Preserve the official teacher-student distillation objective and training
+  path.
 - Use TGL-Rec frozen splits and candidates.
 - Output shared prediction JSONL.
 

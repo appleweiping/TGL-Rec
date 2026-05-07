@@ -15,7 +15,9 @@ Baseline algorithm belongs to the baseline:
 
 Experiment protocol belongs to TGL-Rec:
 
-- Qwen3-8B LoRA/QLoRA backbone where faithful;
+- Qwen3-8B base model where faithful;
+- LoRA/adapter training, extra heads, losses, and scoring logic preserved from
+  the official baseline algorithm where possible;
 - same frozen data;
 - same candidate sets;
 - same split;
@@ -29,12 +31,12 @@ diagnosed under the shared protocol.
 
 | Baseline ID | Local reference | Method identity to preserve | Fair Qwen3-8B adaptation target |
 |---|---|---|---|
-| `slmrec_distill_qwen_lora` | `references/NH/11465_SLMRec_Distilling_Large_.pdf` | SLMRec-style depth/knowledge distillation for sequential recommendation | Qwen3-8B LoRA student with distillation-style supervision; preserve distillation objective rather than replacing it with generic ranking SFT |
+| `slmrec_distill_qwen_lora` | `references/NH/11465_SLMRec_Distilling_Large_.pdf` | SLMRec-style depth/knowledge distillation for sequential recommendation | Qwen3-8B-based student where faithful; preserve SLMRec distillation objective and teacher-student path rather than replacing it with generic ranking SFT |
 | `llm_esr_qwen_lora` | `references/NH/NeurIPS-2024-llm-esr-large-language-models-enhancement-for-long-tailed-sequential-recommendation-Paper-Conference.pdf` | Long-tail sequential recommendation using LLM semantic embeddings, dual-view semantic/collaborative modeling, and retrieval-augmented self-distillation | Use Qwen3-derived semantic embeddings/signals with the shared candidate protocol; preserve long-tail user/item treatment and self-distillation |
-| `controllable_rec_qwen_lora` | `references/NH/Aligning Large Language Models for Controllable Recommendations.pdf` | Recommendation-specific instruction tasks plus alignment for controllable recommendation and format fidelity | Use Qwen3-8B LoRA for controllable recommendation SFT/alignment tasks; preserve control labels and instruction-following objective |
-| `cllm4rec_qwen_lora` | `references/NR/3589334.3645347.pdf` | Collaborative LLM recommender with user/item ID tokens, soft+hard prompting, item prediction head, and mutual regularization | Extend Qwen3-8B LoRA with collaborative ID-token/prompt structure and prediction-head scoring where feasible; do not collapse it into plain text reranking |
+| `controllable_rec_qwen_lora` | `references/NH/Aligning Large Language Models for Controllable Recommendations.pdf` | Recommendation-specific instruction tasks plus alignment for controllable recommendation and format fidelity | Use Qwen3-8B only as the base model where faithful; preserve control labels and instruction-following/alignment objective |
+| `cllm4rec_qwen_lora` | `references/NR/3589334.3645347.pdf` | Collaborative LLM recommender with user/item ID tokens, soft+hard prompting, item prediction head, and mutual regularization | Adapt Qwen3-8B only as the base model where faithful; preserve collaborative ID-token/prompt structure and prediction-head scoring rather than collapsing it into plain text reranking |
 | `rlmrec_qwen_lora` | `references/NR/3589334.3645458.pdf` | LLM-empowered representation learning with user/item profiling and cross-view alignment between semantic and collaborative spaces | Use Qwen3-generated/user-item semantic profiles and preserve cross-view representation alignment under the shared split/candidate protocol |
-| `transrec_qwen_lora` | `references/NR/3637528.3671884.pdf` | Multi-facet item identifiers and constrained/grounded generation from item-language transition paradigm | Use Qwen3-8B LoRA with multi-facet identifiers and valid-item grounding; preserve generation grounding rather than unconstrained free-form output |
+| `transrec_qwen_lora` | `references/NR/3637528.3671884.pdf` | Multi-facet item identifiers and constrained/grounded generation from item-language transition paradigm | Use a Qwen3-8B-compatible generation path only if faithful; preserve multi-facet identifiers and valid-item grounding rather than unconstrained free-form output |
 | `review_pref_reasoning_qwen_lora` | `references/NR/3726302.3730055.pdf` | Review-driven personalized preference reasoning and LLM reranking | Preserve review-to-preference extraction/reasoning and reranking logic; only adapt backbone/data/candidates/evaluator |
 
 ## Source Notes
@@ -93,7 +95,8 @@ These method identities were selected from local files plus public paper pages:
    only glue code is needed for the shared protocol.
 5. Use `sft_variants.py` only for methods whose original algorithm is actually
    SFT/prompt-based.
-6. Train each baseline with Qwen3-8B LoRA/QLoRA when faithful.
+6. Train each baseline with Qwen3-8B as the unified base model, while preserving
+   the official LoRA/adapter/head/loss/scoring choices where faithful.
 7. Evaluate on the same candidate protocol with shared metrics.
 
 Implementation cards are stored under:
@@ -115,3 +118,17 @@ None of the selected reference baselines is reportable yet.
 The current `reference_*_sft` variants remain scaffolds. They should be replaced
 or upgraded only after the corresponding original method has been implemented
 faithfully under this map.
+
+## Provenance Contract
+
+Every reference-baseline config and prediction artifact should carry provenance:
+
+- `baseline_id`;
+- official code URL and status;
+- implementation/reportability status;
+- base-model policy;
+- adapter/training policy;
+- scoring policy;
+- protocol controls;
+- `do_not_merge_into_main_accuracy_table` while the baseline is a scaffold or
+  lacks verified official-code adaptation.

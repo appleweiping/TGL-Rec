@@ -19,11 +19,31 @@ class ReferenceMethodSpec:
     public_url: str
     official_code_url: str | None
     official_code_status: str
+    base_model_policy: str
+    adapter_training_policy: str
+    scoring_policy: str
+    protocol_controls: tuple[str, ...]
     method_family: str
     preserve_components: tuple[str, ...]
     fair_protocol_adaptations: tuple[str, ...]
     implementation_status: str = "not_implemented"
     reportable_baseline: bool = False
+
+    def to_metadata(self) -> dict[str, object]:
+        """Return provenance metadata safe to persist in manifests and predictions."""
+
+        return {
+            "baseline_id": self.baseline_id,
+            "title": self.title,
+            "official_code_url": self.official_code_url,
+            "official_code_status": self.official_code_status,
+            "implementation_status": self.implementation_status,
+            "reportable_baseline": self.reportable_baseline,
+            "base_model_policy": self.base_model_policy,
+            "adapter_training_policy": self.adapter_training_policy,
+            "scoring_policy": self.scoring_policy,
+            "protocol_controls": list(self.protocol_controls),
+        }
 
 
 REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
@@ -34,6 +54,10 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
         public_url="https://arxiv.org/abs/2405.17890",
         official_code_url="https://github.com/WujiangXu/SLMRec",
         official_code_status="official_code_identified",
+        base_model_policy="unified_qwen3_8b_base_model",
+        adapter_training_policy="preserve_official_distillation_algorithm_and_adapt_teacher_student_path",
+        scoring_policy="preserve_official_sequential_recommendation_scoring_when_feasible",
+        protocol_controls=("data", "candidate_sets", "splits", "metrics", "prediction_schema"),
         method_family="distillation_sequential_recommendation",
         preserve_components=(
             "depth/knowledge distillation objective",
@@ -41,7 +65,7 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
             "sequential recommendation training signal",
         ),
         fair_protocol_adaptations=(
-            "use Qwen3-8B LoRA/QLoRA where the reference method requires an LLM backbone",
+            "use Qwen3-8B as the shared base model where faithful",
             "use frozen TGL-Rec splits and candidate sets",
             "emit shared prediction schema",
         ),
@@ -59,6 +83,10 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
         ),
         official_code_url="https://github.com/Applied-Machine-Learning-Lab/LLM-ESR",
         official_code_status="official_code_identified",
+        base_model_policy="unified_qwen3_8b_base_model",
+        adapter_training_policy="preserve_official_long_tail_dual_view_and_self_distillation_algorithm",
+        scoring_policy="preserve_official_long_tail_sequential_scoring_when_feasible",
+        protocol_controls=("data", "candidate_sets", "splits", "metrics", "prediction_schema"),
         method_family="long_tail_sequential_recommendation",
         preserve_components=(
             "LLM semantic item/user signals",
@@ -67,7 +95,7 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
             "long-tail user/item handling",
         ),
         fair_protocol_adaptations=(
-            "derive semantic signals with the shared Qwen3-8B backbone when faithful",
+            "derive semantic signals with the shared Qwen3-8B base model when faithful",
             "use frozen TGL-Rec same-candidate evaluation",
             "report long-tail and ranking diagnostics",
         ),
@@ -79,6 +107,10 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
         public_url="https://arxiv.org/abs/2403.05063",
         official_code_url=None,
         official_code_status="no_official_code_identified",
+        base_model_policy="unified_qwen3_8b_base_model",
+        adapter_training_policy="blocked_until_official_code_or_user_approved_non_official_reproduction",
+        scoring_policy="blocked_until_official_code_or_user_approved_non_official_reproduction",
+        protocol_controls=("data", "candidate_sets", "splits", "metrics", "prediction_schema"),
         method_family="controllable_recommendation_alignment",
         preserve_components=(
             "recommendation-specific instruction tasks",
@@ -87,7 +119,7 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
             "format and candidate grounding constraints",
         ),
         fair_protocol_adaptations=(
-            "use Qwen3-8B LoRA for instruction/control adaptation",
+            "use Qwen3-8B as the shared base model only if faithful",
             "use shared candidates and evaluator",
             "preserve control-condition evaluation when available",
         ),
@@ -99,6 +131,10 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
         public_url="https://github.com/yaochenzhu/LLM4Rec",
         official_code_url="https://github.com/yaochenzhu/LLM4Rec",
         official_code_status="official_code_identified",
+        base_model_policy="unified_qwen3_8b_base_model",
+        adapter_training_policy="preserve_official_id_token_prompt_head_and_regularization_algorithm",
+        scoring_policy="preserve_official_item_prediction_head_or_candidate_scoring_logic",
+        protocol_controls=("data", "candidate_sets", "splits", "metrics", "prediction_schema"),
         method_family="collaborative_llm_recommendation",
         preserve_components=(
             "user and item ID tokens",
@@ -107,7 +143,7 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
             "mutual regularization between text and collaborative signals",
         ),
         fair_protocol_adaptations=(
-            "attach collaborative ID/prompt structure to Qwen3-8B LoRA when feasible",
+            "adapt collaborative ID/prompt structure to Qwen3-8B only where faithful",
             "score the shared candidate set",
             "emit shared predictions with candidate adherence diagnostics",
         ),
@@ -119,6 +155,10 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
         public_url="https://github.com/HKUDS/RLMRec",
         official_code_url="https://github.com/HKUDS/RLMRec",
         official_code_status="official_code_identified",
+        base_model_policy="unified_qwen3_8b_base_model",
+        adapter_training_policy="preserve_official_semantic_collaborative_representation_alignment_algorithm",
+        scoring_policy="preserve_official_representation_alignment_scoring_logic",
+        protocol_controls=("data", "candidate_sets", "splits", "metrics", "prediction_schema"),
         method_family="llm_representation_learning",
         preserve_components=(
             "LLM-generated user/item semantic profiles",
@@ -139,6 +179,10 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
         public_url="https://arxiv.org/abs/2310.06491",
         official_code_url=None,
         official_code_status="no_official_code_identified",
+        base_model_policy="unified_qwen3_8b_base_model",
+        adapter_training_policy="blocked_until_official_code_or_user_approved_non_official_reproduction",
+        scoring_policy="blocked_until_official_code_or_user_approved_non_official_reproduction",
+        protocol_controls=("data", "candidate_sets", "splits", "metrics", "prediction_schema"),
         method_family="grounded_identifier_generation",
         preserve_components=(
             "multi-facet item identifiers",
@@ -146,7 +190,7 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
             "grounded generation constraints",
         ),
         fair_protocol_adaptations=(
-            "use Qwen3-8B LoRA for identifier generation if faithful",
+            "use a Qwen3-8B-compatible generation path only if faithful",
             "ground outputs to the shared candidate set",
             "report validity and hallucination diagnostics",
         ),
@@ -158,6 +202,10 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
         public_url="https://arxiv.org/abs/2408.06276",
         official_code_url="https://github.com/jieyong99/EXP3RT",
         official_code_status="official_code_identified",
+        base_model_policy="unified_qwen3_8b_base_model",
+        adapter_training_policy="preserve_official_review_preference_reasoning_algorithm",
+        scoring_policy="preserve_official_preference_reasoning_reranking_logic",
+        protocol_controls=("data", "candidate_sets", "splits", "metrics", "prediction_schema"),
         method_family="review_preference_reasoning",
         preserve_components=(
             "review-to-preference extraction",
@@ -165,7 +213,7 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
             "LLM reranking based on extracted preferences",
         ),
         fair_protocol_adaptations=(
-            "use Qwen3-8B LoRA for preference reasoning when faithful",
+            "use Qwen3-8B as the shared base model only where faithful",
             "use shared candidates and evaluator",
             "preserve review-derived evidence when the dataset provides reviews",
         ),
@@ -187,6 +235,12 @@ def get_reference_method(name: str) -> ReferenceMethodSpec:
         supported = ", ".join(reference_method_names())
         raise ValueError(f"Unsupported reference method: {name}. Supported methods: {supported}")
     return REFERENCE_METHOD_REGISTRY[key]
+
+
+def reference_method_metadata(name: str) -> dict[str, object]:
+    """Return serializable provenance metadata for one selected reference method."""
+
+    return get_reference_method(name).to_metadata()
 
 
 def require_implemented_reference_method(name: str) -> ReferenceMethodSpec:
