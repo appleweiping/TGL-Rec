@@ -1,0 +1,67 @@
+protocol_version: protocol_week8_large10000_same_candidate
+phase: Phase 10
+model:
+  base_model_name: Qwen/Qwen3-8B
+  base_model_path: /home/ajifang/models/Qwen/Qwen3-8B
+  model_family: qwen3
+  tokenizer_path: null
+  trust_remote_code: false
+  torch_dtype: auto
+  device_map: auto
+  max_seq_length: 1024
+  use_flash_attention: false
+  gradient_checkpointing: true
+training:
+  use_qlora: true
+  load_in_4bit: true
+  load_in_8bit: false
+  bnb_4bit_quant_type: nf4
+  bnb_4bit_compute_dtype: bfloat16
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+  bias: none
+  task_type: CAUSAL_LM
+  per_device_train_batch_size: 1
+  gradient_accumulation_steps: 16
+  learning_rate: 0.0002
+  weight_decay: 0.0
+  warmup_ratio: 0.03
+  num_train_epochs: 1
+  max_steps: null
+  logging_steps: 10
+  save_steps: 200
+  eval_steps: 200
+  save_total_limit: 2
+  bf16: true
+  fp16: false
+  gradient_checkpointing: true
+  max_grad_norm: 1.0
+  seed: 2026
+dataset_artifacts:
+  beauty:
+    split_artifact: outputs/artifacts/protocol_week8_large10000_same_candidate/beauty/splits.jsonl
+    candidate_artifact: outputs/artifacts/protocol_week8_large10000_same_candidate/beauty/candidates.jsonl
+  books:
+    split_artifact: outputs/artifacts/protocol_week8_large10000_same_candidate/books/splits.jsonl
+    candidate_artifact: outputs/artifacts/protocol_week8_large10000_same_candidate/books/candidates.jsonl
+  electronics:
+    split_artifact: outputs/artifacts/protocol_week8_large10000_same_candidate/electronics/splits.jsonl
+    candidate_artifact: outputs/artifacts/protocol_week8_large10000_same_candidate/electronics/candidates.jsonl
+  movies:
+    split_artifact: outputs/artifacts/protocol_week8_large10000_same_candidate/movies/splits.jsonl
+    candidate_artifact: outputs/artifacts/protocol_week8_large10000_same_candidate/movies/candidates.jsonl
+sft:
+  variant: history_only_sft
+  output_root: data/processed/lora_sft/protocol_week8_large10000_same_candidate
+  dry_run_output_dir: outputs/paper_runs/protocol_week8_large10000_same_candidate/lora_8b/dry_run_sft
+  max_train_examples: 80000
+  valid_ratio: 0.05
+  data_dir: data/processed/lora_sft/protocol_week8_large10000_same_candidate/books/history_only_sft
+candidate_policy:
+  candidate_size_train: 20
+  include_target: true
+  seed: 2026
+training_run:
+  output_dir: outputs/paper_runs/protocol_week8_large10000_same_candidate/lora_8b

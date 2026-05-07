@@ -32,7 +32,13 @@ def run_lora_rerank_eval(
     baseline_contract = dict(config.get("baseline_contract", {}))
     run_dir = ensure_dir(resolve_path(eval_config["output_dir"]))
     configured_top_m = int(eval_config.get("top_m_candidates_for_local_lora", 50))
-    candidate_limit = int(top_m or configured_top_m)
+    candidate_selection = str(eval_config.get("candidate_selection", "stable_hash_sampled_with_target"))
+    candidate_limit = _candidate_limit(
+        candidate_selection=candidate_selection,
+        configured_top_m=configured_top_m,
+        top_m=top_m,
+    )
+    protocol_version = str(config.get("protocol_version", eval_config.get("protocol_version", "protocol_v1")))
     adapters = _adapter_specs(eval_config, baseline_contract=baseline_contract)
     datasets = [str(value) for value in eval_config.get("datasets", [])]
     if not datasets:
@@ -61,8 +67,10 @@ def run_lora_rerank_eval(
         for dataset in datasets:
             dataset_rows = _build_examples(
                 dataset=dataset,
+                protocol_version=protocol_version,
                 split=str(split),
                 candidate_limit=candidate_limit,
+                candidate_selection=candidate_selection,
                 limit=None if limit is None else int(limit),
             )
             rows.extend(_rank_dataset(reranker, adapter, dataset, dataset_rows))
@@ -77,13 +85,14 @@ def run_lora_rerank_eval(
         "baseline_contract": baseline_contract,
         "base_model_path": str(base_model_path),
         "candidate_limit": candidate_limit,
-        "candidate_selection": "stable_hash_sampled_with_target",
+        "candidate_selection": candidate_selection,
         "dry_run": dry_run,
         "limit_per_dataset_adapter": limit,
         "num_predictions": len(rows),
         "runtime_seconds": time.perf_counter() - started,
         "split": split,
         "status": "succeeded",
+        "protocol_version": protocol_version,
     }
     write_json(run_dir / "rerank_eval_manifest.json", manifest)
     return {"manifest": manifest, "metrics": metrics, "predictions_path": str(predictions_path)}
@@ -170,11 +179,13 @@ def _adapter_provenance_for_manifest(adapters: list[dict[str, Any]]) -> list[dic
 def _build_examples(
     *,
     dataset: str,
+    protocol_version: str,
     split: str,
-    candidate_limit: int,
+    candidate_limit: int | None,
+    candidate_selection: str,
     limit: int | None = None,
 ) -> list[dict[str, Any]]:
-    artifact_dir = resolve_path(f"outputs/artifacts/protocol_v1/{dataset}")
+    artifact_dir = resolve_path(f"outputs/artifacts/{protocol_version}/{dataset}")
     split_path = artifact_dir / "splits.jsonl"
     candidate_path = artifact_dir / "candidates.jsonl"
     if not split_path.is_file():
@@ -190,11 +201,12 @@ def _build_examples(
         candidates = _candidate_items(row, artifact_dir)
         if target not in candidates:
             raise ValueError(f"target missing from candidates: dataset={dataset} target={target}")
-        limited = _limit_candidates(
+        limited = _select_candidates(
             candidates,
             target=target,
             limit=candidate_limit,
-            seed_key=f"{dataset}|{split}|{row['user_id']}|{target}",
+            selection=candidate_selection,
+            seed_key=f"{protocol_version}|{dataset}|{split}|{row.get('event_id')}|{row['user_id']}|{target}",
         )
         examples.append(
             {
@@ -211,6 +223,36 @@ def _build_examples(
         if limit is not None and len(examples) >= limit:
             break
     return examples
+
+
+def _candidate_limit(
+    *,
+    candidate_selection: str,
+    configured_top_m: int,
+    top_m: int | None,
+) -> int | None:
+    if candidate_selection == "preserve_external_candidates":
+        return None
+    return int(top_m or configured_top_m)
+
+
+def _select_candidates(
+    candidates: list[str],
+    *,
+    target: str,
+    limit: int | None,
+    selection: str,
+    seed_key: str | None = None,
+) -> list[str]:
+    """Select candidate set according to the configured evaluation protocol."""
+
+    if selection == "preserve_external_candidates":
+        return list(candidates)
+    if selection == "stable_hash_sampled_with_target":
+        if limit is None:
+            return list(candidates)
+        return _limit_candidates(candidates, target=target, limit=limit, seed_key=seed_key)
+    raise ValueError(f"Unsupported candidate_selection: {selection}")
 
 
 def _histories_before_targets(split_path: Path) -> dict[str, list[str]]:

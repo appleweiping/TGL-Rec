@@ -89,6 +89,11 @@ resolved:
 
 ## Immediate Checklist
 
+0. Treat the current project-level plan as Phase 10:
+
+   - [docs/phase10_master_plan.md](docs/phase10_master_plan.md)
+   - [docs/server_runbook.md](docs/server_runbook.md)
+
 1. Clear GPU memory on the server and rerun the small post-label-mask LoRA diagnostic:
 
    ```bash
@@ -155,7 +160,7 @@ PAPER_OUTLINE.md             living paper skeleton
 configs/                     dataset, baseline, and experiment matrices
 .codex/                      optional Codex project config and subagent roles
 scripts/                     environment/data/experiment helper scripts
-src/tglrec/                  package code: data, eval, graph, models, text, utils
+src/llm4rec/                 package code: data, eval, graph, models, text, utils
 tests/                       CLI, config, metrics, and preprocessing tests
 ```
 

@@ -34,6 +34,11 @@ PAPER_ALLOWED_METHODS = {
     "w_o_transition_edges",
 }
 
+NON_REPORTABLE_PAPER_METHODS = {
+    "time_graph_evidence": "Phase 5/6 time graph evidence is infrastructure until a reportable method card and locked metrics exist.",
+    "time_graph_evidence_dynamic": "Dynamic time graph evidence is infrastructure until a trained checkpoint and reportable method card exist.",
+}
+
 
 def validate_experiment_config(config_path: str | Path) -> dict[str, Any]:
     """Validate manifest completeness and safety constraints."""
@@ -274,6 +279,8 @@ def _validate_paper_config(
         lowered = text.lower()
         if lowered not in PAPER_ALLOWED_METHODS:
             errors.append(f"unknown or unapproved paper method: {text}")
+        if lowered in NON_REPORTABLE_PAPER_METHODS:
+            errors.append(f"non-reportable paper method: {text} ({NON_REPORTABLE_PAPER_METHODS[lowered]})")
         if "mock" in lowered or "stub" in lowered or "skeleton" in lowered or "markov" in lowered:
             errors.append("paper configs cannot use mock/stub/skeleton/Markov methods")
     readiness_path = _readiness_path_for_dataset(str(manifest_data.get("dataset", "")))

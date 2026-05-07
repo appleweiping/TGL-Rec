@@ -24,13 +24,14 @@ Expected task directories:
 
 Target domains:
 
+- `beauty`
 - `books`
 - `electronics`
 - `movies`
 
-The user also has a complete `beauty` domain on the server. It should be
-integrated as a separate frozen domain/protocol input once its exact task layout
-is confirmed.
+If a domain directory is not present yet, keep it listed as missing in
+`outputs/plans/four_domain_server_plan.json` rather than resampling or
+substituting data.
 
 Check available files on the server with:
 
@@ -49,7 +50,7 @@ External project summaries are expected under:
 
 Known construction details from the adjacent project:
 
-- target domains: `books`, `electronics`, `movies`;
+- target domains: `beauty`, `books`, `electronics`, `movies`;
 - maximum users per domain: 10,000;
 - each ranking event has 1 positive and 100 negatives;
 - same-candidate setting: all methods score the same candidate set for each
@@ -110,10 +111,20 @@ Importer entrypoint:
 
 ```bash
 python scripts/import_week8_same_candidate.py \
+  --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/beauty_large10000_100neg_test_same_candidate \
   --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/books_large10000_100neg_test_same_candidate \
   --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/electronics_large10000_100neg_test_same_candidate \
   --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/movies_large10000_100neg_test_same_candidate \
   --protocol-version protocol_week8_large10000_same_candidate
+```
+
+Generate a full valid/test four-domain run plan with:
+
+```bash
+python scripts/plan_four_domain_runs.py \
+  --external-root ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks \
+  --output outputs/plans/four_domain_server_plan.json \
+  --shell-output outputs/plans/four_domain_server_runbook.sh
 ```
 
 The prediction JSONL schema should be extended, without breaking existing

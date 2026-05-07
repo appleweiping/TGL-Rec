@@ -27,3 +27,8 @@ manifest:
     )
     with pytest.raises(ExperimentValidationError):
         validate_experiment_config(path)
+
+
+def test_experiment_manifest_rejects_non_reportable_paper_method():
+    with pytest.raises(ExperimentValidationError, match="non-reportable paper method"):
+        validate_experiment_config("configs/experiments/paper_movielens_accuracy.yaml")

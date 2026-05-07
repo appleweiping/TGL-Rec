@@ -1,4 +1,4 @@
-from llm4rec.evaluation.lora_rerank import _adapter_specs, _limit_candidates
+from llm4rec.evaluation.lora_rerank import _adapter_specs, _candidate_limit, _limit_candidates, _select_candidates
 
 
 def test_limit_candidates_samples_negatives_and_preserves_target_position():
@@ -37,3 +37,22 @@ def test_adapter_specs_attach_reference_baseline_provenance():
     assert provenance["official_code_status"] == "official_code_identified"
     assert provenance["reportable_baseline"] is False
     assert provenance["do_not_merge_into_main_accuracy_table"] is True
+
+
+def test_preserve_external_candidates_does_not_resample_or_reorder():
+    candidates = ["i3", "i1", "i2", "i4"]
+
+    selected = _select_candidates(
+        candidates,
+        target="i2",
+        limit=None,
+        selection="preserve_external_candidates",
+        seed_key="ignored",
+    )
+
+    assert selected == candidates
+    assert _candidate_limit(
+        candidate_selection="preserve_external_candidates",
+        configured_top_m=50,
+        top_m=10,
+    ) is None

@@ -38,10 +38,20 @@ def build_lora_sft_data(
         raise ValueError("Specify exactly one of dry_run or materialize.")
     config = load_yaml_config(config_path)
     variant = str(config["sft"]["variant"])
+    protocol_version = str(config.get("protocol_version", "protocol_v1"))
     get_sft_variant(variant)
     results: list[SFTBuildResult] = []
     for dataset, artifacts in dict(config["dataset_artifacts"]).items():
-        results.append(_build_dataset(config, str(dataset), dict(artifacts), variant, dry_run=dry_run))
+        results.append(
+            _build_dataset(
+                config,
+                str(dataset),
+                dict(artifacts),
+                variant,
+                protocol_version=protocol_version,
+                dry_run=dry_run,
+            )
+        )
     return results
 
 
@@ -51,6 +61,7 @@ def _build_dataset(
     artifacts: dict[str, Any],
     variant: str,
     *,
+    protocol_version: str,
     dry_run: bool,
 ) -> SFTBuildResult:
     split_artifact = resolve_path(artifacts["split_artifact"])
@@ -64,6 +75,7 @@ def _build_dataset(
     examples = _make_examples(
         dataset=dataset,
         variant=variant,
+        protocol_version=protocol_version,
         train_rows=train_rows,
         candidate_size=candidate_size,
         rng=rng,
@@ -94,7 +106,7 @@ def _build_dataset(
         "num_train_rows": len(train_examples),
         "num_valid_rows": len(valid_examples),
         "output_dir": str(output_dir),
-        "protocol_version": "protocol_v1",
+        "protocol_version": protocol_version,
         "split_artifact": str(split_artifact),
         "split_sha256": sha256_file(split_artifact),
         "target_inclusion_rate": 1.0 if examples else 0.0,
@@ -104,7 +116,14 @@ def _build_dataset(
         write_json(output_dir / "sft_data_manifest.json", manifest)
         write_json(output_dir / "leakage_audit.json", leakage)
     else:
-        dry_dir = ensure_dir(resolve_path(config["sft"].get("dry_run_output_dir", "outputs/paper_runs/protocol_v1/lora_8b/dry_run_sft")))
+        dry_dir = ensure_dir(
+            resolve_path(
+                config["sft"].get(
+                    "dry_run_output_dir",
+                    f"outputs/paper_runs/{protocol_version}/lora_8b/dry_run_sft",
+                )
+            )
+        )
         write_json(dry_dir / f"{dataset}_{variant}_sft_data_manifest.json", manifest)
         write_json(dry_dir / f"{dataset}_{variant}_leakage_audit.json", leakage)
     return SFTBuildResult(output_dir=output_dir, manifest=manifest, leakage_audit=leakage)
@@ -127,6 +146,7 @@ def _make_examples(
     *,
     dataset: str,
     variant: str,
+    protocol_version: str,
     train_rows: list[dict[str, Any]],
     candidate_size: int,
     rng: random.Random,
@@ -153,6 +173,7 @@ def _make_examples(
                         history=history[-20:],
                         candidates=candidates,
                         variant=variant,
+                        protocol_version=protocol_version,
                         source_split=str(row.get("split", "train")),
                     )
                 )
@@ -186,6 +207,7 @@ def _sft_row(
     history: list[str],
     candidates: list[str],
     variant: str,
+    protocol_version: str,
     source_split: str = "train",
 ) -> dict[str, Any]:
     variant_spec = get_sft_variant(variant)
@@ -201,7 +223,7 @@ def _sft_row(
         "metadata": {
             "candidate_source": "train_negative_sampling",
             "constructed_from": "train_only",
-            "protocol_version": "protocol_v1",
+            "protocol_version": protocol_version,
             "sft_family": variant_spec.family,
             "source_split": source_split,
             "target_item": target,
