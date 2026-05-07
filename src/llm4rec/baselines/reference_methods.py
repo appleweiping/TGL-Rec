@@ -17,6 +17,8 @@ class ReferenceMethodSpec:
     title: str
     local_reference: str
     public_url: str
+    official_code_url: str | None
+    official_code_status: str
     method_family: str
     preserve_components: tuple[str, ...]
     fair_protocol_adaptations: tuple[str, ...]
@@ -30,6 +32,8 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
         title="SLMRec: Distilling Large Language Models into Small Recommendation Models",
         local_reference="references/NH/11465_SLMRec_Distilling_Large_.pdf",
         public_url="https://arxiv.org/abs/2405.17890",
+        official_code_url="https://github.com/WujiangXu/SLMRec",
+        official_code_status="official_code_identified",
         method_family="distillation_sequential_recommendation",
         preserve_components=(
             "depth/knowledge distillation objective",
@@ -53,6 +57,8 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
             "https://proceedings.neurips.cc/paper_files/paper/2024/hash/"
             "2f0728449cb3150189d765fc87afc913-Abstract-Conference.html"
         ),
+        official_code_url="https://github.com/Applied-Machine-Learning-Lab/LLM-ESR",
+        official_code_status="official_code_identified",
         method_family="long_tail_sequential_recommendation",
         preserve_components=(
             "LLM semantic item/user signals",
@@ -71,6 +77,8 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
         title="Aligning Large Language Models for Controllable Recommendations",
         local_reference="references/NH/Aligning Large Language Models for Controllable Recommendations.pdf",
         public_url="https://arxiv.org/abs/2403.05063",
+        official_code_url=None,
+        official_code_status="no_official_code_identified",
         method_family="controllable_recommendation_alignment",
         preserve_components=(
             "recommendation-specific instruction tasks",
@@ -89,6 +97,8 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
         title="Collaborative Large Language Model for Recommender Systems",
         local_reference="references/NR/3589334.3645347.pdf",
         public_url="https://github.com/yaochenzhu/LLM4Rec",
+        official_code_url="https://github.com/yaochenzhu/LLM4Rec",
+        official_code_status="official_code_identified",
         method_family="collaborative_llm_recommendation",
         preserve_components=(
             "user and item ID tokens",
@@ -107,6 +117,8 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
         title="Representation Learning with Large Language Models for Recommendation",
         local_reference="references/NR/3589334.3645458.pdf",
         public_url="https://github.com/HKUDS/RLMRec",
+        official_code_url="https://github.com/HKUDS/RLMRec",
+        official_code_status="official_code_identified",
         method_family="llm_representation_learning",
         preserve_components=(
             "LLM-generated user/item semantic profiles",
@@ -125,6 +137,8 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
         title="Bridging Items and Language: A Transition Paradigm for Large Language Model-Based Recommendation",
         local_reference="references/NR/3637528.3671884.pdf",
         public_url="https://arxiv.org/abs/2310.06491",
+        official_code_url=None,
+        official_code_status="no_official_code_identified",
         method_family="grounded_identifier_generation",
         preserve_components=(
             "multi-facet item identifiers",
@@ -142,6 +156,8 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
         title="Review-driven Personalized Preference Reasoning with Large Language Models for Recommendation",
         local_reference="references/NR/3726302.3730055.pdf",
         public_url="https://arxiv.org/abs/2408.06276",
+        official_code_url="https://github.com/jieyong99/EXP3RT",
+        official_code_status="official_code_identified",
         method_family="review_preference_reasoning",
         preserve_components=(
             "review-to-preference extraction",
@@ -177,6 +193,10 @@ def require_implemented_reference_method(name: str) -> ReferenceMethodSpec:
     """Guard against accidentally training or reporting unimplemented reference scaffolds."""
 
     spec = get_reference_method(name)
+    if spec.official_code_status != "official_code_identified":
+        raise ReferenceBaselineNotImplementedError(
+            f"{name} has no verified official code path and cannot be a main baseline."
+        )
     if spec.implementation_status != "implemented" or not spec.reportable_baseline:
         raise ReferenceBaselineNotImplementedError(
             f"{name} is selected for faithful adaptation but is not implemented/reportable yet."

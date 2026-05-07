@@ -28,6 +28,17 @@ def test_reference_methods_are_not_reportable_until_implemented() -> None:
 
     assert spec.reportable_baseline is False
     assert spec.implementation_status == "not_implemented"
+    assert spec.official_code_status == "official_code_identified"
+    assert spec.official_code_url == "https://github.com/yaochenzhu/LLM4Rec"
     assert "item prediction head" in spec.preserve_components
     with pytest.raises(ReferenceBaselineNotImplementedError):
         require_implemented_reference_method("cllm4rec_qwen_lora")
+
+
+def test_reference_method_guard_rejects_missing_official_code() -> None:
+    spec = get_reference_method("controllable_rec_qwen_lora")
+
+    assert spec.official_code_status == "no_official_code_identified"
+    assert spec.official_code_url is None
+    with pytest.raises(ReferenceBaselineNotImplementedError):
+        require_implemented_reference_method("controllable_rec_qwen_lora")

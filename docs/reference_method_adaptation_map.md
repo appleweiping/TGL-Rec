@@ -11,6 +11,7 @@ Baseline algorithm belongs to the baseline:
 - preserve its scoring/reranking logic;
 - preserve its special signals such as collaborative IDs, long-tail
   self-distillation, controllability alignment, or representation alignment.
+- use the official implementation when available.
 
 Experiment protocol belongs to TGL-Rec:
 
@@ -44,27 +45,36 @@ These method identities were selected from local files plus public paper pages:
   sequential recommendation models, with layer redundancy and knowledge
   distillation as core ideas.
   - Public page: <https://arxiv.org/abs/2405.17890>
+  - Official code: <https://github.com/WujiangXu/SLMRec>
 - LLM-ESR official NeurIPS page describes LLM semantic embeddings, dual-view
   semantic/collaborative modeling for long-tail items, and retrieval-augmented
   self-distillation for long-tail users.
   - Public page: <https://proceedings.neurips.cc/paper_files/paper/2024/hash/2f0728449cb3150189d765fc87afc913-Abstract-Conference.html>
+  - Official code: <https://github.com/Applied-Machine-Learning-Lab/LLM-ESR>
 - Controllable Recommendation paper page describes supervised
   recommendation-specific instruction tasks augmented with conventional
   recommender labels, followed by reinforcement-learning-based alignment.
   - Public page: <https://arxiv.org/abs/2403.05063>
+  - Official code: not identified yet; keep out of main baseline set until
+    official code is found or a non-official reproduction is explicitly approved.
 - CLLM4Rec paper page describes adding user/item ID tokens, soft+hard prompting,
   mutual regularization, and an item prediction head.
   - Public code page: <https://github.com/yaochenzhu/LLM4Rec>
+  - Official code: <https://github.com/yaochenzhu/LLM4Rec>
 - RLMRec paper page describes LLM-empowered representation learning and
   cross-view alignment between semantic and collaborative representations.
   - Public code page: <https://github.com/HKUDS/RLMRec>
+  - Official code: <https://github.com/HKUDS/RLMRec>
 - TransRec paper page describes multi-facet identifiers and grounding generated
   identifiers to in-corpus items.
   - Public page: <https://arxiv.org/abs/2310.06491>
+  - Official code: not identified yet; keep out of main baseline set until
+    official code is found or a non-official reproduction is explicitly approved.
 - Review-driven Personalized Preference Reasoning is present in the local
   reference set; public metadata confirms the title. Its exact adaptation
   requires method extraction from the local PDF before implementation.
   - Public page: <https://arxiv.org/abs/2408.06276>
+  - Official code: <https://github.com/jieyong99/EXP3RT>
 
 ## Promotion Plan
 
@@ -79,10 +89,12 @@ These method identities were selected from local files plus public paper pages:
    - evaluation command.
 3. Implement baselines in disjoint modules instead of forcing all of them into
    `sft_variants.py`.
-4. Use `sft_variants.py` only for methods whose original algorithm is actually
+4. Wrap official code where available; do not rewrite official algorithms unless
+   only glue code is needed for the shared protocol.
+5. Use `sft_variants.py` only for methods whose original algorithm is actually
    SFT/prompt-based.
-5. Train each baseline with Qwen3-8B LoRA/QLoRA when faithful.
-6. Evaluate on the same candidate protocol with shared metrics.
+6. Train each baseline with Qwen3-8B LoRA/QLoRA when faithful.
+7. Evaluate on the same candidate protocol with shared metrics.
 
 Implementation cards are stored under:
 

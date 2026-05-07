@@ -16,6 +16,18 @@ Do not make a baseline artificially weak by flattening its algorithm into a
 generic prompt. Do not make the comparison uncontrolled by letting each baseline
 choose its own data, negatives, candidate set, split, metrics, or base model.
 
+Official implementation rule:
+
+- Use the official code/project whenever it exists.
+- TGL-Rec should wrap official training/scoring code with adapters for the
+  shared protocol rather than reimplementing the algorithm from scratch.
+- A paper without identified official code cannot be used as a main
+  senior-recommended baseline unless the user explicitly approves a
+  non-official reproduction and it is labeled as such.
+- A local rewrite is allowed only for glue code: data conversion, candidate
+  alignment, Qwen3-8B backbone replacement, prediction-schema export, and metric
+  evaluation.
+
 Fairness means every reportable reference baseline uses the same protocol
 backbone and evaluator:
 
@@ -78,14 +90,16 @@ the following are true:
 1. It is mapped to a specific reference paper or project from `references/`.
 2. The paper identity, title, venue/year if known, and local file path are
    recorded in a committed note.
-3. The adapted method signal is described concretely, not generically.
-4. The baseline's own training and scoring logic is preserved as much as the
+3. The official code path is identified, cloned or referenced, and its license
+   or usage constraints are recorded.
+4. The adapted method signal is described concretely, not generically.
+5. The baseline's own training and scoring logic is preserved as much as the
    shared Qwen3-8B LoRA protocol allows.
-5. The implementation still uses Qwen3-8B LoRA/QLoRA for fairness.
-6. A smoke build verifies the data path and prompt fields.
-7. A server training run produces an adapter.
-8. The adapter is evaluated with the shared evaluator.
-9. Metrics and diagnostics are saved.
+6. The implementation still uses Qwen3-8B LoRA/QLoRA for fairness.
+7. A smoke build verifies the data path and prompt fields.
+8. A server training run produces an adapter or baseline checkpoint.
+9. The adapter/checkpoint is evaluated with the shared evaluator.
+10. Metrics and diagnostics are saved.
 
 Until then, these variants are framework scaffolds only.
 

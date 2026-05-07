@@ -85,6 +85,11 @@ baseline's own training and scoring logic as much as possible; unify the
 experimental protocol instead. Shared controls are data, candidates, splits,
 metrics, prediction schema, and Qwen3-8B LoRA/QLoRA backbone. Do not turn
 reference baselines into generic prompt toys merely for uniformity.
+Use official baseline code/projects whenever available. TGL-Rec should provide
+data/protocol/backbone/prediction-schema adapters around official code, not
+invent local lookalikes. If official code is not identified, keep that method
+out of the main baseline set unless the user explicitly approves a labeled
+non-official reproduction.
 
 The observation has not been proven yet. The current status is: the hypothesis,
 LoRA framework, and diagnostic tooling exist, but old adapter results were
