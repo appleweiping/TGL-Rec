@@ -78,6 +78,12 @@ Qwen3-8B LoRA variants where possible. The goal is to compare our observation
 against reference-style LoRA baselines fairly, and to test whether the observed
 phenomenon also appears in other baselines rather than only in our method.
 
+Important baseline-fidelity principle: preserve each senior-recommended
+baseline's own training and scoring logic as much as possible; unify the
+experimental protocol instead. Shared controls are data, candidates, splits,
+metrics, prediction schema, and Qwen3-8B LoRA/QLoRA backbone. Do not turn
+reference baselines into generic prompt toys merely for uniformity.
+
 The observation has not been proven yet. The current status is: the hypothesis,
 LoRA framework, and diagnostic tooling exist, but old adapter results were
 diagnostic and affected by prompt-continuation behavior before the label-mask

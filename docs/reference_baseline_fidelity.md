@@ -5,7 +5,18 @@
 The senior-recommended baselines must be original reference-method adaptations,
 not toy prompt variants.
 
-Fairness means every reportable reference baseline uses the same experimental
+The governing principle is:
+
+```text
+Training/scoring algorithm: preserve the baseline's own logic as much as possible.
+Experimental protocol: unify data, candidates, splits, metrics, and backbone.
+```
+
+Do not make a baseline artificially weak by flattening its algorithm into a
+generic prompt. Do not make the comparison uncontrolled by letting each baseline
+choose its own data, negatives, candidate set, split, metrics, or base model.
+
+Fairness means every reportable reference baseline uses the same protocol
 backbone and evaluator:
 
 - base model: Qwen3-8B;
@@ -17,6 +28,29 @@ backbone and evaluator:
 
 But matching the backbone is not enough. A baseline is reportable only if its
 method signal comes from a concrete reference paper or project.
+
+## What Should Be Preserved
+
+For each original reference baseline, preserve as much of its own method as
+possible:
+
+- its training objective;
+- its input/evidence construction;
+- its preference, semantic, collaborative, long-tail, distillation, or control
+  signal;
+- its scoring or reranking logic;
+- its ablations when feasible.
+
+Only adapt the parts needed for a fair shared protocol:
+
+- replace the original backbone with Qwen3-8B LoRA/QLoRA when the method is
+  LLM-based or can be faithfully adapted to this backbone;
+- replace original data splits/candidates with our frozen protocol;
+- emit the shared prediction schema;
+- evaluate with the shared evaluator.
+
+If a paper's baseline cannot be faithfully adapted to Qwen3-8B LoRA without
+destroying its method, record that limitation instead of forcing a toy version.
 
 ## Current Status
 
@@ -45,7 +79,8 @@ the following are true:
 2. The paper identity, title, venue/year if known, and local file path are
    recorded in a committed note.
 3. The adapted method signal is described concretely, not generically.
-4. The SFT data construction or prompt/evidence fields implement that signal.
+4. The baseline's own training and scoring logic is preserved as much as the
+   shared Qwen3-8B LoRA protocol allows.
 5. The implementation still uses Qwen3-8B LoRA/QLoRA for fairness.
 6. A smoke build verifies the data path and prompt fields.
 7. A server training run produces an adapter.

@@ -4,8 +4,8 @@
 
 The `references/` papers should inform baseline methods, but their results must
 not be copied as external numbers. Each reference-style baseline should be
-reimplemented as a variant inside this project's framework and trained/evaluated
-under the same local small-model setting:
+reimplemented inside this project's framework and trained/evaluated under the
+same local small-model protocol:
 
 - base model: Qwen3-8B;
 - adaptation: LoRA/QLoRA;
@@ -16,6 +16,14 @@ under the same local small-model setting:
 
 This makes the comparison a framework-controlled experiment rather than a
 literature-number comparison.
+
+The baseline algorithm itself should remain as original as possible. We control
+the experimental protocol, not the method identity:
+
+- preserve each baseline's own training objective, input construction, and
+  scoring/reranking logic where feasible;
+- unify data, candidate sets, splits, metrics, prediction schema, and Qwen3-8B
+  LoRA/QLoRA backbone.
 
 Current status: these baselines are candidate scaffolds, not original
 senior-recommended baselines yet. Do not report them as completed baselines
@@ -36,7 +44,7 @@ derived from them may be committed only as manually written summaries.
 
 ## Baseline Families To Adapt
 
-Initial reference-style LoRA variants are registered in
+Initial reference-style LoRA containers are registered in
 `src/llm4rec/trainers/sft_variants.py`:
 
 | Variant | Role | Intended Reference Family |
@@ -48,14 +56,16 @@ Initial reference-style LoRA variants are registered in
 | `reference_long_tail_sft` | reference baseline | long-tail and popularity-bias mitigation |
 | `reference_collaborative_sft` | reference baseline | item co-occurrence, neighborhood preference, sequential collaborative filtering |
 
-These are not paper claims yet. They are framework slots. A variant becomes a
+These are not paper claims yet. They are framework containers. A variant becomes a
 reportable senior-recommended baseline only after a specific reference paper is
 mapped to it with:
 
 - paper identity and citation;
 - which signal is adapted;
-- prompt/evidence fields;
-- label construction policy;
+- preserved baseline training objective;
+- preserved scoring/reranking logic;
+- adapted prompt/evidence fields only when the original method uses them;
+- label construction policy when SFT is part of the original or faithful adapted method;
 - expected observation axes;
 - smoke run;
 - server LoRA run;
