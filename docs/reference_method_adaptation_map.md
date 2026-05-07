@@ -84,6 +84,18 @@ These method identities were selected from local files plus public paper pages:
 5. Train each baseline with Qwen3-8B LoRA/QLoRA when faithful.
 6. Evaluate on the same candidate protocol with shared metrics.
 
+Implementation cards are stored under:
+
+```text
+docs/reference_implementation_cards/
+```
+
+The code registry is:
+
+```text
+src/llm4rec/baselines/reference_methods.py
+```
+
 ## Current Reportability
 
 None of the selected reference baselines is reportable yet.
