@@ -55,12 +55,17 @@ Registered SFT variants:
 Reference baseline plan:
 
 - See `docs/reference_lora_baseline_plan.md`.
+- See `docs/reference_baseline_fidelity.md` before describing any reference
+  variant as a senior-recommended original baseline.
 - Reference PDFs are local research material under `references/NH/` and
   `references/NR/`.
 - Do not commit PDFs or copied paper text.
 - The intended design is to adapt reference paper methods into this framework,
   using the same Qwen3-8B LoRA setup, same splits, same candidate protocol, same
   prediction schema, and same evaluator.
+- Current `reference_*_sft` variants are candidate scaffolds until mapped to
+  concrete reference papers/projects. Do not call them original baselines until
+  that mapping and implementation are complete.
 
 ## Important User Direction
 

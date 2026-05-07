@@ -17,11 +17,11 @@ under the same local small-model setting:
 This makes the comparison a framework-controlled experiment rather than a
 literature-number comparison.
 
-Current status: these baselines are selected as framework families, but the
-reference methods have not all been fully mapped, trained, or evaluated yet.
-Do not report them as completed baselines until each family has a concrete
-paper-method mapping, SFT construction policy, server run, metrics, and
-diagnostics.
+Current status: these baselines are candidate scaffolds, not original
+senior-recommended baselines yet. Do not report them as completed baselines
+until each one has a concrete paper-method mapping, SFT construction policy,
+server run, metrics, and diagnostics. See
+`docs/reference_baseline_fidelity.md`.
 
 ## Current Reference Inputs
 
@@ -49,7 +49,8 @@ Initial reference-style LoRA variants are registered in
 | `reference_collaborative_sft` | reference baseline | item co-occurrence, neighborhood preference, sequential collaborative filtering |
 
 These are not paper claims yet. They are framework slots. A variant becomes a
-reportable baseline only after a specific reference paper is mapped to it with:
+reportable senior-recommended baseline only after a specific reference paper is
+mapped to it with:
 
 - paper identity and citation;
 - which signal is adapted;
@@ -59,6 +60,10 @@ reportable baseline only after a specific reference paper is mapped to it with:
 - smoke run;
 - server LoRA run;
 - saved metrics and diagnostics.
+
+Matching the Qwen3-8B LoRA backbone is required for fairness, but it is not
+sufficient for baseline fidelity. The baseline's method signal must come from
+the original reference method rather than a generic prompt phrase.
 
 ## Observation-Aware Evaluation
 
