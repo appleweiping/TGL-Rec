@@ -1,5 +1,14 @@
 # Baseline configuration refreshed on 2026-04-29.
 
+comparison_policy:
+  main_llm_backbone: Qwen/Qwen3-8B
+  finetune_regime: project_lora_or_qlora_regime
+  baseline_hyperparameters: official_default_or_paper_recommended
+  ours_hyperparameters: validation_tuned_with_logged_search_space
+  official_source_required: true
+  fallback_allowed: non_official_labeled_only
+  deviation_log_required: true
+
 baseline_sources:
   recbole:
     url: "https://github.com/RUCAIBox/RecBole"
@@ -35,7 +44,7 @@ baselines:
   bpr_mf:
     category: classic_cf
     required: true
-    implementation: local_or_recbole
+    implementation: local_for_sanity_or_official_adapter_for_main
     source_url: "https://arxiv.org/abs/1205.2618"
     needs_gpu: false
     needs_api: false
@@ -85,7 +94,7 @@ baselines:
   lightgcn:
     category: graph_cf
     required: true
-    implementation: recbole_or_official
+    implementation: official_code_adapter_required
     source_url: "https://arxiv.org/abs/2002.02126"
     code_url: "https://github.com/kuandeng/LightGCN"
     license: "no LICENSE found in official repo on 2026-04-29; MIT if using RecBole"
@@ -100,7 +109,7 @@ baselines:
   gru4rec:
     category: sequential
     required: true
-    implementation: recbole_or_official
+    implementation: official_code_adapter_required
     code_url: "https://github.com/hidasib/GRU4Rec"
     license: check
     needs_gpu: true
@@ -114,7 +123,7 @@ baselines:
   sasrec:
     category: sequential
     required: true
-    implementation: recbole_or_official
+    implementation: official_code_adapter_required
     source_url: "https://arxiv.org/abs/1808.09781"
     code_url: "https://github.com/kang205/SASRec"
     license: "Apache-2.0 official; MIT if using RecBole"
@@ -129,7 +138,7 @@ baselines:
   bert4rec:
     category: sequential
     required: true
-    implementation: recbole_or_official
+    implementation: official_code_adapter_required
     source_url: "https://arxiv.org/abs/1904.06690"
     code_url: "https://github.com/FeiSun/BERT4Rec"
     license: "Apache-2.0 official; MIT if using RecBole"
@@ -145,7 +154,7 @@ baselines:
   tisasrec:
     category: time_aware_sequential
     required: true
-    implementation: official_or_clean_reimplementation
+    implementation: official_code_adapter_required
     source_url: "https://cseweb.ucsd.edu/~jmcauley/pdfs/wsdm20b.pdf"
     code_url: "https://github.com/JiachengLi1995/TiSASRec"
     license: "no LICENSE found on 2026-04-29"
@@ -160,7 +169,7 @@ baselines:
   fearec:
     category: sequential
     required: false
-    implementation: recbole_or_official
+    implementation: official_code_adapter_required
     source_url: "https://recbole.io/docs/recbole/recbole.model.sequential_recommender.fearec.html"
     code_url: "https://github.com/sudaada/FEARec"
     license: "MIT if using RecBole; check official repo"
@@ -184,7 +193,7 @@ baselines:
   llm_srec:
     category: llm4rec
     required: true
-    implementation: official_or_clean_reimplementation
+    implementation: official_code_adapter_required
     source_url: "https://arxiv.org/abs/2502.13909"
     code_url: "https://github.com/Sein-Kim/LLM-SRec"
     license: "no LICENSE found on 2026-04-29"
@@ -232,7 +241,7 @@ baselines:
   g_refer:
     category: graph_to_language
     required: false
-    implementation: official_or_clean_static_adaptation
+    implementation: official_code_adapter_required
     source_url: "https://arxiv.org/abs/2502.12586"
     code_url: "https://github.com/Yuhan1i/G-Refer"
     license: "no LICENSE found on 2026-04-29"
@@ -244,7 +253,7 @@ baselines:
   dynamic_gnn_tgn:
     category: dynamic_graph
     required: false
-    implementation: official_or_local_adapter
+    implementation: official_code_adapter_required
     code_url: "https://github.com/twitter-research/tgn"
     license: check
     needs_gpu: true

@@ -100,8 +100,11 @@ def test_prediction_schema_validates_optional_baseline_provenance() -> None:
                 "adapter_training_policy": "preserve_official_algorithm",
                 "base_model_policy": "unified_qwen3_8b_base_model",
                 "baseline_id": "cllm4rec_qwen_lora",
+                "comparison_protocol": "official_default_qwen3_8b_lora",
                 "config_status": "candidate_scaffold_not_reportable",
                 "do_not_merge_into_main_accuracy_table": True,
+                "finetune_regime": "project_lora_or_qlora_regime",
+                "hyperparameter_policy": "official_default_or_paper_recommended_hyperparameters",
                 "implementation_status": "not_implemented",
                 "official_code_status": "official_code_identified",
                 "protocol_controls": [

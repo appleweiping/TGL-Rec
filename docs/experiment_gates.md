@@ -30,5 +30,9 @@ The machine-readable gate is `configs/stage_gates.yaml`.
 
 The original contribution must remain the diagnosis plus temporal graph-to-language retrieval and
 need-aware gating. API calls, LoRA, and external baselines are measurement tools or comparators, not
-the core novelty. Do not claim SOTA unless the strongest baselines are fairly rerun under the same
-split, candidate/full-ranking protocol, and hyperparameter-search budget.
+the core novelty. The main academic comparison uses official source code,
+Qwen3-8B, the project LoRA/QLoRA regime, shared splits/candidates/metrics, and
+official/default baseline hyperparameters. Our method may be validation-tuned
+only when the search space, selected setting, seeds, and failed settings are
+logged. Do not describe this as equal-budget tuning unless equal-budget tuning
+has actually been run.

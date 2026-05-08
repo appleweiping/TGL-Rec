@@ -1,4 +1,6 @@
 protocol_version: protocol_v1
+launch_plan_only: true
+non_reportable_reason: pending_official_default_qwen3_lora_baseline_runs_and_saved_metrics
 phase: Phase 9D
 llm_config_path: configs/llm/deepseek_v4_flash.yaml
 datasets:
@@ -35,7 +37,7 @@ concurrency:
   jitter: true
 experiment:
   run_mode: diagnostic_api
-  reportable: true
+  reportable: false
   api_calls_allowed: true
   lora_training_enabled: false
   stage: pilot

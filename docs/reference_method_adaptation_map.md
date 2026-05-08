@@ -15,9 +15,13 @@ Baseline algorithm belongs to the baseline:
 
 Experiment protocol belongs to TGL-Rec:
 
-- Qwen3-8B base model where faithful;
-- LoRA/adapter training, extra heads, losses, and scoring logic preserved from
-  the official baseline algorithm where possible;
+- Qwen3-8B backbone for the main LLM baseline table;
+- project LoRA/QLoRA regime for all LLM methods in that table;
+- official/default or paper-recommended hyperparameters for baselines;
+- validation-tuned hyperparameters for TGL-Rec only, with all search ranges and
+  selected settings logged;
+- LoRA/adapter training, extra heads, losses, and scoring logic adapted from the
+  official baseline algorithm where possible;
 - same frozen data;
 - same candidate sets;
 - same split;
@@ -95,8 +99,9 @@ These method identities were selected from local files plus public paper pages:
    only glue code is needed for the shared protocol.
 5. Use `sft_variants.py` only for methods whose original algorithm is actually
    SFT/prompt-based.
-6. Train each baseline with Qwen3-8B as the unified base model, while preserving
-   the official LoRA/adapter/head/loss/scoring choices where faithful.
+6. Train each LLM baseline with Qwen3-8B and the project LoRA/QLoRA regime for
+   the main comparison table. Use official/default baseline hyperparameters
+   unless a documented dataset-adaptation parameter is required.
 7. Evaluate on the same candidate protocol with shared metrics.
 
 Implementation cards are stored under:

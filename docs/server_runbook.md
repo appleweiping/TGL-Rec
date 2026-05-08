@@ -68,6 +68,16 @@ sed -n '1,220p' outputs/plans/four_domain_server_runbook.sh
 The plan should include `beauty`, `books`, `electronics`, and `movies` once all
 external task directories exist.
 
+Run lightweight local guard tests before launching long jobs:
+
+```bash
+python -m pytest \
+  tests/unit/test_reference_baseline_configs.py \
+  tests/unit/test_week8_lora_configs.py \
+  tests/unit/test_four_domain_plan.py \
+  tests/unit/test_run_compare.py -q
+```
+
 ## 4. Import Frozen Same-Candidate Tasks
 
 The generated runbook will call:
@@ -130,6 +140,10 @@ cat data/processed/lora_sft/protocol_week8_large10000_same_candidate/four_domain
 Then train adapters, adjusting private server configs only if needed:
 
 ```bash
+mkdir -p \
+  outputs/paper_runs/protocol_week8_large10000_same_candidate/lora_8b/history_only_sft \
+  outputs/paper_runs/protocol_week8_large10000_same_candidate/lora_8b/temporal_evidence_sft
+
 CUDA_VISIBLE_DEVICES=0 nohup python -u scripts/train_lora_8b.py \
   --config configs/experiments/week8_lora_8b_history_only.yaml \
   > outputs/paper_runs/protocol_week8_large10000_same_candidate/lora_8b/history_only_sft/train.nohup.log 2>&1 &
@@ -160,8 +174,13 @@ python scripts/compare_prediction_runs.py \
   --run history_or_temporal=outputs/paper_runs/protocol_week8_large10000_same_candidate/lora_8b/eval/predictions.jsonl \
   --run baseline=outputs/paper_runs/protocol_week8_large10000_same_candidate/main_accuracy_seed0/predictions.jsonl \
   --baseline baseline \
+  --allow-non-reportable \
   --output-dir outputs/paper_runs/protocol_week8_large10000_same_candidate/paired_compare/lora_vs_baseline
 ```
+
+Omit `--allow-non-reportable` for paper-table comparisons. The comparison tool
+will then reject scaffold/non-reportable rows, protocol mismatches, split
+mismatches, and candidate-set mismatches.
 
 ## 6. Reportability Reminder
 

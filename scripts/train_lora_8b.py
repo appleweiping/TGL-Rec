@@ -18,8 +18,13 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True, type=Path)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--allow-scaffold",
+        action="store_true",
+        help="Allow explicitly non-reportable scaffold/reference interface smoke training.",
+    )
     args = parser.parse_args()
-    result = train_lora_8b(args.config, dry_run=args.dry_run)
+    result = train_lora_8b(args.config, dry_run=args.dry_run, allow_scaffold=args.allow_scaffold)
     print(f"lora training status: {result.get('status')} variant={result.get('variant')}")
     return 0
 

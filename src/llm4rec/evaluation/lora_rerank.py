@@ -25,12 +25,14 @@ def run_lora_rerank_eval(
     split: str = "test",
     top_m: int | None = None,
     dry_run: bool = False,
+    allow_scaffold: bool = False,
 ) -> dict[str, Any]:
     """Generate predictions for configured adapters and evaluate them."""
 
     config = load_yaml_config(config_path)
     eval_config = dict(config["evaluation_run"])
     baseline_contract = dict(config.get("baseline_contract", {}))
+    _guard_scaffold_eval(baseline_contract, allow_scaffold=allow_scaffold)
     run_dir = ensure_dir(resolve_path(eval_config["output_dir"]))
     save_resolved_config(config, run_dir / "resolved_config.yaml")
     write_json(run_dir / "environment.json", collect_environment(resolve_path(".")))
@@ -100,6 +102,18 @@ def run_lora_rerank_eval(
     }
     write_json(run_dir / "rerank_eval_manifest.json", manifest)
     return {"manifest": manifest, "metrics": metrics, "predictions_path": str(predictions_path)}
+
+
+def _guard_scaffold_eval(baseline_contract: dict[str, Any], *, allow_scaffold: bool) -> None:
+    if not baseline_contract.get("scaffold_only"):
+        return
+    if allow_scaffold:
+        return
+    raise RuntimeError(
+        "Refusing to evaluate a scaffold reference baseline config. "
+        "Use official-code baseline outputs for reportable comparison, or pass "
+        "--allow-scaffold for an explicitly non-reportable smoke run."
+    )
 
 
 REFERENCE_VARIANT_TO_METHOD_ID = {

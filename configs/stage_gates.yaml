@@ -47,7 +47,8 @@ stages:
       - sasrec_three_seed_results
       - bert4rec_three_seed_results
       - tisasrec_or_clean_time_aware_alternative
-      - comparable_hyperparameter_search_log
+      - official_default_baseline_hyperparameter_log
+      - ours_validation_tuning_log
       - segment_metrics_for_all_main_baselines
 
   local_or_gpu_small_reranker_no_api:

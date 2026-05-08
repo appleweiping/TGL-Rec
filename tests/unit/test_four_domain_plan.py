@@ -79,4 +79,5 @@ def test_four_domain_plan_includes_week8_sft_merge_train_and_eval(tmp_path: Path
     assert "merge_lora_sft_data.py" in commands["merge_week8_lora_sft"][0]
     assert "four_domain/history_only_sft" in commands["merge_week8_lora_sft"][0]
     assert "--datasets beauty books" in commands["merge_week8_lora_sft"][0]
+    assert commands["train_week8_lora_controls"][0].startswith("mkdir -p ")
     assert "week8_lora_8b_rerank_eval.yaml" in commands["evaluate_week8_lora_controls"][0]

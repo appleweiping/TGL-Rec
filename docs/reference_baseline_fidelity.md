@@ -10,12 +10,36 @@ The governing principle is:
 ```text
 Training/scoring algorithm: preserve the baseline's own logic as much as possible.
 Experimental protocol: unify data, candidates, splits, metrics, prediction schema,
-and the Qwen3-8B base model where faithful.
+Qwen3-8B backbone, and the project LoRA/QLoRA regime for the main LLM baseline table.
 ```
 
 Do not make a baseline artificially weak by flattening its algorithm into a
 generic prompt. Do not make the comparison uncontrolled by letting each baseline
-choose its own data, negatives, candidate set, split, metrics, or base model.
+choose its own data, negatives, candidate set, split, metrics, backbone, or
+fine-tuning regime.
+
+## Main Paper Fairness Setting
+
+The default reportable setting follows the senior-recommended academic practice:
+
+```text
+official source code + our frozen data/protocol + Qwen3-8B backbone +
+project LoRA/QLoRA regime + official/default baseline hyperparameters +
+validation-tuned TGL-Rec with all search ranges logged
+```
+
+This is the primary comparison table unless the paper explicitly opens a
+separate regime. We do not claim equal hyperparameter-search budget. Baselines
+use official/default or paper-recommended hyperparameters, except for documented
+dataset-adaptation values that are required to run on the frozen protocol. Our
+method may be tuned on validation data, but every searched range, selected
+setting, seed, and failed setting must be logged.
+
+If a baseline's core contribution is inseparable from LoRA/adapter design, the
+official design should be adapted into the project LoRA/QLoRA regime as closely
+as possible and the deviation recorded. If a full-finetune table is added later,
+all LLM methods in that table must use the same full-finetune regime; do not
+compare our full-finetuned method against LoRA-only baselines in the main table.
 
 Official implementation rule:
 
@@ -32,9 +56,11 @@ Official implementation rule:
 Fairness means every reportable reference baseline uses the same protocol base
 model and evaluator:
 
-- base model: Qwen3-8B;
+- backbone: Qwen3-8B for LLM-based reportable baselines;
+- fine-tuning regime: project LoRA/QLoRA for the main LLM table;
+- baseline hyperparameters: official/default or paper-recommended values;
 - adaptation/training/head/scorer: preserve each official baseline algorithm
-  where possible;
+  inside that regime where possible;
 - same train/valid/test split;
 - same candidate sets;
 - same prediction schema;
@@ -57,10 +83,10 @@ possible:
 
 Only adapt the parts needed for a fair shared protocol:
 
-- replace the original base model with Qwen3-8B when the method is LLM-based or
-  can be faithfully adapted to this base model;
-- preserve the official baseline's LoRA/adapter/head/scorer training policy
-  when it differs from our local SFT control group;
+- replace the original LLM backbone with Qwen3-8B for the main Qwen3-LoRA table;
+- adapt LoRA/adapter/head/scorer training to the project LoRA/QLoRA regime while
+  preserving the method's official algorithmic signal;
+- use official/default or paper-recommended baseline hyperparameters;
 - replace original data splits/candidates with our frozen protocol;
 - emit the shared prediction schema;
 - evaluate with the shared evaluator.
@@ -100,8 +126,8 @@ the following are true:
 4. The adapted method signal is described concretely, not generically.
 5. The baseline's own training, adapter/head/loss, and scoring logic is
    preserved as much as the shared data/candidate/evaluator protocol allows.
-6. The implementation uses Qwen3-8B as the base model only where faithful;
-   LoRA/QLoRA is method-specific, not mandatory.
+6. The implementation uses Qwen3-8B and the project LoRA/QLoRA regime for the
+   main LLM table, or documents why it must be excluded or reported separately.
 7. A smoke build verifies the data path and prompt fields.
 8. A server training run produces an adapter or baseline checkpoint.
 9. The adapter/checkpoint is evaluated with the shared evaluator.

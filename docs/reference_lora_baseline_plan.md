@@ -8,8 +8,13 @@ wrapped or faithfully adapted through official-code-compatible adapters and
 trained/evaluated under the same project protocol:
 
 - base model: Qwen3-8B;
-- adaptation, LoRA/adapter training, heads, and scoring logic: preserved from
-  each official baseline where faithful;
+- fine-tuning regime: project LoRA/QLoRA for the main LLM table;
+- baseline hyperparameters: official/default or paper-recommended values;
+- our hyperparameters: validation-tuned with search ranges and chosen settings
+  logged;
+- adaptation, heads, losses, and scoring logic: preserve each official
+  baseline's algorithmic signal inside the shared Qwen3-LoRA regime where
+  possible;
 - data split: project `protocol_v1` or a later frozen protocol;
 - candidate construction: shared project candidate protocol;
 - output schema: shared `predictions.jsonl`;
@@ -23,8 +28,8 @@ the experimental protocol, not the method identity:
 
 - preserve each baseline's own training objective, input construction, and
   scoring/reranking logic where feasible;
-- unify data, candidate sets, splits, metrics, prediction schema, and Qwen3-8B
-  base model.
+- unify data, candidate sets, splits, metrics, prediction schema, Qwen3-8B
+  backbone, and LoRA/QLoRA regime for the main LLM table.
 
 Current status: these baselines are candidate scaffolds, not original
 senior-recommended baselines yet. Do not report them as completed baselines
@@ -74,9 +79,10 @@ mapped to it with:
   training path;
 - saved metrics and diagnostics.
 
-Matching the Qwen3-8B base model is required for fairness, but it is not
-sufficient for baseline fidelity. The baseline's method signal must come from
-the original reference method rather than a generic prompt phrase.
+Matching the Qwen3-8B backbone and LoRA/QLoRA regime is required for the main
+LLM comparison table, but it is not sufficient for baseline fidelity. The
+baseline's method signal must come from the original reference method rather
+than a generic prompt phrase.
 
 ## Observation-Aware Evaluation
 
@@ -127,9 +133,9 @@ Expected future integration steps:
 3. Freeze splits and candidates under a new protocol version.
 4. Rebuild SFT/adapter data only for methods that require it, using train split
    only.
-5. Train each baseline with its official or faithful adapted training recipe,
-   while sharing frozen splits, candidates, IDs, prediction schema, evaluator,
-   and Qwen3-8B base model where faithful.
+5. Train each LLM baseline with Qwen3-8B, the project LoRA/QLoRA regime, and
+   official/default hyperparameters, while sharing frozen splits, candidates,
+   IDs, prediction schema, and evaluator.
 6. Evaluate all variants with the same evaluator and diagnostic scripts.
 
 ## Near-Term Plan

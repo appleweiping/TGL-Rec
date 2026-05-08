@@ -20,7 +20,10 @@ class ReferenceMethodSpec:
     official_code_url: str | None
     official_code_status: str
     base_model_policy: str
+    comparison_protocol: str
     adapter_training_policy: str
+    finetune_regime: str
+    hyperparameter_policy: str
     scoring_policy: str
     protocol_controls: tuple[str, ...]
     method_family: str
@@ -40,7 +43,10 @@ class ReferenceMethodSpec:
             "implementation_status": self.implementation_status,
             "reportable_baseline": self.reportable_baseline,
             "base_model_policy": self.base_model_policy,
+            "comparison_protocol": self.comparison_protocol,
             "adapter_training_policy": self.adapter_training_policy,
+            "finetune_regime": self.finetune_regime,
+            "hyperparameter_policy": self.hyperparameter_policy,
             "scoring_policy": self.scoring_policy,
             "protocol_controls": list(self.protocol_controls),
         }
@@ -55,7 +61,10 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
         official_code_url="https://github.com/WujiangXu/SLMRec",
         official_code_status="official_code_identified",
         base_model_policy="unified_qwen3_8b_base_model",
+        comparison_protocol="official_default_qwen3_8b_lora",
         adapter_training_policy="preserve_official_distillation_algorithm_and_adapt_teacher_student_path",
+        finetune_regime="project_lora_or_qlora_regime",
+        hyperparameter_policy="official_default_hyperparameters_for_baselines_validation_tuning_for_ours",
         scoring_policy="preserve_official_sequential_recommendation_scoring_when_feasible",
         protocol_controls=("data", "candidate_sets", "splits", "metrics", "prediction_schema"),
         method_family="distillation_sequential_recommendation",
@@ -84,7 +93,10 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
         official_code_url="https://github.com/Applied-Machine-Learning-Lab/LLM-ESR",
         official_code_status="official_code_identified",
         base_model_policy="unified_qwen3_8b_base_model",
+        comparison_protocol="official_default_qwen3_8b_lora",
         adapter_training_policy="preserve_official_long_tail_dual_view_and_self_distillation_algorithm",
+        finetune_regime="project_lora_or_qlora_regime",
+        hyperparameter_policy="official_default_hyperparameters_for_baselines_validation_tuning_for_ours",
         scoring_policy="preserve_official_long_tail_sequential_scoring_when_feasible",
         protocol_controls=("data", "candidate_sets", "splits", "metrics", "prediction_schema"),
         method_family="long_tail_sequential_recommendation",
@@ -108,7 +120,10 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
         official_code_url=None,
         official_code_status="no_official_code_identified",
         base_model_policy="unified_qwen3_8b_base_model",
+        comparison_protocol="official_default_qwen3_8b_lora",
         adapter_training_policy="blocked_until_official_code_or_user_approved_non_official_reproduction",
+        finetune_regime="project_lora_or_qlora_regime",
+        hyperparameter_policy="official_default_hyperparameters_for_baselines_validation_tuning_for_ours",
         scoring_policy="blocked_until_official_code_or_user_approved_non_official_reproduction",
         protocol_controls=("data", "candidate_sets", "splits", "metrics", "prediction_schema"),
         method_family="controllable_recommendation_alignment",
@@ -132,7 +147,10 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
         official_code_url="https://github.com/yaochenzhu/LLM4Rec",
         official_code_status="official_code_identified",
         base_model_policy="unified_qwen3_8b_base_model",
+        comparison_protocol="official_default_qwen3_8b_lora",
         adapter_training_policy="preserve_official_id_token_prompt_head_and_regularization_algorithm",
+        finetune_regime="project_lora_or_qlora_regime",
+        hyperparameter_policy="official_default_hyperparameters_for_baselines_validation_tuning_for_ours",
         scoring_policy="preserve_official_item_prediction_head_or_candidate_scoring_logic",
         protocol_controls=("data", "candidate_sets", "splits", "metrics", "prediction_schema"),
         method_family="collaborative_llm_recommendation",
@@ -156,7 +174,10 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
         official_code_url="https://github.com/HKUDS/RLMRec",
         official_code_status="official_code_identified",
         base_model_policy="unified_qwen3_8b_base_model",
+        comparison_protocol="official_default_qwen3_8b_lora",
         adapter_training_policy="preserve_official_semantic_collaborative_representation_alignment_algorithm",
+        finetune_regime="project_lora_or_qlora_regime",
+        hyperparameter_policy="official_default_hyperparameters_for_baselines_validation_tuning_for_ours",
         scoring_policy="preserve_official_representation_alignment_scoring_logic",
         protocol_controls=("data", "candidate_sets", "splits", "metrics", "prediction_schema"),
         method_family="llm_representation_learning",
@@ -180,7 +201,10 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
         official_code_url=None,
         official_code_status="no_official_code_identified",
         base_model_policy="unified_qwen3_8b_base_model",
+        comparison_protocol="official_default_qwen3_8b_lora",
         adapter_training_policy="blocked_until_official_code_or_user_approved_non_official_reproduction",
+        finetune_regime="project_lora_or_qlora_regime",
+        hyperparameter_policy="official_default_hyperparameters_for_baselines_validation_tuning_for_ours",
         scoring_policy="blocked_until_official_code_or_user_approved_non_official_reproduction",
         protocol_controls=("data", "candidate_sets", "splits", "metrics", "prediction_schema"),
         method_family="grounded_identifier_generation",
@@ -203,7 +227,10 @@ REFERENCE_METHOD_REGISTRY: dict[str, ReferenceMethodSpec] = {
         official_code_url="https://github.com/jieyong99/EXP3RT",
         official_code_status="official_code_identified",
         base_model_policy="unified_qwen3_8b_base_model",
+        comparison_protocol="official_default_qwen3_8b_lora",
         adapter_training_policy="preserve_official_review_preference_reasoning_algorithm",
+        finetune_regime="project_lora_or_qlora_regime",
+        hyperparameter_policy="official_default_hyperparameters_for_baselines_validation_tuning_for_ours",
         scoring_policy="preserve_official_preference_reasoning_reranking_logic",
         protocol_controls=("data", "candidate_sets", "splits", "metrics", "prediction_schema"),
         method_family="review_preference_reasoning",

@@ -31,12 +31,20 @@ def test_reference_training_configs_declare_official_contract() -> None:
 
         assert contract["reference_method_id"] == baseline_id
         assert contract["base_model_policy"] == "unified_qwen3_8b_base_model"
-        assert contract["adapter_training_policy"] == "preserve_each_official_baseline_algorithm"
+        assert contract["comparison_protocol"] == "official_default_qwen3_8b_lora"
+        assert contract["adapter_training_policy"] == "adapt_official_algorithm_to_project_lora_regime"
+        assert contract["baseline_hyperparameter_policy"] == (
+            "official_default_or_paper_recommended_hyperparameters"
+        )
+        assert contract["ours_hyperparameter_policy"] == "validation_tuning_with_logged_search_space"
         assert contract["scoring_policy"] == "preserve_each_official_baseline_scoring_logic"
         assert contract["scaffold_only"] is True
         assert official_training["policy"] == "blocked_until_official_code_adapter"
         assert official_training["target_policy_after_promotion"] == "preserve_official_algorithm"
-        assert official_training["lora_or_adapter_required"] == "method_specific"
+        assert official_training["lora_or_adapter_required"] == "project_lora_or_qlora_regime"
+        assert official_training["hyperparameter_policy"] == (
+            "official_default_or_paper_recommended_hyperparameters"
+        )
         assert official_training["scaffold_only"] is True
         assert config["sft"]["scaffold_only"] is True
         assert "not_official_baseline" in config["sft"]["container_policy"]
@@ -61,5 +69,6 @@ def test_reference_eval_config_tracks_variant_method_mapping() -> None:
         "cllm4rec_qwen_lora"
     )
     assert contract["scaffold_only"] is True
+    assert contract["comparison_protocol"] == "official_default_qwen3_8b_lora"
     assert "method_specific_scoring_export" in contract["promotion_required_before_main_table"]
     assert "checkpoint_or_adapter_paths" in config["evaluation_run"]

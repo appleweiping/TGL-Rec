@@ -81,7 +81,11 @@ protocol, not the baseline's method identity.
 
 Unified across all main baselines:
 
-- base model: Qwen3-8B;
+- LLM backbone: Qwen3-8B;
+- fine-tuning regime: project LoRA/QLoRA for the main LLM table;
+- baseline hyperparameters: official/default or paper-recommended values;
+- our hyperparameters: validation-tuned with search ranges and selected
+  settings logged;
 - data split and leakage policy;
 - candidate sets;
 - metrics and diagnostics;
@@ -90,7 +94,7 @@ Unified across all main baselines:
 
 Preserved from each official baseline where faithful:
 
-- LoRA/adapter strategy;
+- official algorithmic signal;
 - extra heads;
 - losses and training objective;
 - input/evidence construction;

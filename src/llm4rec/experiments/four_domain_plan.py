@@ -95,6 +95,8 @@ def build_four_domain_server_plan(
                 protocol_version=protocol_version,
             ),
             "train_week8_lora_controls": [
+                "mkdir -p outputs/paper_runs/protocol_week8_large10000_same_candidate/lora_8b/history_only_sft "
+                "outputs/paper_runs/protocol_week8_large10000_same_candidate/lora_8b/temporal_evidence_sft",
                 "CUDA_VISIBLE_DEVICES=0 nohup python -u scripts/train_lora_8b.py "
                 "--config configs/experiments/week8_lora_8b_history_only.yaml "
                 "> outputs/paper_runs/protocol_week8_large10000_same_candidate/lora_8b/history_only_sft/train.nohup.log 2>&1 &",

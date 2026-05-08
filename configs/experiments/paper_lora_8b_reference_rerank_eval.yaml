@@ -17,7 +17,11 @@ baseline_contract:
   official_algorithm_required: true
   official_code_required_for_main_baseline: true
   base_model_policy: unified_qwen3_8b_base_model
-  adapter_training_policy: preserve_each_official_baseline_algorithm
+  comparison_protocol: official_default_qwen3_8b_lora
+  adapter_training_policy: adapt_official_algorithm_to_project_lora_regime
+  finetune_regime: project_lora_or_qlora_regime
+  baseline_hyperparameter_policy: official_default_or_paper_recommended_hyperparameters
+  ours_hyperparameter_policy: validation_tuning_with_logged_search_space
   scoring_policy: preserve_each_official_baseline_scoring_logic
   protocol_controls: [data, candidate_sets, splits, metrics, prediction_schema]
   promotion_required_before_main_table:

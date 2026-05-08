@@ -25,6 +25,7 @@ def compare_prediction_runs(
     baseline: str | None = None,
     ks: tuple[int, ...] = (1, 5, 10),
     strict: bool = True,
+    allow_non_reportable: bool = False,
 ) -> dict[str, Any]:
     """Align prediction rows and export per-event/per-method comparison tables."""
 
@@ -43,6 +44,7 @@ def compare_prediction_runs(
             raise ValueError(f"Prediction runs are not aligned; missing key preview: {missing}")
     if not common:
         raise ValueError("Prediction runs have no aligned events.")
+    _validate_fairness_invariants(run_rows, common, allow_non_reportable=allow_non_reportable)
     output = ensure_dir(output_dir)
     baseline_name = baseline or runs[0].name
     if baseline_name not in run_rows:
@@ -98,6 +100,7 @@ def compare_prediction_runs(
         "num_aligned_events": len(common),
         "runs": [{"name": run.name, "path": str(run.path)} for run in runs],
         "strict": strict,
+        "allow_non_reportable": allow_non_reportable,
     }
     write_json(output / "comparison_manifest.json", manifest)
     return {"manifest": manifest, "summary_rows": summary_rows}
@@ -117,6 +120,57 @@ def _load_indexed_rows(run: PredictionRunSpec) -> dict[tuple[str, str, str, str,
             raise ValueError(f"Duplicate aligned event key in {run.name}: {key}")
         rows[key] = row
     return rows
+
+
+def _validate_fairness_invariants(
+    run_rows: dict[str, dict[tuple[str, str, str, str, str], dict[str, Any]]],
+    common: set[tuple[str, str, str, str, str]],
+    *,
+    allow_non_reportable: bool,
+) -> None:
+    for key in common:
+        reference_row: dict[str, Any] | None = None
+        for name, rows in sorted(run_rows.items()):
+            row = rows[key]
+            if reference_row is None:
+                reference_row = row
+            else:
+                _assert_same_value(name, key, "protocol_version", reference_row, row)
+                _assert_same_value(name, key, "split", reference_row, row)
+                if [str(item) for item in row.get("candidate_items", [])] != [
+                    str(item) for item in reference_row.get("candidate_items", [])
+                ]:
+                    raise ValueError(f"Candidate set mismatch for run={name} key={key}")
+            if not allow_non_reportable and _row_is_non_reportable(row):
+                raise ValueError(
+                    f"Refusing to compare non-reportable/scaffold row for run={name} key={key}. "
+                    "Pass allow_non_reportable=True only for diagnostic comparisons."
+                )
+
+
+def _assert_same_value(
+    run_name: str,
+    key: tuple[str, str, str, str, str],
+    field: str,
+    reference_row: dict[str, Any],
+    row: dict[str, Any],
+) -> None:
+    left = str(reference_row.get(field, ""))
+    right = str(row.get(field, ""))
+    if left != right:
+        raise ValueError(f"{field} mismatch for run={run_name} key={key}: {left!r} != {right!r}")
+
+
+def _row_is_non_reportable(row: dict[str, Any]) -> bool:
+    metadata = dict(row.get("metadata", {}))
+    provenance = dict(metadata.get("baseline_provenance", {}))
+    if bool(provenance.get("do_not_merge_into_main_accuracy_table", False)):
+        return True
+    if bool(provenance.get("scaffold_only", False)):
+        return True
+    if provenance and provenance.get("reportable_baseline") is False:
+        return True
+    return bool(metadata.get("do_not_merge_into_main_accuracy_table", False))
 
 
 def _target_rank(row: dict[str, Any]) -> int | None:

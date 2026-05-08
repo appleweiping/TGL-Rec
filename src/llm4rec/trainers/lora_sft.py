@@ -15,10 +15,16 @@ from llm4rec.trainers.lora_config import load_lora_8b_sections
 from llm4rec.utils.env import collect_environment
 
 
-def train_lora_8b(config_path: str | Path, *, dry_run: bool = False) -> dict[str, Any]:
+def train_lora_8b(
+    config_path: str | Path,
+    *,
+    dry_run: bool = False,
+    allow_scaffold: bool = False,
+) -> dict[str, Any]:
     """Train a local 8B adapter only when all local prerequisites are present."""
 
     config = load_yaml_config(config_path)
+    _guard_scaffold_training(config, allow_scaffold=allow_scaffold)
     variant = str(config.get("sft", {}).get("variant", "history_only_sft"))
     output_dir = ensure_dir(resolve_path(config["training_run"]["output_dir"]) / variant)
     save_resolved_config(config, output_dir / "resolved_config.yaml")
@@ -57,6 +63,20 @@ def train_lora_8b(config_path: str | Path, *, dry_run: bool = False) -> dict[str
     }
     write_json(output_dir / "checkpoint_manifest.json", manifest)
     return manifest
+
+
+def _guard_scaffold_training(config: dict[str, Any], *, allow_scaffold: bool) -> None:
+    contract = dict(config.get("baseline_contract", {}))
+    sft = dict(config.get("sft", {}))
+    if not (contract.get("scaffold_only") or sft.get("scaffold_only")):
+        return
+    if allow_scaffold:
+        return
+    raise RuntimeError(
+        "Refusing to train a scaffold reference baseline config. "
+        "Use an official-code adapter config for reportable baselines, or pass "
+        "--allow-scaffold for an explicitly non-reportable interface smoke run."
+    )
 
 
 def _run_transformers_training(

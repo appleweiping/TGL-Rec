@@ -31,7 +31,12 @@ def test_reference_methods_are_not_reportable_until_implemented() -> None:
     assert spec.official_code_status == "official_code_identified"
     assert spec.official_code_url == "https://github.com/yaochenzhu/LLM4Rec"
     assert spec.base_model_policy == "unified_qwen3_8b_base_model"
+    assert spec.comparison_protocol == "official_default_qwen3_8b_lora"
     assert spec.adapter_training_policy == "preserve_official_id_token_prompt_head_and_regularization_algorithm"
+    assert spec.finetune_regime == "project_lora_or_qlora_regime"
+    assert spec.hyperparameter_policy == (
+        "official_default_hyperparameters_for_baselines_validation_tuning_for_ours"
+    )
     assert spec.scoring_policy == "preserve_official_item_prediction_head_or_candidate_scoring_logic"
     assert spec.protocol_controls == ("data", "candidate_sets", "splits", "metrics", "prediction_schema")
     assert "item prediction head" in spec.preserve_components
@@ -49,8 +54,13 @@ def test_reference_method_metadata_is_serializable_provenance() -> None:
     assert metadata["implementation_status"] == "not_implemented"
     assert metadata["reportable_baseline"] is False
     assert metadata["base_model_policy"] == "unified_qwen3_8b_base_model"
+    assert metadata["comparison_protocol"] == "official_default_qwen3_8b_lora"
     assert metadata["adapter_training_policy"] == (
         "preserve_official_long_tail_dual_view_and_self_distillation_algorithm"
+    )
+    assert metadata["finetune_regime"] == "project_lora_or_qlora_regime"
+    assert metadata["hyperparameter_policy"] == (
+        "official_default_hyperparameters_for_baselines_validation_tuning_for_ours"
     )
     assert metadata["scoring_policy"] == "preserve_official_long_tail_sequential_scoring_when_feasible"
     assert metadata["protocol_controls"] == [

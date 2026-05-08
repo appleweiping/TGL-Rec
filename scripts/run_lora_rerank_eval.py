@@ -22,6 +22,11 @@ def main() -> int:
     parser.add_argument("--split", default="test")
     parser.add_argument("--top-m", type=int, default=None)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--allow-scaffold",
+        action="store_true",
+        help="Allow explicitly non-reportable scaffold/reference eval.",
+    )
     args = parser.parse_args()
     result = run_lora_rerank_eval(
         args.config,
@@ -30,6 +35,7 @@ def main() -> int:
         split=args.split,
         top_m=args.top_m,
         dry_run=args.dry_run,
+        allow_scaffold=args.allow_scaffold,
     )
     print(
         "lora rerank eval completed: "

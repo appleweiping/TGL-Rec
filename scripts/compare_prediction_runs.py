@@ -26,6 +26,11 @@ def main() -> int:
     parser.add_argument("--baseline", default=None)
     parser.add_argument("--k", action="append", type=int, dest="ks")
     parser.add_argument("--allow-missing-events", action="store_true")
+    parser.add_argument(
+        "--allow-non-reportable",
+        action="store_true",
+        help="Allow diagnostic comparison rows marked non-reportable or scaffold-only.",
+    )
     args = parser.parse_args()
 
     specs = [_parse_run_spec(value) for value in args.run]
@@ -35,6 +40,7 @@ def main() -> int:
         baseline=args.baseline,
         ks=tuple(args.ks or [1, 5, 10]),
         strict=not args.allow_missing_events,
+        allow_non_reportable=args.allow_non_reportable,
     )
     print(
         "compared prediction runs: "

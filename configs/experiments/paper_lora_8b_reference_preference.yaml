@@ -8,7 +8,11 @@ baseline_contract:
   official_algorithm_required: true
   official_code_required_for_main_baseline: true
   base_model_policy: unified_qwen3_8b_base_model
-  adapter_training_policy: preserve_each_official_baseline_algorithm
+  comparison_protocol: official_default_qwen3_8b_lora
+  adapter_training_policy: adapt_official_algorithm_to_project_lora_regime
+  finetune_regime: project_lora_or_qlora_regime
+  baseline_hyperparameter_policy: official_default_or_paper_recommended_hyperparameters
+  ours_hyperparameter_policy: validation_tuning_with_logged_search_space
   scoring_policy: preserve_each_official_baseline_scoring_logic
   protocol_controls: [data, candidate_sets, splits, metrics, prediction_schema]
 model:
@@ -25,8 +29,9 @@ model:
 official_training:
   policy: blocked_until_official_code_adapter
   target_policy_after_promotion: preserve_official_algorithm
-  qwen3_8b_base_model: where_faithful
-  lora_or_adapter_required: method_specific
+  qwen3_8b_base_model: required_for_main_qwen3_lora_table
+  lora_or_adapter_required: project_lora_or_qlora_regime
+  hyperparameter_policy: official_default_or_paper_recommended_hyperparameters
   implementation_status: candidate_scaffold_not_reportable
   scaffold_only: true
   non_reportable_reason: requires_official_code_adapter_before_training

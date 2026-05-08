@@ -82,8 +82,13 @@ Fairness contract:
 
 - shared split, candidates, event IDs, metric implementation, and prediction
   schema;
-- shared Qwen3-8B base model where faithful;
-- each official baseline keeps its own adapter/head/loss/scoring design;
+- shared Qwen3-8B backbone for LLM-based main-table baselines;
+- shared project LoRA/QLoRA regime for that main LLM table;
+- official/default or paper-recommended hyperparameters for baselines;
+- validation-tuned TGL-Rec hyperparameters with logged search ranges and
+  selected settings;
+- each official baseline keeps its own algorithmic signal, adapted into the
+  shared backbone/regime when possible;
 - scaffold or non-official baselines stay out of main tables.
 
 Exit gate:

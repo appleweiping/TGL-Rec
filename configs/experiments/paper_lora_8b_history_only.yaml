@@ -1,8 +1,8 @@
 protocol_version: protocol_v1
 phase: Phase 9E
 model:
-  base_model_path: path/to/local/8b/model
-  model_family: other
+  base_model_path: /home/ajifang/models/Qwen/Qwen3-8B
+  model_family: qwen3
   tokenizer_path: null
   trust_remote_code: false
   torch_dtype: auto
