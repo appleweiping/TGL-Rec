@@ -2,6 +2,28 @@
 
 This repository is a research-grade LLM4Rec codebase. Codex must treat it as a publishable research system, not a toy demo.
 
+## Current Durable Memory
+
+Before any nontrivial work, read `docs/codex_project_memory.md` and
+`docs/phase10_master_plan.md`. They are the active memory for the project
+direction, senior baseline advice, server collaboration protocol, and Phase 10
+milestones.
+
+Current operating rules:
+
+- Use multi-agent collaboration for nontrivial implementation, experiment
+  design, reference-baseline adaptation, literature checking, or review work
+  when agent tools are available.
+- The active framework lives under `src/llm4rec/`; older `src/tglrec/` tooling is
+  legacy/compatibility CPU tooling unless a task explicitly targets it.
+- Codex cannot see the shared server. Give the user exact server commands, wait
+  for pasted logs/errors, and do not infer server success without evidence.
+- Completed local work should be committed and pushed so the server can
+  `git pull`, unless the user explicitly asks not to or a blocker is reported.
+- Update `docs/codex_project_memory.md`, the Phase 10 plan, runbook, handoff, or
+  baseline cards whenever direction, next commands, baseline status, or real
+  server outcomes change.
+
 ## 0. Non-Negotiable Rules
 
 - Do not implement toy demos, mocks, pseudo-code, or notebook-only experiments unless explicitly requested.

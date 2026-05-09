@@ -1,5 +1,11 @@
 # Reportable Rules
 
+Current Phase 10 reportability memory lives in
+`docs/codex_project_memory.md`, `docs/phase10_master_plan.md`, and
+`docs/reference_baseline_fidelity.md`. The Phase 8 notes below are historical
+launch constraints and must not be read as a global ban on the later Phase 9E/10
+LoRA work.
+
 Reportability rules for launch:
 
 - smoke runs are `reportable=false`;

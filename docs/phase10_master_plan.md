@@ -16,6 +16,10 @@ research system:
 No result is paper evidence until it is produced from frozen artifacts,
 prediction JSONL, saved metrics, diagnostics, and committed configs.
 
+For durable project memory and future Codex behavior, read
+`docs/codex_project_memory.md` first. It records the senior baseline advice,
+server relay protocol, multi-agent workflow, and update/commit/push contract.
+
 ## Milestones
 
 ### M0: Observation Reproduction
@@ -185,11 +189,27 @@ Before spending larger budget:
 3. run diagnostics only if `predictions.jsonl` exists;
 4. proceed to larger diagnostic only if output behavior is sane.
 
+## Multi-Agent And Update Workflow
+
+Use multi-agent collaboration for nontrivial implementation, baseline
+adaptation, experiment design, literature checking, or reviewer-gate work when
+tools are available. Pair implementation with review/reproducibility checks
+instead of relying on one linear pass.
+
+After each meaningful stage, update the durable memory, this plan, the server
+runbook, and affected baseline cards if next steps, commands, baseline status,
+or real server outcomes changed. Commit and push completed local work so the
+server can continue with `git pull`.
+
 ## Files To Read First In A New Codex Thread
 
-1. `docs/phase10_master_plan.md`
-2. `docs/codex_handoff_phase9e.md`
-3. `docs/week8_large_same_candidate_protocol.md`
-4. `docs/reference_baseline_fidelity.md`
-5. `docs/reference_method_adaptation_map.md`
-6. `docs/method_card_time_graph_evidence.md`
+1. `docs/codex_project_memory.md`
+2. `docs/phase10_master_plan.md`
+3. `docs/server_runbook.md`
+4. `docs/week8_large_same_candidate_protocol.md`
+5. `docs/reference_baseline_fidelity.md`
+6. `docs/reference_method_adaptation_map.md`
+7. `docs/method_card_time_graph_evidence.md`
+
+`docs/codex_handoff_phase9e.md` is historical context. Do not let it override
+the current Phase 10 plan.

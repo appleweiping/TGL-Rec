@@ -1,5 +1,11 @@
 # Codex Handoff: Phase 9E LoRA Baselines
 
+Historical note: this handoff records Phase 9E provenance and should not be the
+first-read active plan for new work. Future Codex threads should start with
+`docs/codex_project_memory.md`, then `docs/phase10_master_plan.md` and
+`docs/server_runbook.md`. If this file conflicts with those Phase 10 documents,
+the Phase 10 documents win.
+
 ## Current State
 
 Branch: `codex/phase9e-lora-rerank-eval`

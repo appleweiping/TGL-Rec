@@ -11,6 +11,10 @@ This repository is intended to become a top-tier recommendation-systems research
 Current status: **Phase 10, four-domain same-candidate protocol and stronger TGL-Rec framework
 integration**.
 
+Future Codex threads should start from `docs/codex_project_memory.md`. That file is the durable
+memory for the current research direction, senior baseline advice, server collaboration protocol,
+multi-agent workflow, and completion/update contract.
+
 The project has moved beyond the earlier Phase 8 launch-preparation state. The current active work is
 to make local Qwen3-8B recommendation experiments reproducible, diagnose whether temporal evidence
 helps beyond history-only prompting, and integrate senior-recommended reference baselines through
@@ -128,6 +132,7 @@ resolved:
 
 0. Treat the current project-level plan as Phase 10:
 
+   - [docs/codex_project_memory.md](docs/codex_project_memory.md)
    - [docs/phase10_master_plan.md](docs/phase10_master_plan.md)
    - [docs/server_runbook.md](docs/server_runbook.md)
 

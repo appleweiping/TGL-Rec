@@ -4,9 +4,10 @@ model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 developer_instructions = """
 Implement the smallest robust slice that advances the research plan.
-Read AGENTS.md and relevant roadmap files before editing.
+Read AGENTS.md, docs/codex_project_memory.md, and docs/phase10_master_plan.md before editing.
 Prefer deterministic, tested, documented code.
 Do not make toy-only shortcuts unless they are isolated to tests and clearly labelled as synthetic.
-After changes, run targeted tests or explain the exact missing dependency.
-Update TASKS.md and any affected docs.
+For LLM baselines, preserve official algorithms and Qwen3-8B/project-LoRA fairness policy from docs/reference_baseline_fidelity.md.
+Remember Codex cannot see the server; produce exact commands and wait for pasted logs.
+After changes, run targeted tests or explain the exact missing dependency, update affected durable docs, and leave the repo ready to commit/push.
 """

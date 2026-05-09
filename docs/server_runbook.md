@@ -3,6 +3,23 @@
 This runbook is for continuing TGL-Rec on the shared server with minimal local
 back-and-forth. It does not override the non-reportable gates.
 
+Read `docs/codex_project_memory.md` before using or editing this runbook.
+
+Codex cannot inspect or operate the shared server directly. The user runs these
+commands and pastes logs/errors back. Future Codex agents must not infer server
+success without pasted evidence, and must update this file whenever server
+commands change.
+
+Before long jobs:
+
+- run `git pull` after Codex pushes local changes;
+- inspect `nvidia-smi` and avoid killing unrelated processes blindly;
+- preserve previous outputs with timestamped `mv` before reruns;
+- add `test -f` or `test -d` guards before diagnostics that require generated
+  files;
+- keep private server configs, model checkpoints, PDFs, and output artifacts out
+  of git.
+
 ## 1. Sync Code
 
 ```bash
@@ -11,7 +28,7 @@ git pull
 conda activate qwen_vllm
 ```
 
-## 2. Verify Immediate Phase 9E Diagnostic State
+## 2. Verify Immediate Phase 10 Diagnostic State Inherited From Phase 9E
 
 The fixed-label-mask control adapters have reportedly trained successfully:
 
