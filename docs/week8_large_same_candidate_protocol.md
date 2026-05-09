@@ -14,6 +14,13 @@ The data is being produced by the adjacent server project:
 The TGL-Rec project must treat this as a frozen external task package. Do not
 resample users, positives, negatives, or candidate sets when importing it.
 
+Do not confuse this final protocol with the older
+`uncertainty-llm4rec/data/processed` folders. Those older folders can be staged
+with `scripts/normalize_adjacent_same_candidate.py` under
+`protocol_uncertainty_legacy_local` for diagnostics, but they are not the paper
+protocol unless their candidate counts, event IDs, and manifests match this
+document.
+
 ## Current External Task Location
 
 Expected task directories:

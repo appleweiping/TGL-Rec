@@ -1,0 +1,21 @@
+protocol_version: protocol_uncertainty_legacy_local
+phase: Phase 10 diagnostic
+observation_stage: legacy_local_base_qwen3
+evaluation_run:
+  output_dir: outputs/paper_runs/protocol_uncertainty_legacy_local/observation/qwen3_base
+  base_model_only_variants:
+    - history_only_sft
+    - temporal_evidence_sft
+  datasets:
+    - beauty
+    - books
+    - electronics
+    - movies
+  candidate_selection: preserve_external_candidates
+  top_m_candidates_for_local_lora: 101
+  do_not_merge_into_main_accuracy_table: true
+  reportable: false
+  purpose: >
+    Diagnostic-only base Qwen3-8B reranking on legacy local uncertainty-llm4rec
+    processed same-candidate artifacts after normalization. Do not merge this
+    protocol into final Week8 paper tables.
