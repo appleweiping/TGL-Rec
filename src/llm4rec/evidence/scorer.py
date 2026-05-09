@@ -24,6 +24,9 @@ DEFAULT_EVIDENCE_WEIGHTS = {
     "direction_asymmetry_weight": 0.25,
     "gate_bias": 0.0,
     "gate_temperature": 1.0,
+    "need_state_weight": 0.35,
+    "evidence_confidence_weight": 0.15,
+    "drift_alignment_weight": 0.2,
 }
 
 
@@ -36,6 +39,8 @@ class CandidateFactorScore:
     drift_score: float = 0.0
     evidence_counts: dict[str, int] = field(default_factory=dict)
     gate: float = 0.5
+    evidence_confidence: float = 0.0
+    need_state_score: float = 0.0
     recency_score: float = 0.0
     semantic_score: float = 0.0
     semantic_trap_penalty: float = 0.0
@@ -49,8 +54,10 @@ class CandidateFactorScore:
             "contrastive_score": self.contrastive_score,
             "drift_score": self.drift_score,
             "evidence_counts": dict(self.evidence_counts),
+            "evidence_confidence": self.evidence_confidence,
             "gate": self.gate,
             "item_id": self.item_id,
+            "need_state_score": self.need_state_score,
             "recency_score": self.recency_score,
             "semantic_score": self.semantic_score,
             "semantic_trap_penalty": self.semantic_trap_penalty,
@@ -116,10 +123,12 @@ def factorized_score_candidates(
         recency = 0.0
         contrastive = 0.0
         drift = 0.0
+        need_state = 0.0
         counts: dict[str, int] = defaultdict(int)
         for row in rows:
             counts[row.evidence_type] += 1
             stats = row.stats
+            metadata = row.metadata
             transition = math.log1p(float(stats.get("transition_count") or 0.0))
             window = float(stats.get("time_window_score") or 0.0)
             temporal += float(merged["transition_weight"]) * transition
@@ -138,9 +147,13 @@ def factorized_score_candidates(
             if row.evidence_type == "contrastive":
                 contrastive += float(merged["contrastive_transition_weight"]) * transition
             if row.evidence_type == "user_drift":
-                drift += float(merged["drift_weight"]) * float(stats.get("recent_signal") or 0.0)
+                drift_signal = float(stats.get("recent_signal") or 0.0)
+                drift += float(merged["drift_weight"]) * drift_signal
+                need_state += float(merged["drift_alignment_weight"]) * _drift_alignment(metadata, drift_signal)
+            need_state += _need_state_contribution(row.evidence_type, stats, metadata, merged)
+        confidence = _evidence_confidence(rows)
         gate = _need_gate(
-            temporal=temporal + contrastive + drift,
+            temporal=temporal + contrastive + drift + need_state,
             semantic=semantic,
             bias=float(merged["gate_bias"]),
             temperature=float(merged["gate_temperature"]),
@@ -151,9 +164,10 @@ def factorized_score_candidates(
             weight=float(merged["semantic_trap_penalty"]),
         )
         total = (
-            gate * (temporal + contrastive + drift)
+            gate * (temporal + contrastive + drift + need_state)
             + (1.0 - gate) * semantic
             + recency
+            + float(merged["evidence_confidence_weight"]) * confidence
             - semantic_trap_penalty
         )
         output[item] = CandidateFactorScore(
@@ -161,7 +175,9 @@ def factorized_score_candidates(
             contrastive_score=float(contrastive),
             drift_score=float(drift),
             evidence_counts=dict(sorted(counts.items())),
+            evidence_confidence=float(confidence),
             gate=float(gate),
+            need_state_score=float(need_state),
             recency_score=float(recency),
             semantic_score=float(semantic),
             semantic_trap_penalty=float(semantic_trap_penalty),
@@ -185,3 +201,64 @@ def _semantic_trap_penalty(*, temporal: float, semantic: float, weight: float) -
     if weight <= 0.0:
         return 0.0
     return max(0.0, float(semantic) - float(temporal)) * float(weight)
+
+
+def _need_state_contribution(
+    evidence_type: str,
+    stats: dict[str, Any],
+    metadata: dict[str, Any],
+    weights: dict[str, Any],
+) -> float:
+    """Score whether a candidate matches the user's current temporal need state."""
+
+    weight = float(weights["need_state_weight"])
+    if weight <= 0.0:
+        return 0.0
+    recent = float(stats.get("recent_signal") or 0.0)
+    transition = float(stats.get("transition_probability") or 0.0)
+    same_recent_category = _same_value(metadata.get("target_category"), metadata.get("recent_category"))
+    same_source_category = _same_value(metadata.get("target_category"), metadata.get("source_category"))
+    if evidence_type == "history":
+        return weight * recent * (1.0 if same_recent_category or same_source_category else 0.25)
+    if evidence_type in {"transition", "time_window", "contrastive"}:
+        category_alignment = 0.5 if same_recent_category or same_source_category else 1.0
+        return weight * max(recent, transition) * category_alignment
+    if evidence_type == "semantic":
+        return weight * 0.25 * float(stats.get("semantic_similarity") or 0.0)
+    return 0.0
+
+
+def _drift_alignment(metadata: dict[str, Any], drift_signal: float) -> float:
+    """Reward candidates that match recent drift destination over stale profile."""
+
+    if drift_signal <= 0.0:
+        return 0.0
+    target = metadata.get("target_category")
+    drift_to = metadata.get("drift_to")
+    drift_from = metadata.get("drift_from")
+    if _same_value(target, drift_to) and not _same_value(target, drift_from):
+        return float(drift_signal)
+    return 0.0
+
+
+def _evidence_confidence(rows: list[Evidence]) -> float:
+    """Confidence from diverse train-only evidence support, bounded to [0, 1]."""
+
+    if not rows:
+        return 0.0
+    support = set()
+    types = set()
+    total_count = 0.0
+    for row in rows:
+        types.add(row.evidence_type)
+        support.update(str(item) for item in row.support_items)
+        total_count += float(row.stats.get("transition_count") or row.stats.get("user_count") or 0.0)
+    diversity = min(1.0, (len(types) + len(support)) / 8.0)
+    volume = 1.0 - math.exp(-total_count / 10.0)
+    return max(0.0, min(1.0, 0.5 * diversity + 0.5 * volume))
+
+
+def _same_value(left: Any, right: Any) -> bool:
+    if left is None or right is None:
+        return False
+    return str(left) == str(right)

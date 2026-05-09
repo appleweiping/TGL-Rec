@@ -27,7 +27,17 @@ scoring:
   semantic_trap_penalty: 0.1
   gate_bias: 0.0
   gate_temperature: 1.0
+  need_state_weight: 0.35
+  evidence_confidence_weight: 0.15
+  drift_alignment_weight: 0.2
   dynamic_encoder_weight: 0.25
+temporal_need_state:
+  status: deterministic_auditable_phase10_upgrade
+  description: >
+    Factorized state channel that separates stable semantic preference, recent
+    transition need, user drift, and evidence confidence before candidate
+    reranking. It remains non-reportable until trained/reportable configs and
+    four-domain ablations exist.
 time_window:
   window_seconds: 86400
 encoder:

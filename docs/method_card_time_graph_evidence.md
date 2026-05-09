@@ -19,6 +19,8 @@ may learn from top-tier systems, but its original claim is the integration of:
   similarity;
 - semantic-trap detection for candidates that look similar but do not fit the
   next need;
+- temporal need-state scoring that separates stable preference, transition
+  pressure, user drift, evidence confidence, and semantic-only attraction;
 - graph-to-language evidence with auditable factor provenance;
 - candidate-grounded Qwen3-8B reranking;
 - optional temporal encoder score channel;
@@ -34,6 +36,8 @@ model performance.
 The gap to formal Phase 10 method status is explicit:
 
 - replace or complement smoke scoring with a trained/reportable scoring path;
+- upgrade deterministic temporal need-state factors into a validated learned or
+  calibrated gate;
 - run the large-scale observation matrix on the four-domain same-candidate
   protocol;
 - implement config-driven full ablations;
@@ -66,6 +70,8 @@ Current reportable status: `false`. Existing smoke outputs are non-reportable an
 ## Current Limitations
 
 - Deterministic evidence-weight scoring is a smoke mechanism, not the final method.
+- The current temporal need-state channel is deterministic and auditable, but it
+  is not yet a learned/reportable objective.
 - Phase 6 adds an optional lightweight `TemporalGraphEncoder` score path when a trained checkpoint
   is available. This encoder is not full TGN and remains smoke/sample validation infrastructure.
 - No real API call, LoRA training, or paper-scale experiment is run in this phase.

@@ -167,6 +167,8 @@ existing ideas. Preserve and deepen these mechanisms:
 - time-windowed and time-decayed transition statistics;
 - semantic-similarity vs temporal-transition separation;
 - need gate that decides when graph evidence should matter;
+- temporal need-state channel for stable preference, transition pressure, user
+  drift, semantic traps, and evidence confidence;
 - graph-to-language evidence translator with auditable factor scores;
 - candidate-grounded LoRA/local reranking path;
 - optional temporal graph encoder score channel;
