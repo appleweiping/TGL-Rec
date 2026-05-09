@@ -147,23 +147,6 @@ Expected domains:
 - `electronics`
 - `movies`
 
-There is also an older adjacent/local data source that future agents must
-remember:
-
-```text
-D:/Research/Uncertainty-LLM4Rec/data/processed
-~/projects/uncertainty-llm4rec/data/processed
-```
-
-It may contain messy domain directories such as `amazon_beauty`,
-`amazon_books`, `amazon_electronics`, `amazon_movies`, and
-`processed_4domains/amazon_*_small`. These are not automatically the final
-Week8 1+100 same-candidate protocol. Treat them as
-`protocol_uncertainty_legacy_local` diagnostic/local sources unless a manifest
-proves they match the final protocol. Use
-`scripts/normalize_adjacent_same_candidate.py` to stage ranking files from this
-source before importing through the Week8-compatible importer.
-
 Rules:
 
 - do not resample users;

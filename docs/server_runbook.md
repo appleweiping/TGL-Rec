@@ -130,49 +130,6 @@ Rules:
 - preserve `event_id/source_event_id`;
 - keep `protocol_v1` intact.
 
-## 4A. Optional Adjacent Legacy Normalization
-
-The user may also have older four-domain data under:
-
-```text
-~/projects/uncertainty-llm4rec/data/processed
-```
-
-or locally:
-
-```text
-D:/Research/Uncertainty-LLM4Rec/data/processed
-```
-
-This source is messy and may include `amazon_beauty`, `amazon_books`,
-`amazon_electronics`, `amazon_movies`, and `processed_4domains/amazon_*_small`.
-It is not the same as the final Week8 1+100 protocol unless checked. For
-diagnostic/local runs, normalize it into staging task directories first:
-
-```bash
-python scripts/normalize_adjacent_same_candidate.py \
-  --source-root ~/projects/uncertainty-llm4rec/data/processed/processed_4domains \
-  --output-root outputs/staging/adjacent_same_candidate \
-  --protocol-version protocol_uncertainty_legacy_local \
-  --domains beauty books electronics movies \
-  --splits valid test
-
-python scripts/import_week8_same_candidate.py \
-  --task-dir outputs/staging/adjacent_same_candidate/protocol_uncertainty_legacy_local/beauty_large10000_100neg_valid_same_candidate \
-  --task-dir outputs/staging/adjacent_same_candidate/protocol_uncertainty_legacy_local/beauty_large10000_100neg_test_same_candidate \
-  --task-dir outputs/staging/adjacent_same_candidate/protocol_uncertainty_legacy_local/books_large10000_100neg_valid_same_candidate \
-  --task-dir outputs/staging/adjacent_same_candidate/protocol_uncertainty_legacy_local/books_large10000_100neg_test_same_candidate \
-  --task-dir outputs/staging/adjacent_same_candidate/protocol_uncertainty_legacy_local/electronics_large10000_100neg_valid_same_candidate \
-  --task-dir outputs/staging/adjacent_same_candidate/protocol_uncertainty_legacy_local/electronics_large10000_100neg_test_same_candidate \
-  --task-dir outputs/staging/adjacent_same_candidate/protocol_uncertainty_legacy_local/movies_large10000_100neg_valid_same_candidate \
-  --task-dir outputs/staging/adjacent_same_candidate/protocol_uncertainty_legacy_local/movies_large10000_100neg_test_same_candidate \
-  --protocol-version protocol_uncertainty_legacy_local
-```
-
-Do not merge `protocol_uncertainty_legacy_local` metrics into the final paper
-tables. It is for debugging the pipeline and observation behavior when the final
-Week8 package is not ready.
-
 ## 5. Week8 LoRA Control Path
 
 After import, build SFT data from train-only interactions:
