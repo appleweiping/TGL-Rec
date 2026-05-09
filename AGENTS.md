@@ -18,6 +18,14 @@ Current operating rules:
   legacy/compatibility CPU tooling unless a task explicitly targets it.
 - Codex cannot see the shared server. Give the user exact server commands, wait
   for pasted logs/errors, and do not infer server success without evidence.
+- The active four-domain same-candidate artifact lives under
+  `~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/` with
+  task prefixes `beauty_supplementary_smallerN_100neg`,
+  `books_large10000_100neg`, `electronics_large10000_100neg`, and
+  `movies_large10000_100neg`. Treat `ranking_valid/test.jsonl` and
+  `candidate_items.csv` as immutable. Method scores must use
+  `source_event_id,user_id,item_id,score` and be imported through
+  `main_import_same_candidate_baseline_scores.py`.
 - Completed local work should be committed and pushed so the server can
   `git pull`, unless the user explicitly asks not to or a blocker is reported.
 - Update `docs/codex_project_memory.md`, the Phase 10 plan, runbook, handoff, or

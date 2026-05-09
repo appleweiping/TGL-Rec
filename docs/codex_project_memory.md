@@ -134,29 +134,48 @@ The intended large protocol comes from the adjacent server project:
 ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/
 ```
 
-Expected directories:
+Current frozen external task families:
 
 ```text
-{domain}_large10000_100neg_{valid,test}_same_candidate/
+beauty_supplementary_smallerN_100neg_{valid,test}_same_candidate/
+books_large10000_100neg_{valid,test}_same_candidate/
+electronics_large10000_100neg_{valid,test}_same_candidate/
+movies_large10000_100neg_{valid,test}_same_candidate/
 ```
 
 Expected domains:
 
-- `beauty`
-- `books`
-- `electronics`
-- `movies`
+- `beauty`: supplementary smaller-N 100-negative package;
+- `books`: 10,000-user 100-negative package;
+- `electronics`: 10,000-user 100-negative package;
+- `movies`: 10,000-user 100-negative package.
+
+This package is a reusable evaluation protocol artifact. It is not model
+weights and not a paper result by itself. It contains frozen same-candidate
+evaluation inputs such as `ranking_valid.jsonl`, `ranking_test.jsonl`,
+`candidate_items.csv`, and `train_interactions.csv`.
 
 Rules:
 
 - do not resample users;
 - do not resample negatives;
-- do not alter candidate order;
+- do not edit `candidate_items.csv`, `ranking_valid.jsonl`, or
+  `ranking_test.jsonl`;
+- do not alter candidate order or candidate membership;
+- every method score file must use the shared schema
+  `source_event_id,user_id,item_id,score`;
+- import baseline/model scores for evaluation through
+  `main_import_same_candidate_baseline_scores.py`;
+- do not use the test split for hyperparameter selection;
 - preserve `event_id`, `source_event_id`, `user_id`, `item_id`, and `split`;
 - keep paired comparison possible for every prediction row;
 - import under an explicit protocol version such as
   `protocol_week8_large10000_same_candidate`;
 - keep `protocol_v1` as diagnostic history only.
+
+If reusing official LLM2Rec results from the adjacent project, only reuse
+scores, provenance, and audit artifacts. Do not make intermediate checkpoints
+or embeddings a long-term required artifact for TGL-Rec.
 
 ## Our Framework Must Stay Original
 

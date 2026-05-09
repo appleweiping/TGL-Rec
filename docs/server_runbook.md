@@ -68,6 +68,13 @@ Do not run diagnostics if `predictions.jsonl` does not exist.
 
 ## 3. Generate Four-Domain Plan
 
+The external protocol artifact currently uses these task prefixes:
+
+- `beauty_supplementary_smallerN_100neg`
+- `books_large10000_100neg`
+- `electronics_large10000_100neg`
+- `movies_large10000_100neg`
+
 ```bash
 python scripts/plan_four_domain_runs.py \
   --external-root ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks \
@@ -83,7 +90,9 @@ sed -n '1,220p' outputs/plans/four_domain_server_runbook.sh
 ```
 
 The plan should include `beauty`, `books`, `electronics`, and `movies` once all
-external task directories exist.
+external task directories exist. It should not expect a
+`beauty_large10000_100neg_*` directory unless the user explicitly overrides the
+task prefix after the adjacent project produces such a package.
 
 The generated plan includes real commands only for implemented stages. It also
 contains explicit `BLOCKED` lines for formal official-reference baselines and
@@ -127,7 +136,16 @@ Rules:
 - do not resample users;
 - do not resample negatives;
 - do not alter candidates;
+- do not edit `candidate_items.csv`, `ranking_valid.jsonl`, or
+  `ranking_test.jsonl`;
 - preserve `event_id/source_event_id`;
+- every model or baseline score file must use
+  `source_event_id,user_id,item_id,score`;
+- import score files for evaluation through
+  `main_import_same_candidate_baseline_scores.py`;
+- do not use test split for hyperparameter selection;
+- if reusing LLM2Rec official results, reuse only scores/provenance/audit, not
+  intermediate checkpoints or embeddings as durable required artifacts;
 - keep `protocol_v1` intact.
 
 ## 5. Week8 LoRA Control Path

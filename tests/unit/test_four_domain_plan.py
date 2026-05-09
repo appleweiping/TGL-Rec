@@ -8,7 +8,9 @@ from llm4rec.experiments.four_domain_plan import (
 )
 
 
-def test_four_domain_plan_detects_existing_and_missing_task_dirs(tmp_path: Path) -> None:
+def test_four_domain_plan_detects_existing_and_missing_task_dirs(
+    tmp_path: Path,
+) -> None:
     external = tmp_path / "external_tasks"
     (external / "books_large10000_100neg_test_same_candidate").mkdir(parents=True)
 
@@ -45,7 +47,9 @@ def test_four_domain_plan_detects_existing_and_missing_task_dirs(tmp_path: Path)
 
 def test_four_domain_plan_can_write_shell_runbook(tmp_path: Path) -> None:
     external = tmp_path / "external_tasks"
-    (external / "beauty_large10000_100neg_valid_same_candidate").mkdir(parents=True)
+    (external / "beauty_supplementary_smallerN_100neg_valid_same_candidate").mkdir(
+        parents=True
+    )
     plan = build_four_domain_server_plan(
         external_root=external,
         domains=["beauty"],
@@ -60,9 +64,13 @@ def test_four_domain_plan_can_write_shell_runbook(tmp_path: Path) -> None:
     assert "import_week8_same_candidate.py" in text
 
 
-def test_four_domain_plan_includes_week8_sft_merge_train_and_eval(tmp_path: Path) -> None:
+def test_four_domain_plan_includes_week8_sft_merge_train_and_eval(
+    tmp_path: Path,
+) -> None:
     external = tmp_path / "external_tasks"
-    (external / "beauty_large10000_100neg_test_same_candidate").mkdir(parents=True)
+    (external / "beauty_supplementary_smallerN_100neg_test_same_candidate").mkdir(
+        parents=True
+    )
     (external / "books_large10000_100neg_test_same_candidate").mkdir(parents=True)
 
     plan = build_four_domain_server_plan(
@@ -80,12 +88,18 @@ def test_four_domain_plan_includes_week8_sft_merge_train_and_eval(tmp_path: Path
     assert "four_domain/history_only_sft" in commands["merge_week8_lora_sft"][0]
     assert "--datasets beauty books" in commands["merge_week8_lora_sft"][0]
     assert commands["train_week8_lora_controls"][0].startswith("mkdir -p ")
-    assert "week8_lora_8b_rerank_eval.yaml" in commands["evaluate_week8_lora_controls"][0]
+    assert (
+        "week8_lora_8b_rerank_eval.yaml" in commands["evaluate_week8_lora_controls"][0]
+    )
 
 
-def test_four_domain_plan_includes_observation_and_formal_baseline_gates(tmp_path: Path) -> None:
+def test_four_domain_plan_includes_observation_and_formal_baseline_gates(
+    tmp_path: Path,
+) -> None:
     external = tmp_path / "external_tasks"
-    (external / "beauty_large10000_100neg_test_same_candidate").mkdir(parents=True)
+    (external / "beauty_supplementary_smallerN_100neg_test_same_candidate").mkdir(
+        parents=True
+    )
 
     plan = build_four_domain_server_plan(
         external_root=external,
@@ -110,8 +124,16 @@ def test_four_domain_plan_includes_observation_and_formal_baseline_gates(tmp_pat
         "cllm4rec_qwen_lora",
         "rlmrec_qwen_lora",
     }
-    assert "week8_qwen3_8b_base_observation.yaml" in commands["observation_qwen3_base"][1]
+    assert (
+        "week8_qwen3_8b_base_observation.yaml" in commands["observation_qwen3_base"][1]
+    )
     assert "--limit 20" in commands["observation_qwen3_base"][1]
+    assert plan["score_import_contract"]["required_importer"] == (
+        "main_import_same_candidate_baseline_scores.py"
+    )
+    assert plan["score_import_contract"]["required_score_schema"] == (
+        "source_event_id,user_id,item_id,score"
+    )
     assert "BLOCKED" in " ".join(commands["observation_reference_baseline_probe"])
     formal_commands = " ".join(commands["formal_reference_baseline_training"])
     assert "BLOCKED" in formal_commands
@@ -121,3 +143,44 @@ def test_four_domain_plan_includes_observation_and_formal_baseline_gates(tmp_pat
     ablation_commands = " ".join(commands["ours_framework_ablation_matrix"])
     assert "protocol_week8_large10000_same_candidate" in ablation_commands
     assert "no_need_gate" in ablation_commands
+
+
+def test_four_domain_plan_uses_current_external_task_names_by_default(
+    tmp_path: Path,
+) -> None:
+    external = tmp_path / "external_tasks"
+    (external / "beauty_supplementary_smallerN_100neg_test_same_candidate").mkdir(
+        parents=True
+    )
+    (external / "books_large10000_100neg_test_same_candidate").mkdir(parents=True)
+    (external / "electronics_large10000_100neg_test_same_candidate").mkdir(parents=True)
+    (external / "movies_large10000_100neg_test_same_candidate").mkdir(parents=True)
+
+    plan = build_four_domain_server_plan(
+        external_root=external,
+        splits=["test"],
+    )
+
+    assert plan["missing_task_dirs"] == []
+    import_command = plan["commands"]["import_frozen_same_candidate_tasks"][0]
+    assert "beauty_supplementary_smallerN_100neg_test_same_candidate" in import_command
+    assert "books_large10000_100neg_test_same_candidate" in import_command
+    assert "electronics_large10000_100neg_test_same_candidate" in import_command
+    assert "movies_large10000_100neg_test_same_candidate" in import_command
+
+
+def test_four_domain_plan_allows_task_prefix_override(tmp_path: Path) -> None:
+    external = tmp_path / "external_tasks"
+    (external / "beauty_large10000_100neg_test_same_candidate").mkdir(parents=True)
+
+    plan = build_four_domain_server_plan(
+        external_root=external,
+        domains=["beauty"],
+        splits=["test"],
+        task_prefixes={"beauty": "beauty_large10000_100neg"},
+    )
+
+    assert plan["missing_task_dirs"] == []
+    assert "beauty_large10000_100neg_test_same_candidate" in (
+        plan["commands"]["import_frozen_same_candidate_tasks"][0]
+    )

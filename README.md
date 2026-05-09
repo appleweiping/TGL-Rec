@@ -51,9 +51,15 @@ What is not yet a paper result:
 
 Phase 10 server path now expects the large four-domain same-candidate package:
 
-- domains: `beauty`, `books`, `electronics`, `movies`;
+- task families: `beauty_supplementary_smallerN_100neg`,
+  `books_large10000_100neg`, `electronics_large10000_100neg`, and
+  `movies_large10000_100neg`;
 - each event: one positive plus 100 negatives;
 - all methods use the same event IDs, candidates, splits, metrics, and evaluator;
+- all method score imports use schema `source_event_id,user_id,item_id,score`
+  through `main_import_same_candidate_baseline_scores.py`;
+- never edit `candidate_items.csv`, `ranking_valid.jsonl`, or
+  `ranking_test.jsonl`, and never tune on the test split;
 - Qwen3-8B is the shared base model where a reference method can be faithfully adapted;
 - LoRA/adapters/heads/losses/scorers follow each official baseline's own algorithm.
 
@@ -155,6 +161,7 @@ resolved:
 
    ```bash
    python scripts/import_week8_same_candidate.py \
+     --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/beauty_supplementary_smallerN_100neg_test_same_candidate \
      --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/books_large10000_100neg_test_same_candidate \
      --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/electronics_large10000_100neg_test_same_candidate \
      --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/movies_large10000_100neg_test_same_candidate \

@@ -16,10 +16,13 @@ resample users, positives, negatives, or candidate sets when importing it.
 
 ## Current External Task Location
 
-Expected task directories:
+Current task directories:
 
 ```text
-~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/{domain}_large10000_100neg_{valid,test}_same_candidate/
+~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/beauty_supplementary_smallerN_100neg_{valid,test}_same_candidate/
+~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/books_large10000_100neg_{valid,test}_same_candidate/
+~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/electronics_large10000_100neg_{valid,test}_same_candidate/
+~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/movies_large10000_100neg_{valid,test}_same_candidate/
 ```
 
 Target domains:
@@ -37,7 +40,7 @@ Check available files on the server with:
 
 ```bash
 find ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks \
-  -path "*large10000_100neg*" -type f | sort
+  -path "*100neg*" -type f | sort
 ```
 
 External project summaries are expected under:
@@ -51,7 +54,9 @@ External project summaries are expected under:
 Known construction details from the adjacent project:
 
 - target domains: `beauty`, `books`, `electronics`, `movies`;
-- maximum users per domain: 10,000;
+- scale: `books`, `electronics`, and `movies` are 10,000-user packages;
+  `beauty` currently uses the frozen `beauty_supplementary_smallerN_100neg`
+  package;
 - each ranking event has 1 positive and 100 negatives;
 - same-candidate setting: all methods score the same candidate set for each
   event;
@@ -82,6 +87,8 @@ Each task directory is expected to contain:
 When adding this protocol to TGL-Rec:
 
 - read the external task directories as immutable inputs;
+- do not edit `candidate_items.csv`, `ranking_valid.jsonl`, or
+  `ranking_test.jsonl`;
 - preserve event and candidate alignment exactly;
 - do not regenerate negatives;
 - do not resample users;
@@ -91,6 +98,20 @@ When adding this protocol to TGL-Rec:
 - save the imported protocol under a new frozen version, for example
   `protocol_week8_large10000_same_candidate`, rather than overwriting
   `protocol_v1`.
+- require every model/baseline score file to use:
+
+```csv
+source_event_id,user_id,item_id,score
+```
+
+- import baseline/model scores into evaluation through
+  `main_import_same_candidate_baseline_scores.py`. The existing
+  `scripts/import_week8_same_candidate.py` only imports the frozen task
+  artifacts into TGL-Rec's local artifact layout.
+- never use the test split for hyperparameter selection.
+- if official LLM2Rec results are reused, reuse only scores, provenance, and
+  audit records. Do not require LLM2Rec intermediate checkpoints or embeddings
+  as durable TGL-Rec artifacts.
 
 ## Framework Work Needed
 
@@ -111,7 +132,7 @@ Importer entrypoint:
 
 ```bash
 python scripts/import_week8_same_candidate.py \
-  --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/beauty_large10000_100neg_test_same_candidate \
+  --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/beauty_supplementary_smallerN_100neg_test_same_candidate \
   --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/books_large10000_100neg_test_same_candidate \
   --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/electronics_large10000_100neg_test_same_candidate \
   --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/movies_large10000_100neg_test_same_candidate \

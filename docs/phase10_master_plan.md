@@ -171,17 +171,13 @@ Expected external task root:
 ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/
 ```
 
-Expected domains:
-
-- `beauty`
-- `books`
-- `electronics`
-- `movies`
-
-Expected task pattern:
+Expected frozen external task families:
 
 ```text
-{domain}_large10000_100neg_{valid,test}_same_candidate/
+beauty_supplementary_smallerN_100neg_{valid,test}_same_candidate/
+books_large10000_100neg_{valid,test}_same_candidate/
+electronics_large10000_100neg_{valid,test}_same_candidate/
+movies_large10000_100neg_{valid,test}_same_candidate/
 ```
 
 Protocol rules:
@@ -189,8 +185,15 @@ Protocol rules:
 - do not resample users;
 - do not resample negatives;
 - do not regenerate candidates;
+- do not edit `candidate_items.csv`, `ranking_valid.jsonl`, or
+  `ranking_test.jsonl`;
 - preserve `event_id/source_event_id`, `user_id`, `item_id`, `split`, and exact
   candidate order;
+- every method must export scores as `source_event_id,user_id,item_id,score`;
+- import evaluation scores through `main_import_same_candidate_baseline_scores.py`;
+- do not use test split for hyperparameter selection;
+- official LLM2Rec result reuse is limited to scores, provenance, and audit
+  artifacts;
 - import under `protocol_week8_large10000_same_candidate` or a later explicit
   protocol version;
 - keep `protocol_v1` as debugging history.
