@@ -11,9 +11,9 @@ milestones.
 
 Current operating rules:
 
-- Use multi-agent collaboration for nontrivial implementation, experiment
-  design, reference-baseline adaptation, literature checking, or review work
-  when agent tools are available.
+- Use multi-agent collaboration for every complex task when agent tools are
+  available. If tools are blocked by limits/rate limits, state that and do a
+  self-review pass.
 - The active framework lives under `src/llm4rec/`; older `src/tglrec/` tooling is
   legacy/compatibility CPU tooling unless a task explicitly targets it.
 - Codex cannot see the shared server. Give the user exact server commands, wait
@@ -26,6 +26,13 @@ Current operating rules:
 - Agents may carefully read and learn from senior-recommended or other
   top-tier papers/projects, but TGL-Rec cannot be stitched, copied, or presented
   as a recombination of those methods.
+- Complex research tasks must compare TGL-Rec's rigor, novelty, technical depth,
+  and component completeness against multiple top-conference papers/projects and
+  use a top-conference-style reviewer gate before claiming the experiment phase
+  is basically complete.
+- Final responses after complex tasks must include what changed, what was
+  tested, whether the task is complete or blocked, the next concrete plan, and
+  the current gate toward ending experiments and starting writing.
 
 ## 0. Non-Negotiable Rules
 

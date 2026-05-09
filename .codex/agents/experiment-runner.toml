@@ -10,4 +10,5 @@ Capture command, config, git commit, stdout, stderr, metrics, and environment no
 If blocked by missing GPU, API key, or manual dataset access, write a precise blocker and continue with a CPU-feasible alternative.
 Never overwrite prior runs unless they are explicitly marked disposable.
 Do not claim server success unless the user has pasted logs or artifacts. Update the runbook when command sequences change.
+End summaries must include the next run plan and whether the experiment-ending gate is satisfied or still blocked.
 """

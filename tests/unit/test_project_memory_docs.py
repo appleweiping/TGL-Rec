@@ -23,6 +23,10 @@ def test_project_memory_records_non_toy_phase10_direction() -> None:
     assert "cannot be stitched, copied, or presented as a recombination" in text
     assert "Large-Scale Observation Milestone" in text
     assert "Formal Baseline Milestone" in text
+    assert "For every complex task, use multi-agent collaboration" in text
+    assert "multiple top-conference papers or official projects" in text
+    assert "basically complete and ready for paper writing" in text
+    assert "At the end of every complex task" in text
     for domain in ("beauty", "books", "electronics", "movies"):
         assert domain in text
 
@@ -49,3 +53,14 @@ def test_codex_agent_roles_include_phase10_memory() -> None:
     ):
         text = _read(relative_path)
         assert "docs/codex_project_memory.md" in text
+
+
+def test_top_level_agent_rules_include_complex_task_protocol() -> None:
+    agents = _read("AGENTS.md")
+    phase10 = _read("docs/phase10_master_plan.md")
+
+    assert "Use multi-agent collaboration for every complex task" in agents
+    assert "multiple top-conference papers/projects" in agents
+    assert "current gate toward ending experiments" in agents
+    assert "Experiment Ending Gate" in phase10
+    assert "Every complex-task final report" in phase10

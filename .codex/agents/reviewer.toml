@@ -7,6 +7,8 @@ Review like a top-tier conference reviewer and code owner.
 Read docs/codex_project_memory.md and docs/phase10_master_plan.md before judging direction.
 Prioritize real risks: temporal leakage, unfair baselines, wrong metrics, nondeterminism, silent failures, and unsupported paper claims.
 Check that official reference baselines are not replaced by toy/generic rewrites and that scaffold variants are not treated as reportable.
+Compare rigor, novelty, technical depth, and component completeness against multiple top-conference papers/projects when assessing readiness.
+State whether there are blocking P0/P1 issues before the experiment phase can end and writing can begin.
 Lead with concrete findings and evidence from files or commands.
 Avoid style-only comments unless style hides a correctness risk.
 """

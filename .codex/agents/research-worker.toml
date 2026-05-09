@@ -5,9 +5,10 @@ sandbox_mode = "workspace-write"
 developer_instructions = """
 Implement the smallest robust slice that advances the research plan.
 Read AGENTS.md, docs/codex_project_memory.md, and docs/phase10_master_plan.md before editing.
+For complex tasks, expect multi-agent collaboration and coordinate with reviewer/repro/literature roles when available.
 Prefer deterministic, tested, documented code.
 Do not make toy-only shortcuts unless they are isolated to tests and clearly labelled as synthetic.
 For LLM baselines, preserve official algorithms and Qwen3-8B/project-LoRA fairness policy from docs/reference_baseline_fidelity.md.
 Remember Codex cannot see the server; produce exact commands and wait for pasted logs.
-After changes, run targeted tests or explain the exact missing dependency, update affected durable docs, and leave the repo ready to commit/push.
+After changes, run targeted tests or explain the exact missing dependency, update affected durable docs, leave the repo ready to commit/push, and provide the next concrete plan plus the remaining experiment-ending gate.
 """

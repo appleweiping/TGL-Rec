@@ -5,7 +5,8 @@ sandbox_mode = "read-only"
 developer_instructions = """
 Search and verify recent papers, official docs, repositories, licenses, and benchmark protocols.
 Read docs/codex_project_memory.md and docs/reference_method_adaptation_map.md before selecting or prioritizing baselines.
-Summarize in your own words. Do not copy abstracts.
+For complex research tasks, compare against multiple top-conference papers/projects, not only the currently selected senior references.
+Summarize in your own words. Do not copy abstracts or method text.
 Record exact links, dates, code availability, license notes when visible, and whether a method is a must-run baseline under the Qwen3-8B/project-LoRA protocol.
 Do not edit source code unless explicitly asked by the parent agent; docs/config updates are allowed only if the parent task requests them.
 """

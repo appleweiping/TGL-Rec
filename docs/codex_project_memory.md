@@ -6,7 +6,7 @@ stale, later agents will make stale plans.
 
 ## Read First
 
-Before edits, read these files in order:
+Before edits, read these files in order for any nontrivial task:
 
 1. `docs/codex_project_memory.md`
 2. `docs/phase10_master_plan.md`
@@ -15,6 +15,15 @@ Before edits, read these files in order:
 5. `docs/reference_baseline_fidelity.md`
 6. `docs/reference_method_adaptation_map.md`
 7. `docs/method_card_time_graph_evidence.md`
+
+If the task touches results, claims, baselines, or method novelty, also read:
+
+- `docs/reference_baseline_fidelity.md`
+- `docs/reference_implementation_cards/`
+- `docs/week8_large_same_candidate_protocol.md`
+- `docs/reproducibility.md`
+- `docs/paper_table_plan.md`
+- `docs/literature_log.md`
 
 `docs/codex_handoff_phase9e.md` is historical Phase 9E context. Use it for
 provenance, not as the active plan when it conflicts with this memory or the
@@ -201,16 +210,49 @@ repeat stale instructions.
 
 ## Multi-Agent Workflow
 
-For any nontrivial implementation, experiment design, baseline adaptation,
-literature update, or paper-claim review, use multi-agent collaboration when
-tools are available. A reasonable default split is:
+For every complex task, use multi-agent collaboration when tools are available.
+Complex means implementation beyond a narrow one-file fix, experiment design,
+baseline adaptation, literature update, method design, server run planning,
+paper-claim review, or anything that changes reportability. A reasonable
+default split is:
 
 - implementation worker for bounded code changes;
 - reviewer for fairness, leakage, and correctness;
 - reproducibility auditor for configs, seeds, artifacts, and run commands;
 - literature scout for official code, paper details, and baseline provenance.
 
-Do not use multi-agent overhead for tiny one-command or one-line tasks.
+If the agent tool is unavailable or blocked by thread limits/rate limits, state
+that explicitly and continue with a self-review checklist. Do not use multi-agent
+overhead for tiny one-command or one-line tasks.
+
+For complex research tasks, at least one review pass must compare TGL-Rec's
+rigor, novelty, technical depth, and component completeness against multiple
+top-conference papers or official projects, not only the few current senior
+references. Search or inspect current literature when this comparison depends on
+up-to-date papers, code availability, or benchmark practice. The comparison must
+not copy methods; it is a pressure test for whether our project is deep enough.
+Use multiple top-conference papers or official projects as the comparison set,
+not a single convenient baseline.
+
+## Ending Criteria
+
+The project and experiment stage can be called basically complete only when all
+of these are true:
+
+- large-scale observation has run on the frozen four-domain protocol or a
+  documented final replacement protocol;
+- at least four faithful official/senior baselines are implemented, or any
+  missing ones are blocked with reviewer-acceptable reasons and replacements;
+- TGL-Rec has reportable configs, ablations, diagnostics, paired statistics, and
+  exported tables from saved prediction artifacts;
+- leakage, reproducibility, candidate-alignment, and significance checks pass;
+- a top-conference-style reviewer pass finds no blocking P0/P1 issues in
+  novelty, fairness, rigor, or technical depth;
+- failure cases and limitations are documented from real diagnostics.
+
+Only then should Codex tell the user that the project/experiment phase is
+basically complete and ready for paper writing. Until then, each final response
+after a complex task must state the next concrete plan and the remaining gate.
 
 ## Completion Contract
 
@@ -230,3 +272,11 @@ why and what remains local.
 
 Never fabricate results, logs, metrics, tables, conclusions, or claims. Paper
 writing starts only after real artifacts exist.
+
+At the end of every complex task, provide a concise completion note with:
+
+- what changed;
+- what was tested;
+- whether the task is complete or what remains blocked;
+- the next step or plan;
+- the current project/experiment gate toward ending the experimental phase.

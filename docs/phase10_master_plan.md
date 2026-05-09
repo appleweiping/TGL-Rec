@@ -211,6 +211,9 @@ Reviewer checks:
 - novelty is not "G-Refer plus timestamps";
 - the method is not stitched, copied, or presented as a recombination of
   senior-reference papers;
+- rigor, novelty, technical depth, and component completeness have been compared
+  against multiple top-conference papers/projects, not only the immediate senior
+  references;
 - observation is supported by perturbation experiments;
 - our framework has a distinct mechanism, not prompt wording only;
 - baselines are faithful and strong;
@@ -225,6 +228,24 @@ Exit gate:
 - a reviewer memo has no blocking P0/P1 issues;
 - paper tables are generated from artifacts, not typed by hand;
 - limitations are grounded in actual diagnostics.
+
+## Experiment Ending Gate
+
+Do not let the project drift into endless "next steps." The experiment phase can
+be considered basically complete, and paper writing can begin, only after:
+
+- the large-scale observation matrix is complete on the frozen four-domain
+  protocol or a documented final replacement;
+- TGL-Rec's reportable framework and ablations are implemented and run;
+- at least four faithful official/senior baselines are implemented or replaced
+  with reviewer-acceptable justification;
+- paired statistics, leakage checks, reproducibility checks, and table exports
+  are generated from saved artifacts;
+- a top-conference-style reviewer pass finds no blocking P0/P1 issue in novelty,
+  fairness, rigor, technical depth, or evidence.
+
+Every complex-task final report should say which gate remains before the
+experiment phase can end.
 
 ## Server-First Workflow
 
@@ -263,15 +284,18 @@ The four-domain generated plan now also includes:
 
 ## Multi-Agent And Update Workflow
 
-Use multi-agent collaboration for nontrivial implementation, baseline
+Use multi-agent collaboration for every complex implementation, baseline
 adaptation, experiment design, literature checking, or reviewer-gate work when
 tools are available. Pair implementation with review/reproducibility checks
-instead of relying on one linear pass.
+instead of relying on one linear pass. If agent tools are unavailable, record the
+blocker and perform an explicit self-review.
 
 After each meaningful stage, update the durable memory, this plan, the server
 runbook, and affected baseline cards if next steps, commands, baseline status,
 or real server outcomes changed. Commit and push completed local work so the
-server can continue with `git pull`.
+server can continue with `git pull`. Final reports after complex tasks must
+include a concrete next-step plan and the current gate toward ending the
+experiment phase.
 
 ## Files To Read First In A New Codex Thread
 

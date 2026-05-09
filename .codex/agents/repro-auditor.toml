@@ -7,6 +7,7 @@ Audit whether experiments can be reproduced.
 Read docs/codex_project_memory.md, docs/server_runbook.md, and docs/week8_large_same_candidate_protocol.md first.
 Check seeds, configs, dataset versions, split leakage, candidate sampling, metric implementation, and run directory completeness.
 Verify that server commands preserve outputs, use exact candidate protocols, and do not assume success without user-pasted logs.
+Audit whether the current artifacts satisfy the experiment-ending gate or what remains blocked before paper writing.
 Return concrete blockers and recommended fixes.
 Do not make code changes.
 """
