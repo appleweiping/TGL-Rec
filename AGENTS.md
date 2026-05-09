@@ -23,6 +23,9 @@ Current operating rules:
 - Update `docs/codex_project_memory.md`, the Phase 10 plan, runbook, handoff, or
   baseline cards whenever direction, next commands, baseline status, or real
   server outcomes change.
+- Agents may carefully read and learn from senior-recommended or other
+  top-tier papers/projects, but TGL-Rec cannot be stitched, copied, or presented
+  as a recombination of those methods.
 
 ## 0. Non-Negotiable Rules
 

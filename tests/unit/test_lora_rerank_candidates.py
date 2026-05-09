@@ -39,6 +39,28 @@ def test_adapter_specs_attach_reference_baseline_provenance():
     assert provenance["do_not_merge_into_main_accuracy_table"] is True
 
 
+def test_adapter_specs_support_base_model_observation_variant():
+    adapters = _adapter_specs(
+        {
+            "base_model_only_variants": ["history_only_sft", "temporal_evidence_sft"],
+            "do_not_merge_into_main_accuracy_table": True,
+        }
+    )
+
+    assert adapters == [
+        {
+            "adapter_path": None,
+            "method": "local_8b_base::history_only_sft",
+            "variant": "history_only_sft",
+        },
+        {
+            "adapter_path": None,
+            "method": "local_8b_base::temporal_evidence_sft",
+            "variant": "temporal_evidence_sft",
+        },
+    ]
+
+
 def test_preserve_external_candidates_does_not_resample_or_reorder():
     candidates = ["i3", "i1", "i2", "i4"]
 

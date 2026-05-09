@@ -85,6 +85,23 @@ sed -n '1,220p' outputs/plans/four_domain_server_runbook.sh
 The plan should include `beauty`, `books`, `electronics`, and `movies` once all
 external task directories exist.
 
+The generated plan includes real commands only for implemented stages. It also
+contains explicit `BLOCKED` lines for formal official-reference baselines and
+TGL-Rec ablations that are not yet implemented. Do not replace those blocked
+lines with `reference_*_sft` scaffolds.
+
+The first new large-scale observation command is the base Qwen3-8B smoke run:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python -u scripts/run_lora_rerank_eval.py \
+  --config configs/experiments/week8_qwen3_8b_base_observation.yaml \
+  --base-model-path /home/ajifang/models/Qwen/Qwen3-8B \
+  --limit 20
+```
+
+Only remove `--limit 20` after the resulting diagnostics show sane parse success
+and candidate adherence.
+
 Run lightweight local guard tests before launching long jobs:
 
 ```bash

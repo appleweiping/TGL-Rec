@@ -1,0 +1,22 @@
+protocol_version: protocol_week8_large10000_same_candidate
+phase: Phase 10
+observation_stage: large_scale_base_qwen3
+evaluation_run:
+  output_dir: outputs/paper_runs/protocol_week8_large10000_same_candidate/observation/qwen3_base
+  base_model_only_variants:
+    - history_only_sft
+    - temporal_evidence_sft
+  datasets:
+    - beauty
+    - books
+    - electronics
+    - movies
+  candidate_selection: preserve_external_candidates
+  top_m_candidates_for_local_lora: 101
+  do_not_merge_into_main_accuracy_table: true
+  reportable: false
+  purpose: >
+    Observation-only base Qwen3-8B reranking on the imported four-domain
+    same-candidate protocol. This run measures whether the base model exhibits
+    the temporal-vs-semantic pain point before any LoRA correction or formal
+    baseline claim.

@@ -41,6 +41,40 @@ Do not reduce this to a prompt-only tweak, generic LoRA SFT, or toy demo. The
 method must have distinct mechanisms, ablations, provenance, and failure-case
 analysis.
 
+Two milestones are now the most important project checkpoints:
+
+### Large-Scale Observation Milestone
+
+Observation should run on the same scale as later training whenever feasible:
+full `beauty` plus `books`, `electronics`, and `movies` with 10,000 users per
+domain under the same-candidate protocol. The observation matrix should include:
+
+- base Qwen3-8B reranking/inference with no adapter;
+- the fixed-label-mask history-only and temporal-evidence controls;
+- at least four senior-reference Qwen3-8B adapted baseline probes once faithful
+  official-code probe wrappers exist;
+- sequence perturbation, time-tag, similarity-vs-transition, parse/adherence,
+  and candidate-grounding diagnostics.
+
+This milestone is complete only when the pain point seen in base Qwen3-8B is
+checked against faithful senior-reference probes, not only against our own
+control prompts.
+
+### Formal Baseline Milestone
+
+After the observation identifies the correctable pain point, each baseline must
+be rebuilt as a formal, fair baseline under the shared protocol. Formal means:
+
+- official algorithm preserved;
+- Qwen3-8B/project LoRA or QLoRA policy applied where faithful;
+- same data, candidates, splits, metric code, prediction schema, and event IDs;
+- baseline official/default hyperparameters recorded;
+- our method validation tuning recorded separately;
+- paired statistics, diagnostics, and exportable tables generated from
+  artifacts.
+
+No `reference_*_sft` scaffold may satisfy this milestone.
+
 ## Senior Baseline Advice Adopted
 
 The main LLM baseline setting follows the senior-advised academic fairness
@@ -134,6 +168,17 @@ Every mechanism should be configurable, logged, and evaluated through the shared
 prediction schema. Do not hard-code model paths, dataset paths, prompts, seeds,
 or protocol details in source files.
 
+When researching or adapting ideas, future agents may carefully read and
+understand senior-recommended papers, official projects, and other top-tier
+conference systems. They are only references for understanding method design.
+Our actual contribution cannot be stitched, copied, or presented as a
+recombination of those methods. If a design element is inspired by prior work,
+document what is borrowed as context, what is different in TGL-Rec, and which
+ablation proves the difference matters.
+
+In short: TGL-Rec cannot be stitched, copied, or presented as a recombination of
+senior-reference or other top-tier methods.
+
 ## Server Collaboration Protocol
 
 Codex runs locally and cannot inspect the shared server directly. The user runs
@@ -185,4 +230,3 @@ why and what remains local.
 
 Never fabricate results, logs, metrics, tables, conclusions, or claims. Paper
 writing starts only after real artifacts exist.
-

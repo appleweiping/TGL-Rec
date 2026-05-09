@@ -2,15 +2,43 @@
 
 ## Purpose
 
-`TimeGraphEvidenceRec` is a Phase 5 design skeleton for converting train-only temporal interaction graphs into grounded recommendation evidence. It is intended to test interfaces for sequence order, time gaps, time windows, transitions, contrastive evidence, and future dynamic graph encoders.
+`TimeGraphEvidenceRec` is the Phase 10 TGL-Rec method blueprint for converting train-only temporal interaction graphs into grounded recommendation evidence. Earlier Phase 5 code was a skeleton; the current research direction is to upgrade it into a reportable framework with large-scale observation, formal baselines, ablations, and reviewer-gated claims.
 
 ## What Is Original
 
-The intended contribution direction is time-aware graph evidence for LLM4Rec: temporal transitions and interaction windows are represented as explicit evidence objects that can be scored, audited, translated into prompt-ready JSON, or passed to a future dynamic graph encoder.
+The intended contribution direction is time-aware graph evidence for LLM4Rec:
+temporal transitions and interaction windows are represented as explicit
+evidence objects that can be scored, audited, translated into prompt-ready JSON,
+or passed to a dynamic graph encoder.
+
+The method must not be a stitched combination of senior-reference baselines. It
+may learn from top-tier systems, but its original claim is the integration of:
+
+- a train-only temporal directed item graph;
+- need-aware gating that decides when temporal evidence should override semantic
+  similarity;
+- semantic-trap detection for candidates that look similar but do not fit the
+  next need;
+- graph-to-language evidence with auditable factor provenance;
+- candidate-grounded Qwen3-8B reranking;
+- optional temporal encoder score channel;
+- ablations that show which mechanism is responsible for improvement.
 
 ## What Is Infrastructure
 
-This Phase 5 implementation is infrastructure. It includes evidence contracts, retrieval, graph-to-text translation, deterministic smoke scoring, ablation switches, leakage checks, and method-card export. It does not claim final model performance.
+Current implemented pieces are infrastructure. They include evidence contracts,
+retrieval, graph-to-text translation, deterministic smoke scoring, ablation
+switches, leakage checks, and method-card export. They do not yet claim final
+model performance.
+
+The gap to formal Phase 10 method status is explicit:
+
+- replace or complement smoke scoring with a trained/reportable scoring path;
+- run the large-scale observation matrix on the four-domain same-candidate
+  protocol;
+- implement config-driven full ablations;
+- compare against at least four faithful senior-reference baselines;
+- export paired statistics and paper-table-ready artifacts from predictions.
 
 ## Required Inputs
 
@@ -33,7 +61,7 @@ The skeleton supports config-driven switches: use_dynamic_encoder, use_explanati
 
 ## Reportable Status
 
-Current reportable status: `false`. Phase 5 smoke outputs are non-reportable and must not be used as paper-scale results.
+Current reportable status: `false`. Existing smoke outputs are non-reportable and must not be used as paper-scale results.
 
 ## Current Limitations
 
@@ -41,6 +69,8 @@ Current reportable status: `false`. Phase 5 smoke outputs are non-reportable and
 - Phase 6 adds an optional lightweight `TemporalGraphEncoder` score path when a trained checkpoint
   is available. This encoder is not full TGN and remains smoke/sample validation infrastructure.
 - No real API call, LoRA training, or paper-scale experiment is run in this phase.
+- Four-domain reportable TGL-Rec configs are still blocked until the Phase 10
+  framework ablation matrix is implemented.
 
 ## Future Extensions
 

@@ -81,3 +81,43 @@ def test_four_domain_plan_includes_week8_sft_merge_train_and_eval(tmp_path: Path
     assert "--datasets beauty books" in commands["merge_week8_lora_sft"][0]
     assert commands["train_week8_lora_controls"][0].startswith("mkdir -p ")
     assert "week8_lora_8b_rerank_eval.yaml" in commands["evaluate_week8_lora_controls"][0]
+
+
+def test_four_domain_plan_includes_observation_and_formal_baseline_gates(tmp_path: Path) -> None:
+    external = tmp_path / "external_tasks"
+    (external / "beauty_large10000_100neg_test_same_candidate").mkdir(parents=True)
+
+    plan = build_four_domain_server_plan(
+        external_root=external,
+        domains=["beauty"],
+        splits=["test"],
+    )
+
+    run_order = plan["run_order"]
+    commands = plan["commands"]
+    required_sections = {
+        "observation_qwen3_base",
+        "observation_reference_baseline_probe",
+        "formal_reference_baseline_training",
+        "ours_framework_ablation_matrix",
+    }
+
+    assert required_sections.issubset(set(run_order))
+    assert required_sections.issubset(set(commands))
+    assert set(plan["reference_baseline_probe_methods"]) >= {
+        "slmrec_distill_qwen_lora",
+        "llm_esr_qwen_lora",
+        "cllm4rec_qwen_lora",
+        "rlmrec_qwen_lora",
+    }
+    assert "week8_qwen3_8b_base_observation.yaml" in commands["observation_qwen3_base"][1]
+    assert "--limit 20" in commands["observation_qwen3_base"][1]
+    assert "BLOCKED" in " ".join(commands["observation_reference_baseline_probe"])
+    formal_commands = " ".join(commands["formal_reference_baseline_training"])
+    assert "BLOCKED" in formal_commands
+    assert "nohup" not in formal_commands
+    assert "train_lora_8b.py" not in formal_commands
+    assert "CUDA_VISIBLE_DEVICES" not in formal_commands
+    ablation_commands = " ".join(commands["ours_framework_ablation_matrix"])
+    assert "protocol_week8_large10000_same_candidate" in ablation_commands
+    assert "no_need_gate" in ablation_commands

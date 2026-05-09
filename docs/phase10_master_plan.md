@@ -28,8 +28,12 @@ Goal: make the motivating observation measurable before optimizing our method.
 
 Required runs:
 
+- large-scale base Qwen3-8B observation on full `beauty` plus 10,000-user
+  `books`, `electronics`, and `movies` same-candidate tasks when available;
 - fixed-label-mask `history_only_sft`;
 - fixed-label-mask `temporal_evidence_sft`;
+- observation probes for at least four faithful senior-reference Qwen3-8B
+  baseline adaptations once their official-code wrappers exist;
 - sequence perturbation diagnostics: original, reversed, shuffled, recent-k;
 - time-tag ablations: no time, absolute time, relative gap, bucketed gap;
 - similarity-vs-transition candidate stress tests.
@@ -40,7 +44,37 @@ Exit gate:
 - prompt-continuation diagnostics are logged;
 - `limit=20` passes before any larger diagnostic;
 - `limit=200` remains diagnostic only on `protocol_v1`;
+- four-domain observation uses the same candidate/event rows as later formal
+  training and evaluation;
+- senior-reference observation probes are blocked rather than approximated until
+  faithful official-code wrappers exist;
 - no conclusion is written from the current toy-ish protocol.
+
+### M0.5: Large-Scale Observation Matrix
+
+Goal: verify that the base Qwen3-8B pain point is not an artifact of one prompt
+or one small protocol.
+
+Required observation matrix:
+
+- domains: full `beauty`, plus `books`, `electronics`, and `movies` with 10,000
+  users per domain when available;
+- candidates: one positive plus 100 negatives from the frozen same-candidate
+  external tasks;
+- methods: base Qwen3-8B, history-only control, temporal-evidence control, and
+  at least four faithful Qwen3-8B senior-reference probes when implemented;
+- diagnostics: parse success, candidate adherence, hallucination, sequence
+  perturbation, time-tag ablation, similarity-vs-transition stress cases,
+  per-domain and aggregate summaries.
+
+Exit gate:
+
+- base Qwen3-8B observation runs from a server command with old outputs
+  preserved;
+- reference probes are either faithfully runnable or explicitly blocked;
+- every prediction row preserves `event_id/source_event_id`;
+- no observation output is merged into final paper tables unless later promoted
+  under the formal baseline gate.
 
 ### M1: Our Framework
 
@@ -102,6 +136,31 @@ Exit gate:
 - no table mixes protocols or candidate sets;
 - paired comparison is possible from saved event IDs.
 
+### M2.5: Formal Baseline Conversion
+
+Goal: convert observation-stage baselines into formal, reportable baselines
+without weakening official algorithms.
+
+Rules:
+
+- official code is used when available;
+- baseline losses, heads, adapters, ID tokens, distillation objectives,
+  representation alignment, preference reasoning, and scoring logic are
+  preserved where those are the method identity;
+- Qwen3-8B and the project LoRA/QLoRA policy are applied only as the shared
+  backbone/regime, not as an excuse to replace the method with generic SFT;
+- baseline default or paper-recommended hyperparameters are logged;
+- TGL-Rec validation tuning is logged separately;
+- leakage audits and paired statistical comparisons run before table export.
+
+Exit gate:
+
+- at least four senior-reference baselines are implemented or explicitly
+  documented as blocked with cause;
+- no `reference_*_sft` scaffold is used as a main-table baseline;
+- each formal baseline has a command path, provenance manifest, prediction JSONL,
+  metrics, diagnostics, and reportability flag.
+
 ### M3: Four Large Domains
 
 Goal: move paper claims from debugging data to the large same-candidate protocol.
@@ -150,6 +209,8 @@ Goal: find and fix rejection reasons before paper writing.
 Reviewer checks:
 
 - novelty is not "G-Refer plus timestamps";
+- the method is not stitched, copied, or presented as a recombination of
+  senior-reference papers;
 - observation is supported by perturbation experiments;
 - our framework has a distinct mechanism, not prompt wording only;
 - baselines are faithful and strong;
@@ -188,6 +249,17 @@ Before spending larger budget:
 2. run `scripts/run_lora_rerank_eval.py --limit 20 --top-m 50`;
 3. run diagnostics only if `predictions.jsonl` exists;
 4. proceed to larger diagnostic only if output behavior is sane.
+
+The four-domain generated plan now also includes:
+
+- `observation_qwen3_base`: executable non-reportable base Qwen3-8B observation
+  smoke run using `configs/experiments/week8_qwen3_8b_base_observation.yaml`;
+- `observation_reference_baseline_probe`: blocked placeholders until faithful
+  official-code probes exist;
+- `ours_framework_ablation_matrix`: planned ablations, blocked until reportable
+  Phase 10 framework configs exist;
+- `formal_reference_baseline_training`: blocked placeholders until official
+  algorithms are faithfully adapted.
 
 ## Multi-Agent And Update Workflow
 

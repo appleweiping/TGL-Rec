@@ -14,6 +14,20 @@ from llm4rec.io.artifacts import ensure_dir, write_json
 DEFAULT_DOMAINS = ("beauty", "books", "electronics", "movies")
 DEFAULT_SPLITS = ("valid", "test")
 DEFAULT_PROTOCOL_VERSION = "protocol_week8_large10000_same_candidate"
+DEFAULT_REFERENCE_BASELINE_PROBES = (
+    "slmrec_distill_qwen_lora",
+    "llm_esr_qwen_lora",
+    "cllm4rec_qwen_lora",
+    "rlmrec_qwen_lora",
+)
+DEFAULT_OURS_ABLATIONS = (
+    "full",
+    "no_temporal_graph",
+    "no_need_gate",
+    "no_semantic_trap_penalty",
+    "no_time_decay",
+    "no_graph_language_evidence",
+)
 
 
 @dataclass(frozen=True)
@@ -53,18 +67,28 @@ def build_four_domain_server_plan(
         "missing_task_dirs": [asdict(task) for task in missing],
         "planned_task_dirs": [asdict(task) for task in tasks],
         "protocol_version": protocol_version,
+        "reference_baseline_probe_methods": list(DEFAULT_REFERENCE_BASELINE_PROBES),
+        "reportability_status": {
+            "observation_qwen3_base": "non_reportable_observation",
+            "observation_reference_baseline_probe": "blocked_until_official_probe_implemented",
+            "formal_reference_baseline_training": "blocked_until_faithful_official_adaptation",
+            "ours_framework_ablation_matrix": "blocked_until_phase10_framework_configs_are_reportable",
+        },
         "run_order": [
             "server_sync",
             "external_task_inventory",
             "import_frozen_same_candidate_tasks",
             "artifact_readiness_checks",
+            "observation_qwen3_base",
+            "observation_reference_baseline_probe",
             "build_week8_lora_sft",
             "merge_week8_lora_sft",
             "train_week8_lora_controls",
             "evaluate_week8_lora_controls",
             "control_lora_diagnostic_eval",
-            "official_baseline_adaptation",
             "ours_framework_ablation_matrix",
+            "formal_reference_baseline_training",
+            "paired_statistics_and_exports",
             "reviewer_gate_before_paper_claims",
         ],
         "commands": {
@@ -83,6 +107,13 @@ def build_four_domain_server_plan(
             "artifact_readiness_checks": _artifact_check_commands(
                 domains=[str(domain) for domain in domains],
                 protocol_version=protocol_version,
+            ),
+            "observation_qwen3_base": _base_observation_commands(
+                protocol_version=protocol_version,
+                base_model_path=base_model_path,
+            ),
+            "observation_reference_baseline_probe": _reference_probe_commands(
+                DEFAULT_REFERENCE_BASELINE_PROBES
             ),
             "build_week8_lora_sft": [
                 "python scripts/build_lora_sft_data.py "
@@ -122,12 +153,25 @@ def build_four_domain_server_plan(
                 "--predictions outputs/paper_runs/protocol_v1/lora_8b/eval/predictions.jsonl "
                 "--output-dir outputs/paper_runs/protocol_v1/lora_8b/eval/diagnostics",
             ],
+            "ours_framework_ablation_matrix": _ours_ablation_commands(
+                protocol_version=protocol_version,
+                ablations=DEFAULT_OURS_ABLATIONS,
+            ),
+            "formal_reference_baseline_training": _formal_reference_training_commands(
+                DEFAULT_REFERENCE_BASELINE_PROBES
+            ),
+            "paired_statistics_and_exports": [
+                "echo 'BLOCKED paired_statistics_and_exports: requires reportable prediction JSONL "
+                "from base observation, faithful official baselines, and TGL-Rec ablations under "
+                f"{protocol_version} before paired significance/export commands can run.'",
+            ],
         },
         "safety_rules": [
             "Do not resample users, positives, negatives, or candidates.",
             "Do not overwrite protocol_v1; import large tasks under a new protocol version.",
             "Do not run diagnostics unless predictions.jsonl exists.",
             "Do not merge scaffold or non-reportable baselines into main paper tables.",
+            "Observation probes and blocked formal baseline sections are non-reportable and must not be merged into main paper tables.",
         ],
     }
 
@@ -193,6 +237,58 @@ def _sft_merge_commands(
         f"--datasets {' '.join(domains)} "
         f"--protocol-version {protocol_version}",
     ]
+
+
+def _base_observation_commands(*, protocol_version: str, base_model_path: str) -> list[str]:
+    output_dir = f"outputs/paper_runs/{protocol_version}/observation/qwen3_base"
+    predictions = f"{output_dir}/predictions.jsonl"
+    return [
+        f"if [ -d {output_dir} ]; then mv {output_dir} {output_dir}_before_$(date +%Y%m%d_%H%M%S); fi",
+        "CUDA_VISIBLE_DEVICES=0 python -u scripts/run_lora_rerank_eval.py "
+        "--config configs/experiments/week8_qwen3_8b_base_observation.yaml "
+        f"--base-model-path {base_model_path} --limit 20",
+        f"test -f {predictions}",
+        "python scripts/diagnose_lora_predictions.py "
+        f"--predictions {predictions} "
+        f"--output-dir {output_dir}/diagnostics",
+        "echo 'If parse/adherence diagnostics are sane, rerun the same config without --limit for the full observation matrix.'",
+    ]
+
+
+def _reference_probe_commands(methods: Iterable[str]) -> list[str]:
+    return [
+        (
+            "echo 'BLOCKED observation_reference_baseline_probe: "
+            f"{method} requires faithful official-code Qwen3-8B probe implementation before running; "
+            "do not substitute reference_*_sft scaffolds.'"
+        )
+        for method in methods
+    ]
+
+
+def _formal_reference_training_commands(methods: Iterable[str]) -> list[str]:
+    return [
+        (
+            "echo 'BLOCKED formal_reference_baseline_training: "
+            f"{method} requires faithful official-code adaptation, provenance manifest, "
+            "and shared-candidate eval wrapper before reportable training.'"
+        )
+        for method in methods
+    ]
+
+
+def _ours_ablation_commands(*, protocol_version: str, ablations: Iterable[str]) -> list[str]:
+    commands = [
+        (
+            "echo 'BLOCKED ours_framework_ablation_matrix: "
+            f"{protocol_version} needs reportable TGL-Rec framework configs before launching full ablations.'"
+        )
+    ]
+    commands.extend(
+        f"echo 'PLANNED ours ablation under {protocol_version}: {ablation}'"
+        for ablation in ablations
+    )
+    return commands
 
 
 def write_shell_runbook(plan: dict[str, object], output_path: str | Path) -> Path:

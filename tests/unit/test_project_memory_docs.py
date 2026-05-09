@@ -20,6 +20,9 @@ def test_project_memory_records_non_toy_phase10_direction() -> None:
     assert "official implementation" in text
     assert "multi-agent" in text
     assert "cannot inspect the shared server directly" in text
+    assert "cannot be stitched, copied, or presented as a recombination" in text
+    assert "Large-Scale Observation Milestone" in text
+    assert "Formal Baseline Milestone" in text
     for domain in ("beauty", "books", "electronics", "movies"):
         assert domain in text
 
@@ -46,4 +49,3 @@ def test_codex_agent_roles_include_phase10_memory() -> None:
     ):
         text = _read(relative_path)
         assert "docs/codex_project_memory.md" in text
-

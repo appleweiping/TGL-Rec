@@ -53,14 +53,14 @@ def run_lora_rerank_eval(
     started = time.perf_counter()
     rows: list[dict[str, Any]] = []
     for adapter in adapters:
-        adapter_path = resolve_path(adapter["adapter_path"])
-        if not adapter_path.exists():
+        adapter_path = resolve_path(adapter["adapter_path"]) if adapter.get("adapter_path") else None
+        if adapter_path is not None and not adapter_path.exists():
             raise FileNotFoundError(f"Missing adapter path: {adapter_path}")
         provider = HFLocalProvider(
             HFLocalProviderConfig(
                 base_model_path=str(base_model_path),
-                adapter_path=str(adapter_path),
-                tokenizer_path=str(adapter_path.parent / "tokenizer"),
+                adapter_path=None if adapter_path is None else str(adapter_path),
+                tokenizer_path=None if adapter_path is None else str(adapter_path.parent / "tokenizer"),
                 load_in_4bit=True,
             ),
             dry_run=dry_run,
@@ -145,8 +145,22 @@ def _adapter_specs(
                 eval_config=eval_config,
             )
         specs.append(spec)
+    for raw_variant in eval_config.get("base_model_only_variants", []):
+        variant = str(raw_variant)
+        reference_method_id = _reference_method_id_for_variant(variant, baseline_contract)
+        spec = {"adapter_path": None, "variant": variant, "method": f"local_8b_base::{variant}"}
+        if reference_method_id:
+            spec["reference_method_id"] = reference_method_id
+            spec["baseline_provenance"] = _baseline_provenance(
+                reference_method_id,
+                baseline_contract=baseline_contract,
+                eval_config=eval_config,
+            )
+        specs.append(spec)
     if not specs:
-        raise ValueError("evaluation_run.adapter_paths or checkpoint_or_adapter_paths must be non-empty")
+        raise ValueError(
+            "evaluation_run.adapter_paths, checkpoint_or_adapter_paths, or base_model_only_variants must be non-empty"
+        )
     return specs
 
 
