@@ -1,0 +1,4 @@
+interface:
+  display_name: "TGL-Rec Research"
+  short_description: "Operate the TGL-Rec Phase 10 research workflow."
+  default_prompt: "Use $tgl-rec-research to plan and execute a TGL-Rec Phase 10 research task."
