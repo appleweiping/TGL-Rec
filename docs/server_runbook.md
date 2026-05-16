@@ -94,10 +94,10 @@ external task directories exist. It should not expect a
 `beauty_large10000_100neg_*` directory unless the user explicitly overrides the
 task prefix after the adjacent project produces such a package.
 
-The generated plan includes real commands only for implemented stages. It also
-contains explicit `BLOCKED` lines for formal official-reference baselines and
-TGL-Rec ablations that are not yet implemented. Do not replace those blocked
-lines with `reference_*_sft` scaffolds.
+The generated plan includes real commands only for implemented stages. It now
+uses the Pony/Uncertainty official baseline suite as the active baseline source.
+Do not replace Pony reuse steps with the old `reference_*_sft` scaffolds or a new
+unrelated senior-reference queue.
 
 The first new large-scale observation command is the base Qwen3-8B smoke run:
 
@@ -115,7 +115,7 @@ Run lightweight local guard tests before launching long jobs:
 
 ```bash
 python -m pytest \
-  tests/unit/test_reference_baseline_configs.py \
+  tests/unit/test_pony_official_baselines.py \
   tests/unit/test_week8_lora_configs.py \
   tests/unit/test_four_domain_plan.py \
   tests/unit/test_run_compare.py -q
@@ -144,9 +144,35 @@ Rules:
 - import score files for evaluation through
   `main_import_same_candidate_baseline_scores.py`;
 - do not use test split for hyperparameter selection;
-- if reusing LLM2Rec official results, reuse only scores/provenance/audit, not
-  intermediate checkpoints or embeddings as durable required artifacts;
+- reuse Pony official baseline results only through score/provenance/audit
+  artifacts after exact same-candidate score gates pass;
+- do not copy large Pony `.tar.gz` evidence archives, checkpoints, or embeddings
+  into git. Record paths, hashes or sizes, summary tables, and import status;
 - keep `protocol_v1` intact.
+
+## 4.5 Pony Official Baseline Reuse
+
+The active TGL-Rec baseline manifest is:
+
+```bash
+cat configs/baselines/pony_official_external.yaml
+```
+
+Completed Pony official baselines currently planned for the TGL-Rec main
+comparison are:
+
+```text
+llm2rec, llmesr, llmemb, rlmrec, irllrec, elmrec, proex
+```
+
+`promax` is planned but pending; keep it out of completed main tables until all
+declared domains pass exact score-gate checks. `setrec` is blocked/replaced and
+should not be revived as a main-table row unless the user explicitly changes the
+baseline strategy.
+
+First-stage TGL-Rec work is manifest/config/doc alignment only. Second-stage
+migration should bring over Pony's official runner/importer design, still
+without committing large artifacts.
 
 ## 5. Week8 LoRA Control Path
 

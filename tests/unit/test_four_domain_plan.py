@@ -93,7 +93,7 @@ def test_four_domain_plan_includes_week8_sft_merge_train_and_eval(
     )
 
 
-def test_four_domain_plan_includes_observation_and_formal_baseline_gates(
+def test_four_domain_plan_includes_observation_and_pony_baseline_reuse_gates(
     tmp_path: Path,
 ) -> None:
     external = tmp_path / "external_tasks"
@@ -111,19 +111,20 @@ def test_four_domain_plan_includes_observation_and_formal_baseline_gates(
     commands = plan["commands"]
     required_sections = {
         "observation_qwen3_base",
-        "observation_reference_baseline_probe",
-        "formal_reference_baseline_training",
+        "pony_official_baseline_reuse",
+        "pony_official_pending_baselines",
         "ours_framework_ablation_matrix",
     }
 
     assert required_sections.issubset(set(run_order))
     assert required_sections.issubset(set(commands))
-    assert set(plan["reference_baseline_probe_methods"]) >= {
-        "slmrec_distill_qwen_lora",
-        "llm_esr_qwen_lora",
-        "cllm4rec_qwen_lora",
-        "rlmrec_qwen_lora",
+    assert set(plan["pony_official_baseline_methods"]) >= {
+        "llm2rec",
+        "llmesr",
+        "llmemb",
+        "rlmrec",
     }
+    assert plan["pony_official_pending_methods"] == ["promax"]
     assert (
         "week8_qwen3_8b_base_observation.yaml" in commands["observation_qwen3_base"][1]
     )
@@ -134,12 +135,15 @@ def test_four_domain_plan_includes_observation_and_formal_baseline_gates(
     assert plan["score_import_contract"]["required_score_schema"] == (
         "source_event_id,user_id,item_id,score"
     )
-    assert "BLOCKED" in " ".join(commands["observation_reference_baseline_probe"])
-    formal_commands = " ".join(commands["formal_reference_baseline_training"])
-    assert "BLOCKED" in formal_commands
-    assert "nohup" not in formal_commands
-    assert "train_lora_8b.py" not in formal_commands
-    assert "CUDA_VISIBLE_DEVICES" not in formal_commands
+    reuse_commands = " ".join(commands["pony_official_baseline_reuse"])
+    assert "PONY_REUSE" in reuse_commands
+    assert "configs/baselines/pony_official_external.yaml" in reuse_commands
+    pending_commands = " ".join(commands["pony_official_pending_baselines"])
+    assert "PENDING Pony official baseline" in pending_commands
+    assert "promax" in pending_commands
+    assert "nohup" not in reuse_commands
+    assert "train_lora_8b.py" not in reuse_commands
+    assert "CUDA_VISIBLE_DEVICES" not in reuse_commands
     ablation_commands = " ".join(commands["ours_framework_ablation_matrix"])
     assert "protocol_week8_large10000_same_candidate" in ablation_commands
     assert "no_need_gate" in ablation_commands

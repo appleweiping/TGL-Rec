@@ -1,1 +1,1 @@
-"""Reference baseline registries and faithful-adaptation guards."""
+"""Baseline registries and faithful-adaptation guards."""

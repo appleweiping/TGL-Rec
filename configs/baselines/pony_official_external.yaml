@@ -1,0 +1,174 @@
+protocol_name: pony_official_external_same_candidate_qwen3base
+status: active_baseline_contract
+source_project:
+  name: Pony/Uncertainty
+  local_root: D:/Research/Uncertainty
+  server_external_task_root: ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks
+  source_config: D:/Research/Uncertainty/configs/official_external_baselines.yaml
+  aggregate_summary_csv: D:/Research/Uncertainty/week8_official_external_qwen3base_multik_comparison.csv
+  aggregate_summary_markdown: D:/Research/Uncertainty/week8_official_external_qwen3base_multik_comparison.md
+fairness_policy:
+  policy_id: official_code_qwen3base_default_hparams_declared_adaptation_v1
+  comparison_variant: official_code_qwen3base_default_hparams_declared_adaptation
+  backbone_model_family: Qwen3-8B
+  backbone_model_path: /home/ajifang/models/Qwen/Qwen3-8B
+  baseline_hyperparameter_policy: official_default_or_recommended
+  ours_hyperparameter_policy: validation_selected_or_fixed_before_test
+  test_set_model_selection_allowed: false
+  import_full_catalog_metrics_allowed: false
+score_file_contract:
+  required_schema: [source_event_id, user_id, item_id, score]
+  key_columns: [source_event_id, user_id, item_id]
+  score_column: score
+  required_key_set: exact_match_to_candidate_rows
+  duplicate_keys_allowed: false
+  missing_candidate_scores_allowed_in_primary_table: false
+  extra_score_keys_allowed_in_primary_table: false
+  score_value_rule: finite_numeric
+  score_scale_rule: arbitrary_scale_but_orderable_within_event
+  importer: main_import_same_candidate_baseline_scores.py
+domains:
+  beauty:
+    task_prefix: beauty_supplementary_smallerN_100neg
+    sample_note: supplementary_smallerN
+  books:
+    task_prefix: books_large10000_100neg
+    sample_note: large10000
+  electronics:
+    task_prefix: electronics_large10000_100neg
+    sample_note: large10000
+  movies:
+    task_prefix: movies_large10000_100neg
+    sample_note: large10000
+main_table_policy:
+  completed_status: official_completed_declared_domains
+  pending_status: official_pending_completion
+  blocked_status: official_blocked_replaced
+  completed_baselines:
+    - llm2rec
+    - llmesr
+    - llmemb
+    - rlmrec
+    - irllrec
+    - elmrec
+    - proex
+  pending_baselines:
+    - promax
+  blocked_baselines:
+    - setrec
+  historical_non_reportable_scaffolds:
+    - reference_preference_sft
+    - reference_semantic_sft
+    - reference_long_tail_sft
+    - reference_collaborative_sft
+baseline_artifact_policy:
+  copy_large_archives_into_tglrec_git: false
+  preserve_in_tglrec: manifest_paths_hashes_summaries_and_import_status
+  evidence_archive_glob: D:/Research/Uncertainty/*_official_qwen3base*_evidence_*.tar.gz
+official_baselines:
+  llm2rec:
+    method_id: llm2rec_official_qwen3base_sasrec
+    display_name: LLM2Rec official Qwen3-8B + SASRec
+    official_repo: https://github.com/HappyPointer/LLM2Rec
+    pinned_commit: 73b481f710f67166ab958f4985d27b27fb410871
+    status: official_completed_declared_domains
+    domains: [beauty, books, electronics, movies]
+    evidence_archives:
+      beauty: D:/Research/Uncertainty/llm2rec_beauty_official_qwen3base_evidence_2026-05-17_045803.tar.gz
+      books: D:/Research/Uncertainty/llm2rec_books_official_qwen3base_evidence_2026-05-09_180854.tar.gz
+      electronics: D:/Research/Uncertainty/llm2rec_electronics_official_qwen3base_evidence_2026-05-09_202450.tar.gz
+      movies: D:/Research/Uncertainty/llm2rec_movies_official_qwen3base_evidence_2026-05-09_221244.tar.gz
+  llmesr:
+    method_id: llmesr_official_qwen3base_sasrec
+    display_name: LLM-ESR official Qwen3-8B + LLMESR-SASRec
+    official_repo: https://github.com/Applied-Machine-Learning-Lab/LLM-ESR
+    pinned_commit: e5dc388c12509c88c65536ecd8d231325993d4ef
+    status: official_completed_declared_domains
+    domains: [beauty, books, electronics, movies]
+    evidence_archives:
+      beauty: D:/Research/Uncertainty/llmesr_beauty_official_qwen3base_2026-05-09_235317.tar.gz
+      books: D:/Research/Uncertainty/llmesr_books_official_qwen3base_evidence_2026-05-10_063404.tar.gz
+      electronics: D:/Research/Uncertainty/llmesr_electronics_official_qwen3base_evidence_2026-05-10_063559.tar.gz
+      movies: D:/Research/Uncertainty/llmesr_movies_official_qwen3base_evidence_2026-05-10_172404.tar.gz
+  llmemb:
+    method_id: llmemb_official_qwen3base
+    display_name: LLMEmb official Qwen3-8B
+    official_repo: https://github.com/Applied-Machine-Learning-Lab/LLMEmb
+    pinned_commit: 3458a5e225062e94b4f1a01e41f3ec82089f0407
+    status: official_completed_declared_domains
+    domains: [beauty, books, electronics, movies]
+    evidence_archives:
+      beauty: D:/Research/Uncertainty/llmemb_beauty_official_qwen3base_slim_evidence_2026-05-10_192810.tar.gz
+      books: D:/Research/Uncertainty/llmemb_books_official_qwen3base_slim_evidence_2026-05-10_222206.tar.gz
+      electronics: D:/Research/Uncertainty/llmemb_electronics_official_qwen3base_slim_evidence_2026-05-11_002720.tar.gz
+      movies: D:/Research/Uncertainty/llmemb_movies_official_qwen3base_slim_evidence_2026-05-11_015348.tar.gz
+  rlmrec:
+    method_id: rlmrec_official_qwen3base_graphcl
+    display_name: RLMRec official Qwen3-8B GraphCL
+    official_repo: https://github.com/HKUDS/RLMRec
+    pinned_commit: 22413752246de3dee8ab0d509f7f7a8889080f95
+    status: official_completed_declared_domains
+    domains: [beauty, books, electronics, movies]
+    evidence_archives:
+      beauty: D:/Research/Uncertainty/rlmrec_beauty_official_qwen3base_slim_evidence_2026-05-11_021741.tar.gz
+      books: D:/Research/Uncertainty/rlmrec_books_official_qwen3base_slim_evidence_2026-05-11_204312.tar.gz
+      electronics: D:/Research/Uncertainty/rlmrec_electronics_official_qwen3base_slim_evidence_2026-05-12_051426.tar.gz
+      movies: D:/Research/Uncertainty/rlmrec_movies_official_qwen3base_slim_evidence_2026-05-12_175425.tar.gz
+  irllrec:
+    method_id: irllrec_official_qwen3base_intent
+    display_name: IRLLRec official Qwen3-8B IntentRep
+    official_repo: https://github.com/wangyu0627/IRLLRec
+    pinned_commit: ee8330b456e568f87869ec6c0c553c55d43fce6e
+    status: official_completed_declared_domains
+    domains: [beauty, books, electronics, movies]
+    evidence_archives:
+      beauty: D:/Research/Uncertainty/irllrec_beauty_official_qwen3base_slim_evidence_2026-05-12_185130.tar.gz
+      books: D:/Research/Uncertainty/irllrec_books_official_qwen3base_slim_evidence_2026-05-13_041223.tar.gz
+      electronics: D:/Research/Uncertainty/irllrec_electronics_official_qwen3base_slim_evidence_2026-05-14_015812.tar.gz
+      movies: D:/Research/Uncertainty/irllrec_movies_official_qwen3base_evidence_2026-05-14_055114.tar.gz
+  elmrec:
+    method_id: elmrec_official_qwen3base_graph
+    display_name: ELMRec official Qwen3-8B Graph
+    official_repo: https://github.com/WangXFng/ELMRec
+    pinned_commit: b28c4f786d89fb8473ab358e12a882b30259f627
+    status: official_completed_declared_domains
+    domains: [beauty, books, electronics, movies]
+    evidence_archives:
+      beauty: D:/Research/Uncertainty/elmrec_beauty_official_qwen3base_evidence_2026-05-15_001548.tar.gz
+      books: D:/Research/Uncertainty/elmrec_books_official_qwen3base_evidence_2026-05-15_080244.tar.gz
+      electronics: D:/Research/Uncertainty/elmrec_electronics_official_qwen3base_evidence_2026-05-15_193756.tar.gz
+      movies: D:/Research/Uncertainty/elmrec_movies_official_qwen3base_evidence_2026-05-15_225746.tar.gz
+  proex:
+    method_id: proex_official_qwen3base_profile
+    display_name: ProEx official Qwen3-8B Profile
+    official_repo: https://github.com/BlueGhostYi/ProRec
+    pinned_commit: 48a3a3d5075c1112c793b9bfc78de9a8b000ffe2
+    status: official_completed_declared_domains
+    domains: [beauty, books, electronics, movies]
+    evidence_archives:
+      beauty: D:/Research/Uncertainty/proex_beauty_official_qwen3base_evidence_2026-05-16_001139.tar.gz
+      books: D:/Research/Uncertainty/proex_books_official_qwen3base_evidence_2026-05-16_075925.tar.gz
+      electronics: D:/Research/Uncertainty/proex_electronics_official_qwen3base_evidence_2026-05-16_174642.tar.gz
+      movies: D:/Research/Uncertainty/proex_movies_official_qwen3base_evidence_2026-05-16_211729.tar.gz
+  promax:
+    method_id: promax_official_qwen3base_profile
+    display_name: ProMax official Qwen3-8B Profile
+    official_repo: https://github.com/BlueGhostYi/ProRec
+    pinned_commit: 48a3a3d5075c1112c793b9bfc78de9a8b000ffe2
+    status: official_pending_completion
+    domains_completed: [beauty]
+    domains_pending: [books, electronics, movies]
+    evidence_archives:
+      beauty: D:/Research/Uncertainty/promax_beauty_official_qwen3base_evidence_2026-05-16_215011.tar.gz
+    pending_note: Last 2026 official baseline; keep planned but out of completed main table until all declared domains pass exact-score gates.
+  setrec:
+    method_id: setrec_official_qwen3base_identifier
+    display_name: SETRec official Qwen3-8B Identifier
+    official_repo: https://github.com/Linxyhaha/SETRec
+    pinned_commit: 2ed9a75ad1ad3784c61bba3c68cbedbe3cfce2d7
+    status: official_blocked_replaced
+    domains_completed: [beauty]
+    replacement_baselines: [elmrec, proex, promax]
+    blocker: setrec_upstream_tokenize_all_cuda_oom
+    evidence_archives:
+      beauty: D:/Research/Uncertainty/setrec_beauty_official_qwen3base_evidence_2026-05-14_204508.tar.gz

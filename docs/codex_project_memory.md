@@ -41,7 +41,9 @@ The research path is:
 2. Build our original TGL-Rec framework around temporal directed item graph
    evidence, graph-to-language translation, need-aware gating, and
    candidate-grounded local Qwen3-8B reranking.
-3. Compare against strong, faithful baselines under one frozen protocol.
+3. Compare against the Pony/Uncertainty official same-candidate baseline suite
+   under the shared frozen protocol instead of rebuilding a separate baseline
+   queue from scratch.
 4. Scale from diagnostic `protocol_v1` data to four large same-candidate domains:
    `beauty`, `books`, `electronics`, and `movies`.
 5. Run reviewer and reproducibility gates before paper writing.
@@ -60,68 +62,70 @@ domain under the same-candidate protocol. The observation matrix should include:
 
 - base Qwen3-8B reranking/inference with no adapter;
 - the fixed-label-mask history-only and temporal-evidence controls;
-- at least four senior-reference Qwen3-8B adapted baseline probes once faithful
-  official-code probe wrappers exist;
+- Pony official baseline rows whose score/provenance artifacts pass exact
+  same-candidate gates;
 - sequence perturbation, time-tag, similarity-vs-transition, parse/adherence,
   and candidate-grounding diagnostics.
 
 This milestone is complete only when the pain point seen in base Qwen3-8B is
-checked against faithful senior-reference probes, not only against our own
+checked against Pony official baseline behavior, not only against our own
 control prompts.
 
-### Formal Baseline Milestone
+### Pony Official Baseline Reuse/Migration Milestone
 
-After the observation identifies the correctable pain point, each baseline must
-be rebuilt as a formal, fair baseline under the shared protocol. Formal means:
+After the observation identifies the correctable pain point, TGL-Rec should
+reuse and migrate the Pony/Uncertainty official baseline system because it was
+run by the same owner on the same data selection and same-candidate design.
+Formal means:
 
-- official algorithm preserved;
-- Qwen3-8B/project LoRA or QLoRA policy applied where faithful;
-- same data, candidates, splits, metric code, prediction schema, and event IDs;
-- baseline official/default hyperparameters recorded;
+- official algorithm or official-code-level implementation preserved in Pony;
+- Qwen3-8B declared-adaptation policy applied where the baseline consumes LLM or
+  text representations;
+- same data, candidates, splits, metric code, score schema, and event IDs;
+- baseline official/default or recommended hyperparameters recorded;
 - our method validation tuning recorded separately;
-- paired statistics, diagnostics, and exportable tables generated from
-  artifacts.
+- paired statistics, diagnostics, and exportable tables generated from imported
+  Pony score/provenance artifacts plus TGL-Rec method artifacts.
 
-No `reference_*_sft` scaffold may satisfy this milestone.
+The active manifest is `configs/baselines/pony_official_external.yaml`. No
+`reference_*_sft` scaffold may satisfy this milestone.
 
-## Senior Baseline Advice Adopted
+## Pony Official Baseline Policy
 
-The main LLM baseline setting follows the senior-advised academic fairness
-choice:
+The main baseline setting follows the Pony official-code fairness policy:
 
-- get source code from the official implementation whenever possible;
-- run all reportable LLM baselines on our frozen data and candidate protocol;
-- use Qwen3-8B as the shared base model/backbone where faithful;
-- use the project LoRA/QLoRA regime for the main LLM table;
+- reuse Pony official-code or official-code-level baselines already run on the
+  frozen same-candidate protocol;
+- preserve the official implementation path or official-code-level provenance
+  whenever a Pony baseline enters the main table;
+- use Qwen3-8B as the shared LLM/text backbone where the baseline requires an
+  LLM or text representation;
 - preserve each baseline's official algorithm, losses, heads, adapters,
-  evidence construction, and scoring logic as much as possible;
-- use official/default or paper-recommended hyperparameters for baselines;
+  representation modules, graph/intent/profile components, and scoring logic as
+  much as possible;
+- use official/default or recommended hyperparameters for baselines;
 - tune TGL-Rec on validation data, with search ranges and selected settings
   logged;
-- evaluate all methods with the same split, candidates, metrics, prediction
-  schema, and paired event IDs.
+- keep the project LoRA/QLoRA regime for TGL-Rec controls and any future
+  method-declared adapter work;
+- evaluate all methods with the same split, candidates, metrics,
+  `source_event_id,user_id,item_id,score` score schema, and paired event IDs.
 
 Do not claim equal-budget tuning unless it was actually run. Do not call a
-generic local rewrite an official baseline. If official code is missing, mark the
-method as blocked or non-official until the user explicitly approves a labeled
-reproduction.
+generic local rewrite an official baseline. Do not rerun or replace the Pony
+baseline suite with a new unrelated queue unless the user explicitly changes
+the paper strategy.
 
-Current official-code baseline queue:
+Active Pony official baseline suite:
 
-- `slmrec_distill_qwen_lora`
-- `llm_esr_qwen_lora`
-- `cllm4rec_qwen_lora`
-- `rlmrec_qwen_lora`
-- `review_pref_reasoning_qwen_lora`
+- completed main-table candidates: `llm2rec`, `llmesr`, `llmemb`, `rlmrec`,
+  `irllrec`, `elmrec`, and `proex`;
+- pending planned baseline: `promax`, the last 2026 official baseline, excluded
+  from completed main tables until all declared domains pass exact-score gates;
+- blocked/replaced: `setrec`, replaced by `elmrec`, `proex`, and `promax`.
 
-Blocked from main tables unless official code is found or the user approves a
-non-official reproduction:
-
-- `controllable_rec_qwen_lora`
-- `transrec_qwen_lora`
-
-The `reference_*_sft` scaffold variants are not reportable senior baselines by
-themselves. They are implementation scaffolds and controls only.
+The old `reference_*_sft` scaffold variants are historical/non-reportable
+containers only. They are not the active main baseline plan.
 
 ## Data And Protocol Memory
 
@@ -172,6 +176,10 @@ Rules:
 - import under an explicit protocol version such as
   `protocol_week8_large10000_same_candidate`;
 - keep `protocol_v1` as diagnostic history only.
+- reuse Pony official baseline score/provenance artifacts only after exact
+  same-candidate score-gate checks pass;
+- do not copy large Pony `.tar.gz` evidence archives into git. Record paths,
+  hashes or sizes, summaries, and import status instead.
 
 If reusing official LLM2Rec results from the adjacent project, only reuse
 scores, provenance, and audit artifacts. Do not make intermediate checkpoints
@@ -262,8 +270,8 @@ of these are true:
 
 - large-scale observation has run on the frozen four-domain protocol or a
   documented final replacement protocol;
-- at least four faithful official/senior baselines are implemented, or any
-  missing ones are blocked with reviewer-acceptable reasons and replacements;
+- Pony official baseline reuse/migration is complete for the active suite, with
+  any pending baseline such as `promax` clearly marked until all domains pass;
 - TGL-Rec has reportable configs, ablations, diagnostics, paired statistics, and
   exported tables from saved prediction artifacts;
 - leakage, reproducibility, candidate-alignment, and significance checks pass;

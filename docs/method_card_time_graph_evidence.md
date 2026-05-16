@@ -41,7 +41,7 @@ The gap to formal Phase 10 method status is explicit:
 - run the large-scale observation matrix on the four-domain same-candidate
   protocol;
 - implement config-driven full ablations;
-- compare against at least four faithful senior-reference baselines;
+- compare against the Pony/Uncertainty official same-candidate baseline suite;
 - export paired statistics and paper-table-ready artifacts from predictions.
 
 ## Required Inputs

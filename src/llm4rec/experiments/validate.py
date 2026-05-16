@@ -128,6 +128,7 @@ def validate_project(root: str | Path = ".") -> dict[str, Any]:
         "configs/experiments/phase6_sasrec_smoke.yaml",
         "configs/experiments/phase6_temporal_graph_smoke.yaml",
         "configs/experiments/phase6_method_encoder_smoke.yaml",
+        "configs/baselines/pony_official_external.yaml",
         "configs/training/sasrec_smoke.yaml",
         "configs/training/temporal_graph_smoke.yaml",
         "docs/method_card_time_graph_evidence.md",

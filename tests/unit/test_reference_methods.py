@@ -13,6 +13,8 @@ from llm4rec.baselines.reference_methods import (
 def test_reference_method_registry_selects_concrete_methods() -> None:
     names = reference_method_names()
 
+    # Historical scaffold registry only. The active main baselines now come from
+    # configs/baselines/pony_official_external.yaml.
     assert "slmrec_distill_qwen_lora" in names
     assert "llm_esr_qwen_lora" in names
     assert "controllable_rec_qwen_lora" in names
@@ -26,6 +28,8 @@ def test_reference_method_registry_selects_concrete_methods() -> None:
 def test_reference_methods_are_not_reportable_until_implemented() -> None:
     spec = get_reference_method("cllm4rec_qwen_lora")
 
+    # These local reference specs are preserved for provenance, not for the
+    # active Phase 10 main baseline table.
     assert spec.reportable_baseline is False
     assert spec.implementation_status == "not_implemented"
     assert spec.official_code_status == "official_code_identified"

@@ -8,7 +8,8 @@ research system:
 1. verify the observation that LLM-based recommenders may underuse temporal
    order and time gaps;
 2. build our own time-aware graph-evidence framework;
-3. compare against faithful official baselines under one protocol;
+3. compare against the Pony/Uncertainty official same-candidate baseline suite
+   under one protocol instead of rebuilding a separate baseline queue;
 4. scale from current debugging domains to the four large same-candidate domains:
    `beauty`, `books`, `electronics`, and `movies`;
 5. pass a top-conference reviewer gate before writing claims.
@@ -32,8 +33,8 @@ Required runs:
   `books`, `electronics`, and `movies` same-candidate tasks when available;
 - fixed-label-mask `history_only_sft`;
 - fixed-label-mask `temporal_evidence_sft`;
-- observation probes for at least four faithful senior-reference Qwen3-8B
-  baseline adaptations once their official-code wrappers exist;
+- Pony official baseline score/provenance reuse for cross-method diagnostics
+  once exact same-candidate score gates pass;
 - sequence perturbation diagnostics: original, reversed, shuffled, recent-k;
 - time-tag ablations: no time, absolute time, relative gap, bucketed gap;
 - similarity-vs-transition candidate stress tests.
@@ -46,8 +47,8 @@ Exit gate:
 - `limit=200` remains diagnostic only on `protocol_v1`;
 - four-domain observation uses the same candidate/event rows as later formal
   training and evaluation;
-- senior-reference observation probes are blocked rather than approximated until
-  faithful official-code wrappers exist;
+- Pony official baselines are reused through manifest/provenance/score-gate
+  checks rather than approximated with `reference_*_sft` scaffolds;
 - no conclusion is written from the current toy-ish protocol.
 
 ### M0.5: Large-Scale Observation Matrix
@@ -62,7 +63,7 @@ Required observation matrix:
 - candidates: one positive plus 100 negatives from the frozen same-candidate
   external tasks;
 - methods: base Qwen3-8B, history-only control, temporal-evidence control, and
-  at least four faithful Qwen3-8B senior-reference probes when implemented;
+  Pony official baselines whose score/provenance artifacts pass exact gates;
 - diagnostics: parse success, candidate adherence, hallucination, sequence
   perturbation, time-tag ablation, similarity-vs-transition stress cases,
   per-domain and aggregate summaries.
@@ -71,7 +72,8 @@ Exit gate:
 
 - base Qwen3-8B observation runs from a server command with old outputs
   preserved;
-- reference probes are either faithfully runnable or explicitly blocked;
+- Pony official baselines are either reusable with passing gates or explicitly
+  pending/blocked, such as `promax` pending and `setrec` replaced;
 - every prediction row preserves `event_id/source_event_id`;
 - no observation output is merged into final paper tables unless later promoted
   under the formal baseline gate.
@@ -99,67 +101,81 @@ Exit gate:
 - ablations can be run by config rather than source edits;
 - the framework beats smoke tests before server-scale runs.
 
-### M2: Complete Recommendation System
+### M2: Complete Recommendation System With Pony Official Baselines
 
 Goal: compare our method against a full recommender stack, not only LLM prompts.
 
-Required baseline families:
+The active main baseline suite is reused from Pony/Uncertainty because it uses
+the same data selection, same-candidate event rows, Qwen3-8B declared-adaptation
+policy, and official-code/official-code-level provenance.
 
-- non-personalized: random, popularity;
-- traditional CF: item-kNN/BM25-like text ranking, BPR-MF or matrix
-  factorization, LightGCN where feasible;
-- sequential: SASRec plus at least one stronger sequential/time-aware baseline
-  when feasible;
-- text retrieval: BM25 and dense retrieval interface;
-- LLM baselines: zero-shot/few-shot/rerank/constrained candidate rerank;
-- official reference baselines: SLMRec, LLM-ESR, CLLM4Rec, RLMRec, and
-  review-driven preference reasoning when their official code adaptation is
-  faithful.
+Active completed candidates:
+
+- `llm2rec`
+- `llmesr`
+- `llmemb`
+- `rlmrec`
+- `irllrec`
+- `elmrec`
+- `proex`
+
+Planned pending candidate:
+
+- `promax`, the last 2026 official baseline, excluded from completed main
+  tables until all declared domains pass exact-score gates.
+
+Blocked/replaced:
+
+- `setrec`, blocked by upstream large-domain failure and replaced by `elmrec`,
+  `proex`, and `promax`.
 
 Fairness contract:
 
 - shared split, candidates, event IDs, metric implementation, and prediction
   schema;
 - shared Qwen3-8B backbone for LLM-based main-table baselines;
-- shared project LoRA/QLoRA regime for that main LLM table;
+- method-declared adapter, representation, graph, intent, or profile modules
+  retained when they are part of the official algorithm;
 - official/default or paper-recommended hyperparameters for baselines;
 - validation-tuned TGL-Rec hyperparameters with logged search ranges and
   selected settings;
 - each official baseline keeps its own algorithmic signal, adapted into the
-  shared backbone/regime when possible;
+  shared same-candidate protocol when possible;
 - scaffold or non-official baselines stay out of main tables.
 
 Exit gate:
 
-- every reportable baseline has an implementation card, provenance, command,
-  metrics, diagnostics, and reportability status;
+- every reused Pony baseline has manifest status, official repo, pinned commit,
+  evidence/archive path, score-gate status, metrics, diagnostics, and
+  reportability status;
 - no table mixes protocols or candidate sets;
 - paired comparison is possible from saved event IDs.
 
-### M2.5: Formal Baseline Conversion
+### M2.5: Pony Baseline Reuse And Migration
 
-Goal: convert observation-stage baselines into formal, reportable baselines
-without weakening official algorithms.
+Goal: make the Pony official baseline system a first-class TGL-Rec baseline
+source without rerunning already completed baselines or copying large artifacts
+into git.
 
 Rules:
 
-- official code is used when available;
-- baseline losses, heads, adapters, ID tokens, distillation objectives,
-  representation alignment, preference reasoning, and scoring logic are
-  preserved where those are the method identity;
-- Qwen3-8B and the project LoRA/QLoRA policy are applied only as the shared
-  backbone/regime, not as an excuse to replace the method with generic SFT;
-- baseline default or paper-recommended hyperparameters are logged;
+- `configs/baselines/pony_official_external.yaml` is the active manifest;
+- Pony score files must use `source_event_id,user_id,item_id,score`;
+- exact key match to frozen candidates, no missing/extra/duplicate keys, and
+  finite scores are required before import;
+- baseline default/recommended hyperparameters are logged from Pony provenance;
 - TGL-Rec validation tuning is logged separately;
 - leakage audits and paired statistical comparisons run before table export.
 
 Exit gate:
 
-- at least four senior-reference baselines are implemented or explicitly
-  documented as blocked with cause;
+- completed Pony baselines are imported or linked with provenance and exact
+  same-candidate score audits;
+- `promax` is either completed across all declared domains or clearly excluded
+  from completed main tables as pending;
 - no `reference_*_sft` scaffold is used as a main-table baseline;
-- each formal baseline has a command path, provenance manifest, prediction JSONL,
-  metrics, diagnostics, and reportability flag.
+- the second migration stage has a TGL-Rec-side runner/importer plan, but the
+  first reset stage does not copy large evidence archives into git.
 
 ### M3: Four Large Domains
 
@@ -220,7 +236,7 @@ Reviewer checks:
 - observation is supported by perturbation experiments;
 - our framework has a distinct mechanism, not prompt wording only;
 - baselines are faithful and strong;
-- official baselines are not weakened by generic local rewrites;
+- Pony official baselines are not weakened or replaced by generic local rewrites;
 - no leakage from valid/test into graph evidence, SFT data, retrieval, or prompts;
 - all results have seeds, configs, environment, git commit, and metrics files;
 - statistical tests and paired comparisons are available;
@@ -240,8 +256,8 @@ be considered basically complete, and paper writing can begin, only after:
 - the large-scale observation matrix is complete on the frozen four-domain
   protocol or a documented final replacement;
 - TGL-Rec's reportable framework and ablations are implemented and run;
-- at least four faithful official/senior baselines are implemented or replaced
-  with reviewer-acceptable justification;
+- the Pony official baseline suite is reused/migrated with exact score gates,
+  and pending `promax` status is explicit if not complete;
 - paired statistics, leakage checks, reproducibility checks, and table exports
   are generated from saved artifacts;
 - a top-conference-style reviewer pass finds no blocking P0/P1 issue in novelty,
@@ -278,12 +294,12 @@ The four-domain generated plan now also includes:
 
 - `observation_qwen3_base`: executable non-reportable base Qwen3-8B observation
   smoke run using `configs/experiments/week8_qwen3_8b_base_observation.yaml`;
-- `observation_reference_baseline_probe`: blocked placeholders until faithful
-  official-code probes exist;
+- `pony_official_baseline_reuse`: planned reuse checks for Pony official
+  same-candidate score/provenance artifacts;
+- `pony_official_pending_baselines`: planned pending entries such as `promax`
+  until all declared domains pass exact-score gates;
 - `ours_framework_ablation_matrix`: planned ablations, blocked until reportable
-  Phase 10 framework configs exist;
-- `formal_reference_baseline_training`: blocked placeholders until official
-  algorithms are faithfully adapted.
+  Phase 10 framework configs exist.
 
 ## Multi-Agent And Update Workflow
 

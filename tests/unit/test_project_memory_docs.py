@@ -22,7 +22,8 @@ def test_project_memory_records_non_toy_phase10_direction() -> None:
     assert "cannot inspect the shared server directly" in text
     assert "cannot be stitched, copied, or presented as a recombination" in text
     assert "Large-Scale Observation Milestone" in text
-    assert "Formal Baseline Milestone" in text
+    assert "Pony Official Baseline Reuse/Migration Milestone" in text
+    assert "configs/baselines/pony_official_external.yaml" in text
     assert "For every complex task, use multi-agent collaboration" in text
     assert "multiple top-conference papers or official projects" in text
     assert "basically complete and ready for paper writing" in text

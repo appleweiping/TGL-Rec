@@ -17,8 +17,8 @@ multi-agent workflow, and completion/update contract.
 
 The project has moved beyond the earlier Phase 8 launch-preparation state. The current active work is
 to make local Qwen3-8B recommendation experiments reproducible, diagnose whether temporal evidence
-helps beyond history-only prompting, and integrate senior-recommended reference baselines through
-their official implementations under a shared experimental protocol.
+helps beyond history-only prompting, and reuse/migrate the Pony/Uncertainty official same-candidate
+baseline suite under the shared experimental protocol.
 
 What is already implemented:
 
@@ -32,10 +32,9 @@ What is already implemented:
 - Need-gated TDIG evidence scorer: transition probability, PMI, lift, direction asymmetry,
   recency, drift, contrastive evidence, and semantic-trap penalty are exposed as auditable
   factor scores.
-- Reference baseline registry and reportability guard:
-  `src/llm4rec/baselines/reference_methods.py`.
-- Reference implementation cards:
-  `docs/reference_implementation_cards/`.
+- Pony official baseline manifest and guard:
+  `configs/baselines/pony_official_external.yaml` and
+  `src/llm4rec/baselines/pony_official.py`.
 
 What is not yet a paper result:
 
@@ -45,11 +44,14 @@ What is not yet a paper result:
 - `history_only_sft` and `temporal_evidence_sft` have been retrained on the server after the
   label-mask fix, but their post-fix rerank diagnostics still need to be run successfully after GPU
   memory is cleared.
-- No senior-recommended official reference baseline is reportable yet. The `reference_*_sft` variants
-  are scaffolds only until mapped to official code and implemented faithfully.
+- Pony official baselines are reused through manifest/provenance/score-gate
+  checks, not by copying large artifacts or rerunning a new baseline queue.
+  `promax` remains pending until all declared domains pass.
 - No paper conclusion should be written from diagnostic runs.
 
-Phase 10 server path now expects the large four-domain same-candidate package:
+Phase 10 server path now expects the large four-domain same-candidate package
+and reuses the Pony/Uncertainty official baseline suite rather than rebuilding a
+separate senior-reference baseline queue:
 
 - task families: `beauty_supplementary_smallerN_100neg`,
   `books_large10000_100neg`, `electronics_large10000_100neg`, and
@@ -60,8 +62,11 @@ Phase 10 server path now expects the large four-domain same-candidate package:
   through `main_import_same_candidate_baseline_scores.py`;
 - never edit `candidate_items.csv`, `ranking_valid.jsonl`, or
   `ranking_test.jsonl`, and never tune on the test split;
-- Qwen3-8B is the shared base model where a reference method can be faithfully adapted;
-- LoRA/adapters/heads/losses/scorers follow each official baseline's own algorithm.
+- Qwen3-8B is the shared base model where an official baseline consumes LLM/text
+  representations;
+- adapters, representation learners, graph/intent/profile modules, losses, and
+  scorers follow each official baseline's own algorithm;
+- active manifest: `configs/baselines/pony_official_external.yaml`.
 
 After importing the external tasks, build per-domain SFT rows and merge them before training:
 
@@ -86,53 +91,39 @@ python scripts/merge_lora_sft_data.py \
 
 ## Official Baseline Contract
 
-Senior-recommended baselines must preserve the official algorithm. TGL-Rec controls the experiment
-protocol, not the baseline's method identity.
+TGL-Rec now reuses the Pony/Uncertainty official same-candidate baseline suite.
+The two projects use the same owner, data selection, candidate protocol, and
+Qwen3-8B declared-adaptation policy, so rerunning a different baseline set here
+would waste time and make the paper harder to align.
 
-Unified across all main baselines:
+Active completed main-table candidates:
 
-- LLM backbone: Qwen3-8B;
-- fine-tuning regime: project LoRA/QLoRA for the main LLM table;
-- baseline hyperparameters: official/default or paper-recommended values;
-- our hyperparameters: validation-tuned with search ranges and selected
-  settings logged;
-- data split and leakage policy;
-- candidate sets;
-- metrics and diagnostics;
-- prediction JSONL schema;
-- event/candidate IDs for paired comparison.
+- `llm2rec`: LLM2Rec official Qwen3-8B + SASRec.
+- `llmesr`: LLM-ESR official Qwen3-8B + LLMESR-SASRec.
+- `llmemb`: LLMEmb official Qwen3-8B.
+- `rlmrec`: RLMRec official Qwen3-8B GraphCL.
+- `irllrec`: IRLLRec official Qwen3-8B IntentRep.
+- `elmrec`: ELMRec official Qwen3-8B graph bridge.
+- `proex`: ProEx official Qwen3-8B profile baseline.
 
-Preserved from each official baseline where faithful:
+Planned but not completed:
 
-- official algorithmic signal;
-- extra heads;
-- losses and training objective;
-- input/evidence construction;
-- scoring or reranking logic;
-- official code path.
+- `promax`: final 2026 official baseline, excluded from completed main tables
+  until all declared domains pass exact same-candidate score gates.
 
-If official code is unavailable, the baseline cannot enter the main reportable set unless the user
-explicitly approves a labeled non-official reproduction. See:
+Blocked/replaced:
 
-- `docs/reference_baseline_fidelity.md`
-- `docs/reference_method_adaptation_map.md`
-- `src/llm4rec/baselines/reference_methods.py`
+- `setrec`: blocked by upstream large-domain failure and replaced by `elmrec`,
+  `proex`, and `promax`.
 
-## Current Reference Baseline Queue
+All main baseline rows must preserve:
 
-Selected official-code candidates:
-
-- `slmrec_distill_qwen_lora`: SLMRec distillation.
-- `llm_esr_qwen_lora`: LLM-ESR long-tail sequential recommendation.
-- `cllm4rec_qwen_lora`: Collaborative LLM recommendation.
-- `rlmrec_qwen_lora`: LLM representation learning for recommendation.
-- `review_pref_reasoning_qwen_lora`: review-driven preference reasoning.
-
-Reference methods without identified official code are blocked from the main baseline set until
-resolved:
-
-- `controllable_rec_qwen_lora`
-- `transrec_qwen_lora`
+- same split, candidate sets, metric code, score schema, and event IDs;
+- `source_event_id,user_id,item_id,score` for score imports;
+- official/default or recommended baseline hyperparameters;
+- TGL-Rec validation tuning separately logged;
+- no full-catalog external metrics in the same-candidate main table;
+- no `reference_*_sft` scaffold rows in the main official baseline table.
 
 ## Immediate Checklist
 
@@ -168,10 +159,11 @@ resolved:
      --protocol-version protocol_week8_large10000_same_candidate
    ```
 
-4. Wrap official reference baseline code with TGL-Rec adapters, starting with the baselines whose
-   official code is identified.
-5. Train/evaluate every reportable method under the same Qwen3-8B base model and same candidate
-   protocol.
+4. Reuse/import Pony official baseline score and provenance artifacts through
+   `configs/baselines/pony_official_external.yaml`; do not copy large evidence
+   archives into git.
+5. Finish or explicitly keep pending `promax`; do not include it in completed
+   main tables until all declared domains pass exact-score gates.
 
 ## Core hypothesis
 

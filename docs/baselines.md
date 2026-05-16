@@ -1,5 +1,24 @@
 ﻿# Baselines
 
+Active paper-facing official baselines now come from the Pony/Uncertainty same-candidate suite, not from a new TGL-Rec-specific senior-reference queue. See `configs/baselines/pony_official_external.yaml`, `docs/reference_baseline_fidelity.md`, and `docs/reference_method_adaptation_map.md`.
+
+Completed main-table candidates after manifest/provenance/score-gate checks:
+
+- `llm2rec`;
+- `llmesr`;
+- `llmemb`;
+- `rlmrec`;
+- `irllrec`;
+- `elmrec`;
+- `proex`.
+
+Pending/planned:
+
+- `promax`, excluded from completed main tables until all declared domains pass.
+
+Blocked/replaced:
+
+- `setrec`, replaced by `elmrec`, `proex`, and `promax`.
 Implemented smoke/pre-experiment baselines:
 
 - random;
