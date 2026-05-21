@@ -1,16 +1,16 @@
 # Project Context — TGL-Rec
 
-## Current State (as of 2026-05-19)
+## Current State (as of 2026-05-21)
 
 | Metric | Value |
 |--------|-------|
 | GitHub | https://github.com/appleweiping/TGL-Rec |
 | Commits | 51 |
 | Branch | codex/phase9e-lora-rerank-eval (active) |
-| Stage | Phase 10 — four-domain experiments |
-| Official baselines | 7 completed (same-candidate protocol) |
+| Stage | Phase 10 — four-domain experiments (implementation started) |
+| Official baselines | 8 completed (all 4 domains, same-candidate protocol) |
 | Datasets | 4 domains (Beauty, Books, Electronics, Movies) |
-| Method | TDIG + graph-to-language evidence + gated reranker |
+| Method | TDIG + graph-to-language evidence + learned need-gate + LoRA reranker |
 | LLM | Qwen3-8B (LoRA/QLoRA fine-tuning) |
 | Python | >=3.10 |
 | License | MIT |

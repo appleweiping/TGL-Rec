@@ -109,7 +109,7 @@ The active main baseline suite is reused from Pony/Uncertainty because it uses
 the same data selection, same-candidate event rows, Qwen3-8B declared-adaptation
 policy, and official-code/official-code-level provenance.
 
-Active completed candidates:
+Active completed candidates (all 8, all 4 domains passed):
 
 - `llm2rec`
 - `llmesr`
@@ -118,11 +118,7 @@ Active completed candidates:
 - `irllrec`
 - `elmrec`
 - `proex`
-
-Planned pending candidate:
-
-- `promax`, the last 2026 official baseline, excluded from completed main
-  tables until all declared domains pass exact-score gates.
+- `promax`
 
 Blocked/replaced:
 
@@ -171,8 +167,8 @@ Exit gate:
 
 - completed Pony baselines are imported or linked with provenance and exact
   same-candidate score audits;
-- `promax` is either completed across all declared domains or clearly excluded
-  from completed main tables as pending;
+- `promax` is completed across all 4 declared domains (beauty, books,
+  electronics, movies) with passing score gates;
 - no `reference_*_sft` scaffold is used as a main-table baseline;
 - the second migration stage has a TGL-Rec-side runner/importer plan, but the
   first reset stage does not copy large evidence archives into git.

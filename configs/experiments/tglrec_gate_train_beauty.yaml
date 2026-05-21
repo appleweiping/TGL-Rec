@@ -1,0 +1,52 @@
+# TGL-Rec Gate Training Config (Beauty domain, diagnostic)
+# Usage: python scripts/train_need_gate.py --config configs/experiments/tglrec_gate_train_beauty.yaml --output-dir outputs/gate_training/beauty/
+
+dataset:
+  domain: beauty
+  train_interactions: data/beauty/train_interactions.jsonl
+  item_records: data/beauty/item_records.jsonl
+  candidates_dir: data/beauty/same_candidate/
+
+time_window:
+  window_seconds: 604800  # 7 days
+  decay_lambda: 0.0000116  # 1/86400
+
+retrieval:
+  modes:
+    - transition_topk
+    - time_window_topk
+    - semantic_topk
+    - contrastive_transition_only
+    - recent_history_focused
+  top_k_per_candidate: 3
+  recent_history_items: 3
+
+gate:
+  input_dim: 25
+  use_interaction: true
+  learning_rate: 0.01
+  l2_reg: 0.001
+  max_epochs: 100
+  patience: 10
+  batch_size: 256
+
+scoring:
+  mode: reportable
+  trap_penalty_weight: 0.3
+  confidence_weight: 0.15
+  recency_weight: 0.2
+
+evaluation:
+  candidate_protocol: same_candidate
+  metrics:
+    - MRR
+    - HR@5
+    - HR@10
+    - NDCG@5
+    - NDCG@10
+
+experiment:
+  run_id: tglrec_gate_train_beauty
+  reportable: false
+  evidence_level: diagnostic
+  seed: 42

@@ -118,10 +118,8 @@ the paper strategy.
 
 Active Pony official baseline suite:
 
-- completed main-table candidates: `llm2rec`, `llmesr`, `llmemb`, `rlmrec`,
-  `irllrec`, `elmrec`, and `proex`;
-- pending planned baseline: `promax`, the last 2026 official baseline, excluded
-  from completed main tables until all declared domains pass exact-score gates;
+- completed main-table candidates (all 8, all 4 domains): `llm2rec`, `llmesr`,
+  `llmemb`, `rlmrec`, `irllrec`, `elmrec`, `proex`, and `promax`;
 - blocked/replaced: `setrec`, replaced by `elmrec`, `proex`, and `promax`.
 
 The old `reference_*_sft` scaffold variants are historical/non-reportable
