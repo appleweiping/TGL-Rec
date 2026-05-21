@@ -28,3 +28,14 @@ Implementation, testing, documentation updates.
 - 7 official baselines completed
 - LoRA fine-tuning implemented
 - Paper outline exists but no results written yet
+
+## Server Access
+
+Remote GPU server `pony-rec-gpu` is directly accessible via SSH (key-based auth):
+- **SSH command**: `ssh pony-rec-gpu`
+- **Host**: `125.71.97.70:15302`, User `ajifang`
+- **GPU**: NVIDIA RTX 4090 (49GB VRAM)
+- **Server project path**: `~/projects/pony-rec-rescue-shadow-v6`
+- **Local project path**: `D:\Research\TGL-Rec`
+
+Agents can execute server commands directly: `ssh pony-rec-gpu "<command>"`

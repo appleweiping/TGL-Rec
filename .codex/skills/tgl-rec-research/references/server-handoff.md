@@ -1,16 +1,29 @@
 # Server Handoff
 
-Use this reference when preparing shared-server commands or interpreting pasted logs.
+Use this reference when running commands on the shared GPU server or interpreting results.
+
+## Access
+
+Server `pony-rec-gpu` is directly accessible via SSH (key-based auth configured):
+```bash
+ssh pony-rec-gpu "<command>"
+```
+- Host: `125.71.97.70:15302`, User: `ajifang`
+- GPU: NVIDIA RTX 4090 (49GB VRAM)
+- Server project path: `~/projects/pony-rec-rescue-shadow-v6`
 
 ## Protocol
 
-Codex cannot inspect the shared GPU server directly. Give the user exact commands, wait for pasted logs or errors, and do not infer success without evidence.
+Agents can now run server commands directly. Do not guess server state — always verify with a command before claiming status.
 
-Before long jobs, include checks for:
+Before long jobs, check:
+
+```bash
+ssh pony-rec-gpu "cd ~/projects/pony-rec-rescue-shadow-v6 && git status --short && nvidia-smi --query-gpu=memory.used,memory.free --format=csv,noheader"
+```
 
 - current repo path and branch;
 - `git status --short`;
-- `git pull` or the exact commit expected;
 - `nvidia-smi`;
 - expected input files with `test -f` or `test -d`;
 - output directory preservation before reruns.

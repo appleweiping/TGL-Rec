@@ -52,8 +52,8 @@ main_table_policy:
     - irllrec
     - elmrec
     - proex
-  pending_baselines:
     - promax
+  pending_baselines: []
   blocked_baselines:
     - setrec
   historical_non_reportable_scaffolds:
@@ -155,12 +155,14 @@ official_baselines:
     display_name: ProMax official Qwen3-8B Profile
     official_repo: https://github.com/BlueGhostYi/ProRec
     pinned_commit: 48a3a3d5075c1112c793b9bfc78de9a8b000ffe2
-    status: official_pending_completion
-    domains_completed: [beauty]
-    domains_pending: [books, electronics, movies]
+    status: official_completed_declared_domains
+    domains: [beauty, books, electronics, movies]
     evidence_archives:
       beauty: D:/Research/Uncertainty/promax_beauty_official_qwen3base_evidence_2026-05-16_215011.tar.gz
-    pending_note: Last 2026 official baseline; keep planned but out of completed main table until all declared domains pass exact-score gates.
+      books: D:/Research/Uncertainty/promax_books_official_qwen3base_evidence_2026-05-17_072215.tar.gz
+      electronics: D:/Research/Uncertainty/promax_electronics_official_qwen3base_evidence_2026-05-17_185305.tar.gz
+      movies: D:/Research/Uncertainty/promax_movies_official_qwen3base_evidence_2026-05-17_225204.tar.gz
+    completion_note: All 4 domains passed exact-score gates (score_coverage=1.0, fully_scored_event_rate=1.0, missing_keys=0) verified 2026-05-20.
   setrec:
     method_id: setrec_official_qwen3base_identifier
     display_name: SETRec official Qwen3-8B Identifier
