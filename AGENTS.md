@@ -16,8 +16,10 @@ Current operating rules:
   self-review pass.
 - The active framework lives under `src/llm4rec/`; older `src/tglrec/` tooling is
   legacy/compatibility CPU tooling unless a task explicitly targets it.
-- Codex cannot see the shared server. Give the user exact server commands, wait
-  for pasted logs/errors, and do not infer server success without evidence.
+- Server `pony-rec-gpu` is directly accessible via SSH: `ssh pony-rec-gpu "<command>"`.
+  Host: `125.71.97.70:15302`, User: `ajifang`, GPU: RTX 4090 (49GB).
+  Server project path: `~/projects/pony-rec-rescue-shadow-v6`.
+  Do not guess server state — run a command to verify.
 - The active four-domain same-candidate artifact lives under
   `~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/` with
   task prefixes `beauty_supplementary_smallerN_100neg`,
@@ -44,6 +46,7 @@ Current operating rules:
 
 ## 0. Non-Negotiable Rules
 
+- **Mandatory update after every step**: After completing any stage, step, error fix, or contribution, MUST update BOTH shared memory (`D:\research\Vipin's Knowledgebase\memory\`) AND project documentation (README, CLAUDE.md, CONTEXT.md, codex_project_memory, phase plan). Then commit and push. Do not ask — just do it.
 - Do not implement toy demos, mocks, pseudo-code, or notebook-only experiments unless explicitly requested.
 - Do not fabricate experimental results, tables, logs, metrics, or paper claims.
 - Do not write paper conclusions before actual experiments are run.

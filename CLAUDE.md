@@ -20,13 +20,14 @@ You are working on TGL-Rec: Temporal Graph-to-Language Retrieval for Need-Aware 
 - Tests: `tests/unit/` + `tests/smoke/` + `tests/test_reportable_modules.py`
 
 ## Critical Rules
-1. Never fabricate experiment results or claim unverified improvements
-2. All baselines must run under the SAME candidate protocol (frozen)
-3. Evidence levels: smoke → pilot → diagnostic → controlled → official → paper-result
-4. 8 official baselines completed (all 4 domains): llm2rec, llmesr, llmemb, rlmrec, irllrec, elmrec, proex, promax
-5. No paper claims without statistical significance testing
-6. TGL-Rec is INDEPENDENT from Pony — never mix methods or modify Pony files
-7. Follow stage gates in `docs/EXPERIMENT_PLAN.md`
+1. **Every step/stage/fix/contribution → update memory + project docs + commit push.** No exceptions.
+2. Never fabricate experiment results or claim unverified improvements
+3. All baselines must run under the SAME candidate protocol (frozen)
+4. Evidence levels: smoke → pilot → diagnostic → controlled → official → paper-result
+5. 8 official baselines completed (all 4 domains): llm2rec, llmesr, llmemb, rlmrec, irllrec, elmrec, proex, promax
+6. No paper claims without statistical significance testing
+7. TGL-Rec is INDEPENDENT from Pony — never mix methods or modify Pony files
+8. Follow stage gates in `docs/EXPERIMENT_PLAN.md`
 
 ## Research Question
 Does the LLM actually use temporal/sequential signals, or just semantic similarity?
