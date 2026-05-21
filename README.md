@@ -41,13 +41,28 @@ What is not yet a paper result:
 - The current `protocol_v1` data (`movielens_full` and
   `amazon_multidomain_filtered_iterative_k3`) is useful for framework debugging and diagnostics, but
   too preliminary for final paper claims.
-- `history_only_sft` and `temporal_evidence_sft` have been retrained on the server after the
-  label-mask fix, but their post-fix rerank diagnostics still need to be run successfully after GPU
-  memory is cleared.
-- Pony official baselines are reused through manifest/provenance/score-gate
-  checks, not by copying large artifacts or rerunning a new baseline queue.
-  `promax` remains pending until all declared domains pass.
+- The reportable scoring path (learned need-gate + evidence scorer) is implemented and tested
+  locally but has not been trained on full-scale data yet.
+- Observation experiment (does base Qwen3-8B ignore temporal order?) has not been run.
 - No paper conclusion should be written from diagnostic runs.
+
+Phase 10 new implementation (commit 7250b2e, 2026-05-21):
+
+- `src/llm4rec/evidence/need_state.py`: NeedStateEncoder (user temporal state: drift,
+  transition pressure, gap, entropy).
+- `src/llm4rec/evidence/need_gate.py`: LearnedNeedGate (26-param logistic gate, decides
+  when to trust temporal evidence over semantic similarity).
+- `src/llm4rec/evidence/reportable_scorer.py`: ReportableScorer (integrates gate + evidence
+  features into a trained scoring pipeline).
+- `scripts/train_need_gate.py`: Gate training from train-only data.
+- `scripts/prepare_lora_data.py`: LoRA training data with evidence text.
+- `scripts/run_observation.py`: Observation experiment (shuffled/reversed/recent-only variants).
+- `scripts/deploy_server.sh`: Independent server deployment (separate from Pony).
+- `docs/technical_design.md`: Full technical design with math formulation.
+- `docs/EXPERIMENT_PLAN.md`: ARIS-format experiment plan (6 blocks, ~700 GPU hours).
+
+Literature novelty confirmed (2026-05-21): differentiated from CETRec, G-Refer, FlexRec,
+and Temporal Awareness prompting. See `docs/technical_design.md` §2 for full comparison.
 
 Phase 10 server path now expects the large four-domain same-candidate package
 and reuses the Pony/Uncertainty official baseline suite rather than rebuilding a
@@ -96,7 +111,7 @@ The two projects use the same owner, data selection, candidate protocol, and
 Qwen3-8B declared-adaptation policy, so rerunning a different baseline set here
 would waste time and make the paper harder to align.
 
-Active completed main-table candidates:
+Active completed main-table candidates (all 8, all 4 domains):
 
 - `llm2rec`: LLM2Rec official Qwen3-8B + SASRec.
 - `llmesr`: LLM-ESR official Qwen3-8B + LLMESR-SASRec.
@@ -105,11 +120,7 @@ Active completed main-table candidates:
 - `irllrec`: IRLLRec official Qwen3-8B IntentRep.
 - `elmrec`: ELMRec official Qwen3-8B graph bridge.
 - `proex`: ProEx official Qwen3-8B profile baseline.
-
-Planned but not completed:
-
-- `promax`: final 2026 official baseline, excluded from completed main tables
-  until all declared domains pass exact same-candidate score gates.
+- `promax`: ProMax official Qwen3-8B profile (2026, completed all 4 domains).
 
 Blocked/replaced:
 
@@ -131,39 +142,42 @@ All main baseline rows must preserve:
 
    - [docs/codex_project_memory.md](docs/codex_project_memory.md)
    - [docs/phase10_master_plan.md](docs/phase10_master_plan.md)
+   - [docs/technical_design.md](docs/technical_design.md)
+   - [docs/EXPERIMENT_PLAN.md](docs/EXPERIMENT_PLAN.md)
    - [docs/server_runbook.md](docs/server_runbook.md)
 
-1. Clear GPU memory on the server and rerun the small post-label-mask LoRA diagnostic:
+1. Deploy TGL-Rec to server as independent project:
 
    ```bash
-   CUDA_VISIBLE_DEVICES=0 python -u scripts/run_lora_rerank_eval.py \
-     --config configs/experiments/paper_lora_8b_rerank_eval.yaml \
-     --base-model-path /home/ajifang/models/Qwen/Qwen3-8B \
+   # On server (~/projects/TGL-Rec/, conda env tglrec)
+   # See scripts/deploy_server.sh for full instructions
+   ```
+
+2. Run observation experiment (Block 1 — stage gate):
+
+   ```bash
+   CUDA_VISIBLE_DEVICES=0 python scripts/run_observation.py \
+     --domain beauty \
+     --model-path /home/ajifang/models/Qwen/Qwen3-8B \
+     --data-dir data/beauty_valid \
+     --output-dir outputs/observation/beauty/ \
      --limit 20 \
-     --top-m 50
-
-   python scripts/diagnose_lora_predictions.py \
-     --predictions outputs/paper_runs/protocol_v1/lora_8b/eval/predictions.jsonl \
-     --output-dir outputs/paper_runs/protocol_v1/lora_8b/eval/diagnostics
+     --variants base,shuffled,reversed,recent_only
    ```
 
-2. If the small diagnostic is sane, rerun `--limit 200` for diagnostic comparison only.
-3. Import the Week8 large same-candidate protocol when the adjacent project finishes:
+   If shuffled ≈ base → pain point confirmed, proceed.
+   If shuffled << base → LLM already uses temporal order, reformulate.
+
+3. Train need-gate on full data:
 
    ```bash
-   python scripts/import_week8_same_candidate.py \
-     --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/beauty_supplementary_smallerN_100neg_test_same_candidate \
-     --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/books_large10000_100neg_test_same_candidate \
-     --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/electronics_large10000_100neg_test_same_candidate \
-     --task-dir ~/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/movies_large10000_100neg_test_same_candidate \
-     --protocol-version protocol_week8_large10000_same_candidate
+   python scripts/train_need_gate.py \
+     --config configs/experiments/tglrec_gate_train_beauty.yaml \
+     --output-dir outputs/gate_training/beauty/
    ```
 
-4. Reuse/import Pony official baseline score and provenance artifacts through
-   `configs/baselines/pony_official_external.yaml`; do not copy large evidence
-   archives into git.
-5. Finish or explicitly keep pending `promax`; do not include it in completed
-   main tables until all declared domains pass exact-score gates.
+4. Prepare LoRA training data and train Stage 2 reranker.
+5. Run full comparison against 8 Pony official baselines (all completed).
 
 ## Core hypothesis
 
