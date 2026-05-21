@@ -217,6 +217,13 @@ senior-reference or other top-tier methods.
 
 ## Server Collaboration Protocol
 
+**Local is primary. Server is experiment-only.**
+
+- All code, docs, git commit/push happen locally (D:\research\TGL-Rec)
+- Server only does: `git pull` → execute experiments → output results
+- Never write code or commit from server
+- GitHub updates always come from local push
+
 Codex runs locally and cannot inspect the shared server directly. The user runs
 server commands and pastes logs or errors back.
 

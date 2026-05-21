@@ -48,6 +48,8 @@ Proposed answer: TDIG (Temporal Directed Item Graph) + learned need-gate + evide
 
 ## Server Access
 
+**Local is primary, server is experiment-only.** All code/docs/commits happen locally. Server only does `git pull` → run → output results. Never commit from server.
+
 Remote GPU server `pony-rec-gpu` is now directly accessible via SSH (key-based auth configured):
 - **SSH command**: `ssh pony-rec-gpu`
 - **Host**: `125.71.97.70`, Port `15302`, User `ajifang`
