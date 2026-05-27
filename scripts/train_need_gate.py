@@ -136,19 +136,18 @@ def main() -> None:
                 "weight": min(1.0, gt_temporal),
             })
 
-        for cand in random.sample(candidates, min(5, len(candidates))):
-            if cand == gt:
-                continue
+        neg_candidates = [c for c in candidates if c != gt]
+        sampled_negs = random.sample(neg_candidates, min(10, len(neg_candidates)))
+        for cand in sampled_negs:
             cand_rows = [r for r in retrieval.evidence if str(r.target_item) == cand]
             cand_features = ReportableScorer._extract_evidence_features(cand_rows)
-            cand_semantic = cand_features[6]
             cand_temporal = sum(cand_features[:6])
-            if cand_semantic > 0.2 and cand_temporal < cand_semantic * 0.5:
+            if cand_temporal < 0.1:
                 all_examples.append({
                     "need_state": need_vec,
                     "evidence_features": cand_features,
                     "label": 0,
-                    "weight": min(1.0, cand_semantic),
+                    "weight": 1.0,
                 })
 
     print(f"[gate-train] Generated {len(all_examples)} examples "
