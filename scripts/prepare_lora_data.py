@@ -68,7 +68,7 @@ def format_evidence_text(
         rec = item_records.get(item_id, {})
         title = rec.get("title", rec.get("name", item_id))
         if evidence_rows:
-            text = translator.translate_evidence_list(evidence_rows)
+            text = translator.translate(evidence_rows)
             lines.append(f"- {title}: {text}")
         else:
             lines.append(f"- {title}: No temporal evidence")
