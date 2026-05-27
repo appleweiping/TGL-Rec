@@ -77,6 +77,7 @@ def run_observation_variant(
     output_dir: Path,
     limit: int | None = None,
     seed: int = 42,
+    quantize_4bit: bool = False,
 ) -> dict:
     """Run one observation variant and save results."""
 
@@ -113,12 +114,22 @@ def run_observation_variant(
 
     print(f"[obs-{variant}] Loading model from {model_path}...")
     tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(
-        model_path,
-        torch_dtype=torch.bfloat16,
-        device_map="auto",
-        trust_remote_code=True,
-    )
+
+    load_kwargs = {
+        "trust_remote_code": True,
+        "device_map": "auto",
+    }
+    if quantize_4bit:
+        from transformers import BitsAndBytesConfig
+        load_kwargs["quantization_config"] = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.bfloat16,
+            bnb_4bit_quant_type="nf4",
+        )
+    else:
+        load_kwargs["torch_dtype"] = torch.bfloat16
+
+    model = AutoModelForCausalLM.from_pretrained(model_path, **load_kwargs)
     model.eval()
 
     predictions = []
@@ -234,6 +245,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--variants", default="base,shuffled,reversed,recent_only")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--quantize-4bit", action="store_true", help="Use 4-bit quantization (fits in ~6GB)")
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)
@@ -259,6 +271,7 @@ def main() -> None:
             output_dir=output_dir,
             limit=args.limit,
             seed=args.seed,
+            quantize_4bit=args.quantize_4bit,
         )
         all_metrics[variant] = metrics
 
