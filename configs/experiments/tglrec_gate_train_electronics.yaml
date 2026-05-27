@@ -1,11 +1,11 @@
-# TGL-Rec Gate Training Config (Beauty domain)
-# Usage: python scripts/train_need_gate.py --config configs/experiments/tglrec_gate_train_beauty.yaml --output-dir outputs/gate_training/beauty/
+# TGL-Rec Gate Training Config (Electronics domain)
+# Usage: python scripts/train_need_gate.py --config configs/experiments/tglrec_gate_train_electronics.yaml --output-dir outputs/gate_training/electronics/
 
 dataset:
-  domain: beauty
-  train_interactions: data/domains/beauty/train_interactions.jsonl
-  item_records: data/domains/beauty/item_records.jsonl
-  candidates_dir: data/domains/beauty/same_candidate/
+  domain: electronics
+  train_interactions: data/domains/electronics/train_interactions.jsonl
+  item_records: data/domains/electronics/item_records.jsonl
+  candidates_dir: data/domains/electronics/same_candidate/
 
 time_window:
   window_seconds: 604800  # 7 days
@@ -46,7 +46,7 @@ evaluation:
     - NDCG@10
 
 experiment:
-  run_id: tglrec_gate_train_beauty
+  run_id: tglrec_gate_train_electronics
   reportable: true
   evidence_level: formal
   seed: 42
