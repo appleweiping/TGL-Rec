@@ -302,9 +302,7 @@ def main() -> None:
         if args.quantize_4bit:
             from transformers import BitsAndBytesConfig
             load_kwargs["quantization_config"] = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_compute_dtype=torch.bfloat16,
-                bnb_4bit_quant_type="nf4",
+                load_in_8bit=True,
             )
         else:
             load_kwargs["torch_dtype"] = torch.bfloat16
