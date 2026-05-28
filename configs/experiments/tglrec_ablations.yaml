@@ -1,0 +1,84 @@
+# TGL-Rec Ablation Experiment Configs
+# Each ablation removes one component to measure its contribution
+# Run after main evaluation completes
+
+# Ablation 1: No temporal graph (only semantic similarity)
+no_temporal_graph:
+  description: "Remove TDIG evidence, keep only semantic similarity"
+  gate:
+    force_alpha: 0.0  # always trust semantic, never temporal
+  retrieval:
+    modes:
+      - semantic_topk
+    disable:
+      - transition_topk
+      - time_window_topk
+      - contrastive_transition_only
+
+# Ablation 2: No need-gate (fixed alpha=0.5)
+no_gate:
+  description: "Replace learned gate with fixed 0.5 interpolation"
+  gate:
+    force_alpha: 0.5
+    trained: false
+
+# Ablation 3: No semantic trap penalty
+no_trap_penalty:
+  description: "Remove semantic trap detection penalty"
+  scoring:
+    trap_penalty_weight: 0.0
+
+# Ablation 4: No time-window edges (only direct transitions)
+no_time_window:
+  description: "Remove time-window co-occurrence, keep only direct transitions"
+  retrieval:
+    modes:
+      - transition_topk
+      - semantic_topk
+      - contrastive_transition_only
+    disable:
+      - time_window_topk
+
+# Ablation 5: No evidence text (gate score only, no LLM reranking)
+no_llm_rerank:
+  description: "Use gate scores directly without LLM reranking"
+  scoring:
+    mode: gate_only
+    use_llm: false
+
+# Ablation 6: No recency signal
+no_recency:
+  description: "Remove recency weighting from scoring"
+  scoring:
+    recency_weight: 0.0
+
+# Ablation 7: No contrastive evidence
+no_contrastive:
+  description: "Remove contrastive (negative) evidence from retrieval"
+  retrieval:
+    modes:
+      - transition_topk
+      - time_window_topk
+      - semantic_topk
+      - recent_history_focused
+    disable:
+      - contrastive_transition_only
+
+# Ablation 8: Full model (reference, no ablation)
+full_model:
+  description: "Complete TGL-Rec with all components"
+  gate:
+    trained: true
+  retrieval:
+    modes:
+      - transition_topk
+      - time_window_topk
+      - semantic_topk
+      - contrastive_transition_only
+      - recent_history_focused
+  scoring:
+    mode: reportable
+    trap_penalty_weight: 0.3
+    confidence_weight: 0.15
+    recency_weight: 0.2
+    use_llm: true

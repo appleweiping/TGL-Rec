@@ -66,26 +66,41 @@ Components:
 
 ## 6. Experiments
 
-Datasets:
+Datasets (4 domains, same-candidate protocol from Pony):
 
-- MovieLens-1M/20M.
-- Amazon category datasets.
-- Steam/Yelp if included.
+- Amazon Beauty (973 users, 101 candidates each)
+- Amazon Books (10,000 users, 101 candidates each)
+- Amazon Electronics (10,000 users, 101 candidates each)
+- Amazon Movies (10,000 users, 101 candidates each)
 
-Baselines:
+Official Baselines (8, from Pony/Uncertainty shared protocol):
 
-- popularity, item-kNN, BPR-MF;
-- LightGCN;
-- GRU4Rec, SASRec, BERT4Rec, TiSASRec;
-- LLM-SRec-style or updated LLM4Rec baselines;
-- G-Refer-style static graph-to-language comparator.
+- LLM2Rec (LLM-based collaborative filtering)
+- LLM-ESR (LLM enhancement for sequential recommendation)
+- LLMEmb (LLM embedding for recommendation)
+- RLMRec (representation learning meets LLM recommendation)
+- IRLLRec (intent-aware reinforcement learning LLM recommendation)
+- ELMRec (efficient LLM recommendation)
+- ProEx (profile-based explanation recommendation)
+- ProMax (profile maximization recommendation)
+
+All baselines use Qwen3-8B backbone, same splits, same candidates, same metrics.
 
 Metrics:
 
-- HR/NDCG/MRR@K;
-- diagnostic metrics;
-- efficiency;
-- explanation faithfulness if explanation is evaluated.
+- MRR, HR@5, HR@10, NDCG@5, NDCG@10
+- Parse success rate, candidate adherence
+- Paired statistical tests (McNemar, Wilcoxon signed-rank)
+
+Ablations (7 variants):
+
+- No temporal graph (alpha forced to 0)
+- No need-gate (fixed alpha=0.5)
+- No semantic trap penalty
+- No time-window edges
+- No LLM reranking (gate scores only)
+- No recency signal
+- No contrastive evidence
 
 ## 7. Results
 
