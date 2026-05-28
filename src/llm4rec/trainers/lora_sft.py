@@ -201,13 +201,32 @@ def _training_device_map(device_map: str) -> str | dict[str, int]:
 
 
 def _tokenize_sft(row: dict[str, Any], tokenizer: Any, max_seq_length: int) -> dict[str, Any]:
-    prefix, assistant = _split_sft_text(row)
+    messages = list(row["messages"])
+    if not messages or messages[-1].get("role") != "assistant":
+        raise ValueError("SFT row must end with an assistant message")
+
+    prefix_messages = messages[:-1]
+    full_messages = messages
+
+    # Use chat template for proper format matching with inference
+    if hasattr(tokenizer, "apply_chat_template"):
+        prefix_text = tokenizer.apply_chat_template(
+            prefix_messages, tokenize=False, add_generation_prompt=True
+        )
+        full_text = tokenizer.apply_chat_template(
+            full_messages, tokenize=False, add_generation_prompt=False
+        )
+    else:
+        prefix_text = "".join(f"{msg['role']}: {msg['content']}\n" for msg in prefix_messages)
+        prefix_text = f"{prefix_text}assistant: "
+        full_text = f"{prefix_text}{messages[-1]['content']}"
+
     eos_token = getattr(tokenizer, "eos_token", None)
-    if eos_token:
-        assistant = f"{assistant}{eos_token}"
-    full_text = f"{prefix}{assistant}"
+    if eos_token and not full_text.endswith(eos_token):
+        full_text = f"{full_text}{eos_token}"
+
     encoded = tokenizer(full_text, truncation=True, max_length=max_seq_length, padding=False)
-    prefix_encoded = tokenizer(prefix, truncation=True, max_length=max_seq_length, padding=False)
+    prefix_encoded = tokenizer(prefix_text, truncation=True, max_length=max_seq_length, padding=False)
     input_ids = list(encoded["input_ids"])
     labels = list(input_ids)
     prefix_length = min(len(prefix_encoded["input_ids"]), len(labels))
@@ -222,18 +241,6 @@ def _tokenize_sft(row: dict[str, Any], tokenizer: Any, max_seq_length: int) -> d
             labels[index] = -100
     encoded["labels"] = labels
     return encoded
-
-
-def _split_sft_text(row: dict[str, Any]) -> tuple[str, str]:
-    messages = list(row["messages"])
-    if not messages or messages[-1].get("role") != "assistant":
-        raise ValueError("SFT row must end with an assistant message")
-    prefix_messages = messages[:-1]
-    assistant_message = messages[-1]
-    prefix = "".join(f"{msg['role']}: {msg['content']}\n" for msg in prefix_messages)
-    prefix = f"{prefix}assistant: "
-    assistant = str(assistant_message["content"])
-    return prefix, assistant
 
 
 def _append_log(output_dir: Path, message: str) -> None:

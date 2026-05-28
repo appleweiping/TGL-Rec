@@ -39,3 +39,9 @@ training:
   seed: 2026
 readiness:
   output_dir: outputs/paper_runs/protocol_v1/lora_8b/readiness
+sft:
+  variant: tglrec_temporal_evidence
+  data_dir: outputs/lora_data/beauty
+  scaffold_only: false
+training_run:
+  output_dir: outputs/lora_adapters/beauty/seed_42
