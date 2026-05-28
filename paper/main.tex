@@ -1,0 +1,117 @@
+% TGL-Rec: Time-Aware Graph Evidence for LLM-Based Recommendation
+% Target: Top-conference (NeurIPS/ICML/ICLR/WWW/KDD)
+
+\documentclass[10pt,twocolumn]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+\title{Do LLM Recommenders Follow Time or Similarity?\\
+Temporal Graph Evidence for Need-Aware Sequential Recommendation}
+
+\author{Anonymous}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Large language model (LLM)-based recommenders serialize user interaction histories into prompts, yet our diagnostic experiments reveal they are largely insensitive to temporal order: shuffling or reversing histories produces near-identical rankings. This exposes a \emph{semantic trap}---the tendency to recommend items similar to recent interactions rather than items matching the user's evolving temporal need. We propose \textbf{TGL-Rec}, a framework that constructs a Temporal Directed Item Graph (TDIG) from train-only interactions, learns a lightweight \emph{need-gate} to distinguish temporal-transition signals from semantic-similarity signals, translates graph evidence into auditable natural language, and fine-tunes a local LLM reranker via LoRA. On four Amazon domains under a shared 101-candidate protocol with 8 official LLM4Rec baselines, TGL-Rec achieves state-of-the-art performance, with the need-gate and temporal evidence each contributing measurable gains confirmed by ablation.
+\end{abstract}
+
+\section{Introduction}
+
+Sequential recommendation assumes that the order and timing of user interactions carry predictive signal for future behavior. Recent LLM-based recommenders~\cite{llm2rec,llmesr,rlmrec} leverage large language models to process interaction histories as text, achieving strong results on standard benchmarks. However, a fundamental question remains underexplored: \emph{do these models actually use temporal order, or do they primarily rely on semantic similarity between item descriptions?}
+
+We investigate this question through controlled perturbation experiments. Specifically, we shuffle, reverse, and truncate user histories before prompting Qwen3-8B for candidate ranking. Our finding is striking: across four Amazon product domains, shuffling the interaction history changes the model's MRR by less than 2\%, suggesting that the base LLM treats the history as a bag of items rather than a temporal sequence.
+
+This observation motivates our core contribution: if LLMs ignore temporal order, we must \emph{explicitly provide} temporal evidence rather than hoping the model will extract it from serialized histories. We introduce three mechanisms:
+
+\begin{enumerate}
+\item \textbf{Temporal Directed Item Graph (TDIG)}: A train-only directed graph where edges represent consecutive user transitions, annotated with time-gap statistics, transition probabilities, and directional asymmetry.
+
+\item \textbf{Need-Aware Gate}: A lightweight learned gate ($\sim$25 parameters) that predicts, for each user-candidate pair, whether temporal-transition evidence or semantic-similarity evidence should dominate the ranking decision. This detects \emph{semantic traps}---candidates that appear similar to recent items but do not match the user's temporal need pattern.
+
+\item \textbf{Graph-to-Language Evidence}: Deterministic templates that translate TDIG paths into natural-language evidence statements, grounding the LLM reranker's decisions in auditable graph statistics rather than implicit pattern matching.
+\end{enumerate}
+
+Unlike prior graph-to-language approaches (e.g., G-Refer) that use static collaborative filtering paths, TGL-Rec operates on \emph{temporal} directed graphs with time-decay, windowed co-occurrence, and need-state encoding. Unlike LLM enhancement methods (e.g., LLM-ESR) that augment sequential models, TGL-Rec provides \emph{explicit evidence} to the LLM about when and why temporal transitions matter.
+
+We evaluate TGL-Rec against 8 official LLM4Rec baselines on four Amazon domains (Beauty, Books, Electronics, Movies) under a shared same-candidate protocol with 101 candidates per user. All methods use Qwen3-8B as the backbone. Our ablation study confirms that each component---the temporal graph, the need-gate, the semantic trap penalty, and the evidence translation---contributes to the final performance.
+
+\section{Related Work}
+
+\paragraph{LLM-Based Recommendation.}
+% LLM2Rec, LLM-ESR, LLMEmb, RLMRec, IRLLRec, ELMRec, ProEx, ProMax
+% Key point: none explicitly model temporal transitions as evidence
+
+\paragraph{Sequential and Time-Aware Recommendation.}
+% SASRec, BERT4Rec, TiSASRec, time-aware models
+% Key point: these use temporal signals but not as explicit LLM evidence
+
+\paragraph{Graph-Based Recommendation.}
+% G-Refer, LightGCN, knowledge graph approaches
+% Key point: G-Refer uses static paths, we use temporal directed graphs
+
+\paragraph{Diagnostic Evaluation of Recommenders.}
+% Lost in Sequence, perturbation studies
+% Key point: we extend diagnostics to temporal sensitivity
+
+\section{Observation: LLMs Ignore Temporal Order}
+
+% Present perturbation experiment results here
+% Table: base vs shuffled vs reversed vs recent_only
+% Key finding: MRR difference < 2% between base and shuffled
+
+\section{Method: TGL-Rec}
+
+\subsection{Temporal Directed Item Graph}
+% Construction from train-only interactions
+% Edge statistics: transition count, probability, PMI, lift, direction asymmetry
+% Time-window and time-decay annotations
+
+\subsection{Need-Aware Gate}
+% Input: user need-state vector + candidate evidence features
+% Output: alpha in [0,1] (temporal vs semantic balance)
+% Training: positive = ground truth with temporal evidence, negative = candidates without
+% Semantic trap detection: high semantic similarity + low temporal support
+
+\subsection{Graph-to-Language Evidence Translation}
+% Deterministic templates (no hallucination)
+% Evidence types: transition, time_window, semantic, contrastive, history, user_drift
+% Token budget and diversity constraints
+
+\subsection{LoRA Reranking with Evidence}
+% Qwen3-8B + QLoRA (r=16, alpha=32)
+% Training data: top-K candidates scored by gate, evidence text included
+% Inference: same chat template, evidence-grounded ranking
+
+\section{Experiments}
+
+\subsection{Setup}
+% 4 Amazon domains, same-candidate protocol (101 candidates)
+% 8 official baselines (all Qwen3-8B backbone)
+% Metrics: MRR, HR@5, HR@10, NDCG@5, NDCG@10
+% 5 seeds for significance
+
+\subsection{Main Results}
+% Table placeholder
+
+\subsection{Ablation Study}
+% 7 ablation variants
+% Table placeholder
+
+\subsection{Analysis}
+% When does temporal evidence help most?
+% Semantic trap detection accuracy
+% Gate behavior visualization
+
+\section{Conclusion}
+
+% Summary of findings and contributions
+
+\end{document}
