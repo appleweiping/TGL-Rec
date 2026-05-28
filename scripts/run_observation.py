@@ -284,7 +284,9 @@ def main() -> None:
             user_seqs[uid].append(str(row["item_id"]))
         for ex in examples:
             uid = str(ex.get("user_id", ""))
-            ex["history_items"] = user_seqs.get(uid, [])[-15:]
+            target = str(ex.get("target_item", ""))
+            hist = [item for item in user_seqs.get(uid, []) if item != target]
+            ex["history_items"] = hist[-15:]
 
     print(f"[obs] Loaded {len(examples)} examples from {ranking_file}")
 
