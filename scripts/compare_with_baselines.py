@@ -34,7 +34,7 @@ BASELINE_NAMES = [
 ]
 
 DOMAINS = ["beauty", "books", "electronics", "movies"]
-METRICS = ["MRR", "HR@5", "HR@10", "NDCG@5", "NDCG@10"]
+METRICS = ["MRR", "HR@5", "HR@10", "HR@20", "NDCG@5", "NDCG@10", "NDCG@20"]
 
 
 def load_tglrec_metrics(eval_dir: Path) -> dict[str, dict[str, float]]:

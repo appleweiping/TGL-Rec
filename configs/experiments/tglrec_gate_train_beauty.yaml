@@ -42,8 +42,10 @@ evaluation:
     - MRR
     - HR@5
     - HR@10
+    - HR@20
     - NDCG@5
     - NDCG@10
+    - NDCG@20
 
 experiment:
   run_id: tglrec_gate_train_beauty
