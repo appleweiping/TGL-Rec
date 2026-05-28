@@ -139,9 +139,15 @@ def run_observation_variant(
 
         history_items = ex.get("history_items", [])
         candidates = ex.get("candidate_items", [])
-        history_text = format_history(history_items, variant)
+        if history_items and isinstance(history_items[0], dict):
+            history_text = format_history(history_items, variant)
+        else:
+            history_text = format_history(
+                [{"item_id": h} for h in history_items] if history_items else [],
+                variant,
+            )
         cand_text = "\n".join(
-            f"{i+1}. {c.get('title', c.get('item_id', ''))}"
+            f"{i+1}. {c.get('title', c.get('item_id', '')) if isinstance(c, dict) else c}"
             for i, c in enumerate(candidates)
         )
         prompt = OBSERVATION_PROMPT_TEMPLATE.format(
@@ -168,7 +174,7 @@ def run_observation_variant(
             "variant": variant,
             "ground_truth": ex.get("target_item"),
             "raw_output": response,
-            "candidate_items": [c.get("item_id", "") for c in candidates],
+            "candidate_items": [c if isinstance(c, str) else c.get("item_id", "") for c in candidates],
         })
 
     elapsed = time.time() - t0
@@ -258,6 +264,21 @@ def main() -> None:
         sys.exit(1)
 
     examples = list(read_jsonl(ranking_file))
+
+    # Build user histories from train interactions if not in ranking data
+    train_file = data_dir.parent / "train_interactions.jsonl"
+    if train_file.exists() and examples and "history_items" not in examples[0]:
+        print(f"[obs] Building user histories from {train_file}...")
+        user_seqs: dict[str, list] = {}
+        for row in read_jsonl(train_file):
+            uid = str(row["user_id"])
+            if uid not in user_seqs:
+                user_seqs[uid] = []
+            user_seqs[uid].append(str(row["item_id"]))
+        for ex in examples:
+            uid = str(ex.get("user_id", ""))
+            ex["history_items"] = user_seqs.get(uid, [])[-15:]
+
     print(f"[obs] Loaded {len(examples)} examples from {ranking_file}")
 
     variants = [v.strip() for v in args.variants.split(",")]
