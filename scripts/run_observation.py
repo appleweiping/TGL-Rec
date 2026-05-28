@@ -78,6 +78,8 @@ def run_observation_variant(
     limit: int | None = None,
     seed: int = 42,
     quantize_4bit: bool = False,
+    model=None,
+    tokenizer=None,
 ) -> dict:
     """Run one observation variant and save results."""
 
@@ -91,46 +93,51 @@ def run_observation_variant(
     print(f"[obs-{variant}] Running {len(examples)} examples...")
     t0 = time.time()
 
-    # Lazy import to avoid loading model until needed
-    try:
-        from transformers import AutoModelForCausalLM, AutoTokenizer
-        import torch
-    except ImportError:
-        print("[obs] transformers/torch not available. Generating prompts only.")
-        prompts = []
-        for ex in examples:
-            history_items = ex.get("history_items", [])
-            candidates = ex.get("candidate_items", [])
-            history_text = format_history(history_items, variant)
-            cand_text = "\n".join(f"{i+1}. {c.get('title', c.get('item_id', ''))}" for i, c in enumerate(candidates))
-            prompt = OBSERVATION_PROMPT_TEMPLATE.format(
-                history_section=history_text,
-                candidates_section=cand_text,
+    if model is None or tokenizer is None:
+        try:
+            from transformers import AutoModelForCausalLM, AutoTokenizer
+            import torch
+        except ImportError:
+            print("[obs] transformers/torch not available. Generating prompts only.")
+            prompts = []
+            for ex in examples:
+                history_items = ex.get("history_items", [])
+                candidates = ex.get("candidate_items", [])
+                if history_items and isinstance(history_items[0], dict):
+                    history_text = format_history(history_items, variant)
+                else:
+                    history_text = format_history(
+                        [{"item_id": h} for h in history_items] if history_items else [], variant
+                    )
+                cand_text = "\n".join(
+                    f"{i+1}. {c if isinstance(c, str) else c.get('item_id', '')}"
+                    for i, c in enumerate(candidates)
+                )
+                prompt = OBSERVATION_PROMPT_TEMPLATE.format(
+                    history_section=history_text,
+                    candidates_section=cand_text,
+                )
+                prompts.append({"user_id": ex.get("user_id"), "prompt": prompt})
+            write_jsonl(variant_dir / "prompts.jsonl", prompts)
+            write_json(variant_dir / "status.json", {"status": "prompts_only", "n": len(prompts)})
+            return {"status": "prompts_only", "n": len(prompts)}
+
+        print(f"[obs-{variant}] Loading model from {model_path}...")
+        tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+        load_kwargs = {"trust_remote_code": True, "device_map": "auto"}
+        if quantize_4bit:
+            from transformers import BitsAndBytesConfig
+            load_kwargs["quantization_config"] = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.bfloat16,
+                bnb_4bit_quant_type="nf4",
             )
-            prompts.append({"user_id": ex.get("user_id"), "prompt": prompt})
-        write_jsonl(variant_dir / "prompts.jsonl", prompts)
-        write_json(variant_dir / "status.json", {"status": "prompts_only", "n": len(prompts)})
-        return {"status": "prompts_only", "n": len(prompts)}
+        else:
+            load_kwargs["torch_dtype"] = torch.bfloat16
+        model = AutoModelForCausalLM.from_pretrained(model_path, **load_kwargs)
+        model.eval()
 
-    print(f"[obs-{variant}] Loading model from {model_path}...")
-    tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
-
-    load_kwargs = {
-        "trust_remote_code": True,
-        "device_map": "auto",
-    }
-    if quantize_4bit:
-        from transformers import BitsAndBytesConfig
-        load_kwargs["quantization_config"] = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.bfloat16,
-            bnb_4bit_quant_type="nf4",
-        )
-    else:
-        load_kwargs["torch_dtype"] = torch.bfloat16
-
-    model = AutoModelForCausalLM.from_pretrained(model_path, **load_kwargs)
-    model.eval()
+    import torch
 
     predictions = []
     for idx, ex in enumerate(examples):
@@ -284,6 +291,29 @@ def main() -> None:
     variants = [v.strip() for v in args.variants.split(",")]
     all_metrics = {}
 
+    # Load model ONCE and reuse across variants
+    model, tokenizer = None, None
+    try:
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+        import torch
+        print(f"[obs] Loading model from {args.model_path}...")
+        tokenizer = AutoTokenizer.from_pretrained(args.model_path, trust_remote_code=True)
+        load_kwargs = {"trust_remote_code": True, "device_map": "auto"}
+        if args.quantize_4bit:
+            from transformers import BitsAndBytesConfig
+            load_kwargs["quantization_config"] = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.bfloat16,
+                bnb_4bit_quant_type="nf4",
+            )
+        else:
+            load_kwargs["torch_dtype"] = torch.bfloat16
+        model = AutoModelForCausalLM.from_pretrained(args.model_path, **load_kwargs)
+        model.eval()
+        print("[obs] Model loaded.")
+    except ImportError:
+        print("[obs] transformers/torch not available. Will generate prompts only.")
+
     for variant in variants:
         metrics = run_observation_variant(
             variant=variant,
@@ -293,6 +323,8 @@ def main() -> None:
             limit=args.limit,
             seed=args.seed,
             quantize_4bit=args.quantize_4bit,
+            model=model,
+            tokenizer=tokenizer,
         )
         all_metrics[variant] = metrics
 
