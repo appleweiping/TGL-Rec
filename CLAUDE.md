@@ -49,6 +49,20 @@ edges on sparse Amazon data → lost to popularity). New method:
 - Kill-test code: `scripts/rwpmi_zeroshot_beauty.py` + `scripts/run_rwpmi_beauty.sh` (self-gates on ≥17GB free GPU, never preempts).
 - Go/kill thresholds: `docs/redesign_decision_RW-PMI.md`.
 
+## After the performance table — required paper experiments
+Once the main performance result is done (RW-PMI vs 8 baselines × 8 domains), THREE experiments are
+required before submission (advisor-specified) — see `docs/paper_followup_experiments.md`:
+1. **Observation** (motivation): show the popularity-collapse / mis-calibration phenomenon. Use the
+   **baseline models** (no paid/SOTA general model needed), ~2 domains is enough (ICLR precedent),
+   reuse earlier observation material if found. Output a clean figure/table.
+2. **Ablation**: toggle off each RW-PMI component; a component whose removal doesn't hurt (or helps)
+   is badly designed — report honestly.
+3. **Hyperparameter analysis**: sweep lr / α / δ / τ / LoRA rank etc., plot performance curves
+   (matplotlib) to show stability.
+Plus a **framework overview figure** (PPT or LLM-generated). Main table + these 3 + overview ≈ ready
+to write and submit; other experiments supplemented later. **Do NOT start these until the
+performance table is complete.**
+
 ## Server Access
 
 **Local is primary, server is experiment-only.** All code/docs/commits happen locally. Server only does `git pull` → run → output results. Never commit from server.
