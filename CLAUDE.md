@@ -33,13 +33,22 @@ You are working on TGL-Rec: Temporal Graph-to-Language Retrieval for Need-Aware 
 ## Research Question
 Do LLM rerankers score candidates by user-conditional relevance, or do they collapse to popularity/semantic-similarity? The old temporal-graph premise ("LLMs ignore order") was never validated and is abandoned.
 
-## Method Architecture — RW-PMI (current; old TDIG core ABANDONED)
-Decided 2026-06-07 via tri-agent discussion (`docs/redesign_decision_RW-PMI.md`). The TDIG +
-26-param need-gate + graph-to-prose design is dropped (failed structurally: near-zero transition
-edges on sparse Amazon data → lost to popularity). New method:
-1. **set-PMI core**: `log p(c|H) − log p(c|null-user)` normalized **per-candidate inside the 101-set** (real within-list popularity debiasing).
-2. **residualized intent-witness gain**: leakage-free witness from history only, residualized vs PMI (kept only if it adds ≥0.007 NDCG@10 and corr<0.80).
-3. **token-length guard**; train with **InfoNCE over the 101-set + popularity-matched negatives** (LoRA), only after the zero-shot kill test passes.
+## Method Architecture — CC-PACE (current; supersedes RW-PMI and the old TDIG core)
+Decided 2026-06-07 via a ≥20-round tri-agent escalation (Opus-lead + Opus-#2 + GPT-5.5 xhigh);
+full design `docs/method_v2_decision_CC-PACE.md`, raw discussion in
+`outputs/method_redesign_v2_discussion/`. RW-PMI (`docs/redesign_decision_RW-PMI.md`) and the earlier
+TDIG/need-gate design are both superseded.
+
+**CC-PACE = Collaborative-Conditioned Panel-Anomaly Calibrated Exchangeability reranker.** One
+mechanism: a single Qwen3-8B forced-choice listwise judge over the 101-panel (unified schema +
+randomized label IDs + long-term profile slots + rendered frozen-CF neighbor evidence tokens) emits
+per-candidate evidence E_judge; rank by the residualized statistic
+`T_u(c) = E_judge(c) − m̂_LOO(content, facet, log-pop, CF_emb, r_CF, CF_cluster)` (symmetric LOO
+isotonic). CF is the conditioning σ-field (frozen, NOT a score head) — ablating CF tokens = text-only
+PACE with zero code-path change, which is the non-stitch proof. Dual null max(p_pop, p_sem) +
+split-conformal as a calibration/abstention layer (honest: conformal does NOT change within-panel
+NDCG; residualization + the listwise Plackett-Luce-trained LoRA drive ranking). Honest top risk:
+promax (beauty SOTA 0.1506) — beauty is profile-expressible, so profile slots are mandatory.
 
 ## Current Phase (Phase 10) — RW-PMI rollout
 - **8 domains**: sports, toys, home, tools (10k users) + books, electronics, movies (10k) + beauty (973).
