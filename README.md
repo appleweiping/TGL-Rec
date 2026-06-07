@@ -8,8 +8,8 @@ This repository is intended to become a top-tier recommendation-systems research
 
 ## Current phase
 
-Current status: **Phase 10, four-domain same-candidate protocol and stronger TGL-Rec framework
-integration**.
+Current status: **Phase 10, eight-domain same-candidate protocol with eight official
+baselines frozen for comparison (see `data/pony_official_baselines/`)**.
 
 Future Codex threads should start from `docs/codex_project_memory.md`. That file is the durable
 memory for the current research direction, senior baseline advice, server collaboration protocol,
@@ -64,13 +64,13 @@ Phase 10 new implementation (commit 7250b2e, 2026-05-21):
 Literature novelty confirmed (2026-05-21): differentiated from CETRec, G-Refer, FlexRec,
 and Temporal Awareness prompting. See `docs/technical_design.md` §2 for full comparison.
 
-Phase 10 server path now expects the large four-domain same-candidate package
-and reuses the Pony/Uncertainty official baseline suite rather than rebuilding a
-separate senior-reference baseline queue:
+The server path uses the large same-candidate package and the frozen official
+baseline suite (see [`data/pony_official_baselines/`](data/pony_official_baselines/))
+rather than rebuilding a separate baseline queue:
 
-- task families: `beauty_supplementary_smallerN_100neg`,
-  `books_large10000_100neg`, `electronics_large10000_100neg`, and
-  `movies_large10000_100neg`;
+- domains: `sports`, `toys`, `home`, `tools` (primary, large10000), plus the
+  additional `books`, `electronics`, `movies` (large10000) and `beauty`
+  (supplementary smaller-N) task families;
 - each event: one positive plus 100 negatives;
 - all methods use the same event IDs, candidates, splits, metrics, and evaluator;
 - all method score imports use schema `source_event_id,user_id,item_id,score`
@@ -106,26 +106,39 @@ python scripts/merge_lora_sft_data.py \
 
 ## Official Baseline Contract
 
-TGL-Rec now reuses the Pony/Uncertainty official same-candidate baseline suite.
-The two projects use the same owner, data selection, candidate protocol, and
-Qwen3-8B declared-adaptation policy, so rerunning a different baseline set here
-would waste time and make the paper harder to align.
+Our method is compared against **eight official LLM4Rec baselines** under a single
+shared protocol, across **eight benchmark domains**. The frozen baseline evidence
+(metrics, provenance, coverage audits) lives in
+[`data/pony_official_baselines/`](data/pony_official_baselines/) — see its `README.md`
+for the full protocol, and `baseline_comparison_8domains.csv` for the 64-row
+(8 domains x 8 baselines) master comparison table. Baseline numbers are frozen there;
+they are not re-derived per run.
 
-Active completed main-table candidates (all 8, all 4 domains):
+**Protocol** (identical for every baseline and for our method): same-candidate ranking,
+101 candidates per user event (1 positive + 100 negatives), Qwen3-8B backbone, 10,000
+test users per domain (Beauty is a supplementary 973-user set). Comparison variant:
+`official_code_qwen3base_default_hparams_declared_adaptation` — official code at a pinned
+commit, default hyper-parameters, declared candidate-schema adaptation.
+
+**Domains** (8): `sports`, `toys`, `home`, `tools` (primary), plus `books`,
+`electronics`, `movies`, `beauty` (additional).
+
+**The eight baselines** (all official Qwen3-8B):
 
 - `llm2rec`: LLM2Rec official Qwen3-8B + SASRec.
 - `llmesr`: LLM-ESR official Qwen3-8B + LLMESR-SASRec.
-- `llmemb`: LLMEmb official Qwen3-8B.
+- `llmemb`: LLMEmb official Qwen3-8B (embedding alignment).
 - `rlmrec`: RLMRec official Qwen3-8B GraphCL.
 - `irllrec`: IRLLRec official Qwen3-8B IntentRep.
 - `elmrec`: ELMRec official Qwen3-8B graph bridge.
 - `proex`: ProEx official Qwen3-8B profile baseline.
-- `promax`: ProMax official Qwen3-8B profile (2026, completed all 4 domains).
+- `promax`: ProMax official Qwen3-8B profile (2026).
 
-Blocked/replaced:
+> The 8th baseline slot is `llmemb`. Earlier drafts used `setrec`; it had only a
+> single-domain run and is not part of the shared protocol, so it is excluded and the
+> slot is held by `llmemb`.
 
-- `setrec`: blocked by upstream large-domain failure and replaced by `elmrec`,
-  `proex`, and `promax`.
+**Metrics**: HR@5/10/20, NDCG@5/10/20, MRR (ranking quality is the primary axis).
 
 All main baseline rows must preserve:
 

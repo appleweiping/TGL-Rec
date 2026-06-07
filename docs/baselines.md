@@ -1,8 +1,13 @@
 ﻿# Baselines
 
-Active paper-facing official baselines now come from the Pony/Uncertainty same-candidate suite, not from a new TGL-Rec-specific senior-reference queue. See `configs/baselines/pony_official_external.yaml`, `docs/reference_baseline_fidelity.md`, and `docs/reference_method_adaptation_map.md`.
+The paper-facing comparison uses **eight official LLM4Rec baselines** evaluated under a
+single shared same-candidate protocol across **eight domains**. The frozen evidence
+(per-(domain,baseline) metrics, provenance, coverage audits) and the 64-row master table
+live in [`../data/pony_official_baselines/`](../data/pony_official_baselines/); see also
+`configs/baselines/pony_official_external.yaml`, `docs/reference_baseline_fidelity.md`,
+and `docs/reference_method_adaptation_map.md`.
 
-Completed main-table candidates after manifest/provenance/score-gate checks:
+The eight official baselines (all official Qwen3-8B, completed across the 8 domains):
 
 - `llm2rec`;
 - `llmesr`;
@@ -10,15 +15,14 @@ Completed main-table candidates after manifest/provenance/score-gate checks:
 - `rlmrec`;
 - `irllrec`;
 - `elmrec`;
-- `proex`.
+- `proex`;
+- `promax`.
 
-Pending/planned:
+Not part of the shared protocol:
 
-- `promax`, excluded from completed main tables until all declared domains pass.
+- `setrec` — only a single-domain run exists, so it is excluded from the main comparison;
+  the 8th slot is held by `llmemb`.
 
-Blocked/replaced:
-
-- `setrec`, replaced by `elmrec`, `proex`, and `promax`.
 Implemented smoke/pre-experiment baselines:
 
 - random;
