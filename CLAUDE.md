@@ -14,7 +14,8 @@ You are working on TGL-Rec: Temporal Graph-to-Language Retrieval for Need-Aware 
 ## Quick Context
 - GitHub: https://github.com/appleweiping/TGL-Rec
 - Stage: Phase 10 — reportable scoring path implemented, awaiting server deployment
-- Branch: `codex/phase9e-lora-rerank-eval` (active), `main` (stable)
+- Branch: `main` is the active CC-PACE mainline (work directly off `main`; the old
+  `feat/official-baseline-evidence-8domains` and `codex/phase9e-lora-rerank-eval` are historical).
 - Core code: `src/llm4rec/` (active framework), `src/tglrec/` (legacy CPU tools)
 - Configs: `configs/` (790+ YAML files)
 - Tests: `tests/unit/` + `tests/smoke/` + `tests/test_reportable_modules.py`
