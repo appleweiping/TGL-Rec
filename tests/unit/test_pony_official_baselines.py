@@ -26,8 +26,9 @@ def test_pony_official_manifest_records_active_baseline_suite() -> None:
         "irllrec",
         "elmrec",
         "proex",
+        "promax",
     ]
-    assert result["pending"] == ["promax"]
+    assert result["pending"] == []
     assert result["blocked"] == ["setrec"]
     assert result["baseline_count"] == 9
 

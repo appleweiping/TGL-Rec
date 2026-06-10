@@ -8,8 +8,9 @@ This repository is intended to become a top-tier recommendation-systems research
 
 ## Current phase
 
-Current status: **Phase 10, eight-domain same-candidate protocol with eight official
-baselines frozen for comparison (see `data/pony_official_baselines/`)**.
+Current status: **Phase 10 — method = CC-PACE (implemented, see `docs/HOW_TO_RUN_CC_PACE.md`);
+eight-domain same-candidate protocol with eight official baselines frozen for comparison
+(`data/pony_official_baselines/`). Beauty-first rollout; no experiments run yet.**
 
 Future Codex threads should start from `docs/codex_project_memory.md`. That file is the durable
 memory for the current research direction, senior baseline advice, server collaboration protocol,
@@ -202,7 +203,14 @@ Many LLM4Rec pipelines appear sequential because the prompt is ordered, but the 
 
 ## Planned method in one line
 
-Build a temporal directed item-transition graph from user histories, retrieve time-aware paths around a user and candidate items, translate those paths into compact natural-language evidence, and use a lightweight gated reranker plus optional dynamic GNN / LLM channel to rank candidates.
+**CC-PACE** (current method; supersedes the earlier temporal-graph design): a single Qwen3-8B
+forced-choice listwise judge scores the whole 101-candidate panel (unified schema + randomized label
+IDs + long-term profile slots + rendered frozen-CF neighbour evidence) and we rank by the
+**residualized panel-anomaly statistic** `T_u(c) = E_judge(c) − m̂_LOO(content, facet, log-pop, CF
+nuisance)` — i.e. the candidate whose judge evidence is most anomalous relative to the panel's own
+popularity/CF-matched empirical null. Collaborative signal is the conditioning σ-field, never a fused
+score head (non-stitch). Full design `docs/method_v2_decision_CC-PACE.md`; how to run
+`docs/HOW_TO_RUN_CC_PACE.md`; code `src/llm4rec/methods/cc_pace/` + `llm4rec.rankers.CCPaceRanker`.
 
 ## Main deliverables
 

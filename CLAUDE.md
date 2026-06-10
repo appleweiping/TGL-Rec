@@ -50,16 +50,25 @@ split-conformal as a calibration/abstention layer (honest: conformal does NOT ch
 NDCG; residualization + the listwise Plackett-Luce-trained LoRA drive ranking). Honest top risk:
 promax (beauty SOTA 0.1506) — beauty is profile-expressible, so profile slots are mandatory.
 
-## Current Phase (Phase 10) — RW-PMI rollout
+**IMPLEMENTED** in `src/llm4rec/methods/cc_pace/` (config/schema/judge/hf_judge/residualizer/
+conformal/cf_conditioning/statistic), ranker `llm4rec.rankers.CCPaceRanker`, trainer
+`llm4rec.trainers.cc_pace_trainer`, driver `scripts/cc_pace_beauty.py` + `scripts/run_cc_pace_beauty.sh`
+(GPU-gated), tests `tests/unit/test_cc_pace_*.py` (10, CPU-passing). **To run experiments + write the
+paper, follow `docs/HOW_TO_RUN_CC_PACE.md`** — only CF-provider artifacts + profile-slot data-prep
+remain to wire on the server (documented seams; `--mock` proves the full pipeline).
+
+## Current Phase (Phase 10) — CC-PACE rollout
 - **8 domains**: sports, toys, home, tools (10k users) + books, electronics, movies (10k) + beauty (973).
-- **Plan**: run RW-PMI on **beauty first** (smallest, fast). Beauty SOTA bar = proex NDCG@10=0.1506.
+- **Plan**: run CC-PACE on **beauty first** (smallest, fast). Beauty SOTA bar = promax NDCG@10=0.1506.
   - If beauty reaches SOTA → roll the SAME method out to the other 7 domains.
   - If NOT → re-run the three-way ARIS discussion (Opus+Opus+GPT-5.5), redesign, and re-run beauty (formal) until it is genuinely SOTA on beauty before scaling.
-- Kill-test code: `scripts/rwpmi_zeroshot_beauty.py` + `scripts/run_rwpmi_beauty.sh` (self-gates on ≥17GB free GPU, never preempts).
-- Go/kill thresholds: `docs/redesign_decision_RW-PMI.md`.
+- **How to run / handoff: `docs/HOW_TO_RUN_CC_PACE.md`.** Driver `scripts/cc_pace_beauty.py`; server
+  runner `scripts/run_cc_pace_beauty.sh` (self-gates on ≥17GB free GPU, never preempts).
+- Go/kill thresholds + full design: `docs/method_v2_decision_CC-PACE.md`.
+- (Superseded, kept for history: `scripts/rwpmi_zeroshot_beauty.py`, `docs/redesign_decision_RW-PMI.md`.)
 
 ## After the performance table — required paper experiments
-Once the main performance result is done (RW-PMI vs 8 baselines × 8 domains), THREE experiments are
+Once the main performance result is done (CC-PACE vs 8 baselines × 8 domains), THREE experiments are
 required before submission (advisor-specified) — see `docs/paper_followup_experiments.md`:
 1. **Observation** (motivation): show the popularity-collapse / mis-calibration phenomenon. Use the
    **baseline models** (no paid/SOTA general model needed), ~2 domains is enough (ICLR precedent),
