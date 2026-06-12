@@ -9,7 +9,7 @@
 # Go/kill thresholds: docs/method_v2_decision_CC-PACE.md.
 set -u
 PROJ=/home/ajifang/projects/TGL-Rec
-PY=/home/ajifang/miniconda3/envs/tglrec/bin/python
+PY=/home/ajifang/miniconda3/envs/tglrec-lora/bin/python
 PONY_TASK=/home/ajifang/projects/pony-rec-rescue-shadow-v6/outputs/baselines/external_tasks/beauty_supplementary_smallerN_100neg_test_same_candidate/ranking_test.jsonl
 TASK="$PROJ/outputs/baselines/external_tasks/beauty_supplementary_smallerN_100neg_test_same_candidate/ranking_test.jsonl"
 TRAIN="$PROJ/data/domains/beauty/train_interactions.jsonl"
