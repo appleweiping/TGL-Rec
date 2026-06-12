@@ -27,7 +27,7 @@ class HFForcedChoiceModel:
         dtype: str = "bfloat16",
         device: str = "cuda",
         max_ctx: int = 32768,
-        suffix_batch: int = 128,
+        suffix_batch: int = 32,
     ) -> None:
         import torch  # noqa: F401  (import-time check)
         from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -65,7 +65,7 @@ def score_label_logprobs(
     *,
     device: str = "cuda",
     max_ctx: int = 32768,
-    suffix_batch: int = 128,
+    suffix_batch: int = 32,
 ) -> list[float]:
     """Length-normalized label log-probs after the prompt, via one shared prefill.
 
@@ -108,13 +108,13 @@ def score_label_logprobs(
                 ],
                 dim=1,
             )
-            # 2) batched short forward over the cached prefix (fresh expanded cache
-            # per chunk; cache.update() concatenates, leaving the prompt cache clean).
-            # use_cache=True: some transformers versions drop past_key_values entirely
-            # when use_cache is False, which would silently break the shared prefill.
+            # 2) batched short forward over the cached prefix. _expand_past builds a
+            # NEW cache from zero-copy .expand views, so the prompt cache is never
+            # mutated and per-chunk memory stays transient (use_cache=False verified
+            # to honour past_key_values on transformers 5.7: maxdiff 1e-7 vs naive).
             batch_past = _expand_past(prefill.past_key_values, bsz)
             logits = model(
-                suffix, attention_mask=attn, past_key_values=batch_past, use_cache=True
+                suffix, attention_mask=attn, past_key_values=batch_past, use_cache=False
             ).logits  # [bsz, max_len, V]
             logp = torch.log_softmax(logits.float(), dim=-1)
             for b, t in enumerate(chunk):
@@ -131,11 +131,24 @@ def score_label_logprobs(
 
 
 def _expand_past(past, batch_size: int):
-    """Expand a batch-1 KV cache to ``batch_size`` (legacy tuple or Cache API)."""
-    if hasattr(past, "batch_repeat_interleave"):  # transformers Cache object
-        return past.batch_repeat_interleave(batch_size)
-    if hasattr(past, "to_legacy_cache"):
-        past = past.to_legacy_cache()
+    """Build a NEW batch-``batch_size`` cache from zero-copy views of a batch-1 cache.
+
+    Never mutates ``past`` (DynamicCache.batch_repeat_interleave is IN-PLACE and
+    returns None on transformers 5.x, so it must not be used on the shared prompt
+    cache). Supports the 5.x ``cache.layers`` API and the legacy tuple format.
+    """
+    if hasattr(past, "layers"):  # transformers 5.x Cache API
+        from transformers.cache_utils import DynamicCache
+
+        new = DynamicCache()
+        for li, layer in enumerate(past.layers):
+            new.update(
+                layer.keys.expand(batch_size, -1, -1, -1),
+                layer.values.expand(batch_size, -1, -1, -1),
+                li,
+            )
+        return new
+    # legacy tuple-of-tuples format
     expanded = tuple(
         tuple(t.expand(batch_size, -1, -1, -1) for t in layer) for layer in past
     )
