@@ -63,29 +63,51 @@ def _naive_reference(model, tok, prompt, label_ids):
     return out
 
 
-def test_cached_scorer_matches_naive_full_forward():
+@pytest.mark.parametrize("suffix_batch", [8, 2, 1])
+def test_cached_scorer_matches_naive_full_forward(suffix_batch):
     model = _tiny_model()
     tok = CharTokenizer()
     prompt = "User bought serum and shampoo.\nCandidates:\n[000] serum\n[001] brush\nBest label:"
     labels = [f"[{i:03d}]" for i in range(7)]
 
-    fast = score_label_logprobs(model, tok, prompt, labels, device="cpu", max_ctx=256)
+    fast = score_label_logprobs(
+        model, tok, prompt, labels, device="cpu", max_ctx=256, suffix_batch=suffix_batch
+    )
     ref = _naive_reference(model, tok, prompt, labels)
     assert len(fast) == len(ref) == 7
     for f, r in zip(fast, ref):
         assert abs(f - r) < 1e-4, (f, r)
 
 
-def test_cached_scorer_is_order_independent():
-    """Reusing+cropping the prompt cache must not let label N contaminate label N+1."""
+def test_sequential_fallback_matches_batched():
+    """The OOM fallback path (batch-1 + cache crop) must agree with the batched path."""
+    from llm4rec.methods.cc_pace.hf_judge import _score_one_sequential
+
+    import torch
+
     model = _tiny_model()
     tok = CharTokenizer()
     prompt = "History: toner, sunscreen.\nBest label:"
     labels = [f"[{i:03d}]" for i in range(5)]
-    fwd = score_label_logprobs(model, tok, prompt, labels, device="cpu", max_ctx=256)
-    rev = score_label_logprobs(model, tok, prompt, list(reversed(labels)), device="cpu", max_ctx=256)
-    for f, r in zip(fwd, reversed(rev)):
-        assert abs(f - r) < 1e-5
+    batched = score_label_logprobs(model, tok, prompt, labels, device="cpu", max_ctx=256)
+
+    p_ids = tok(prompt).input_ids
+    with torch.no_grad():
+        prefill = model(p_ids, use_cache=True)
+        first_row = torch.log_softmax(prefill.logits[0, -1, :].float(), dim=-1)
+        seq_vals = [
+            _score_one_sequential(
+                model,
+                tok(label, add_special_tokens=False).input_ids[0],
+                prefill.past_key_values,
+                p_ids.shape[1],
+                first_row,
+                "cpu",
+            )
+            for label in labels
+        ]
+    for b, s in zip(batched, seq_vals):
+        assert abs(b - s) < 1e-5
 
 
 def test_cached_scorer_ranks_consistently_with_variable_label_lengths():
@@ -93,7 +115,9 @@ def test_cached_scorer_ranks_consistently_with_variable_label_lengths():
     tok = CharTokenizer()
     prompt = "History: lipstick, mascara.\nBest label:"
     labels = ["[01]", "[002]", "[3]", "[0004]"]  # heterogeneous token lengths
-    fast = score_label_logprobs(model, tok, prompt, labels, device="cpu", max_ctx=256)
+    fast = score_label_logprobs(
+        model, tok, prompt, labels, device="cpu", max_ctx=256, suffix_batch=3
+    )
     ref = _naive_reference(model, tok, prompt, labels)
     order_fast = sorted(range(len(labels)), key=lambda i: -fast[i])
     order_ref = sorted(range(len(labels)), key=lambda i: -ref[i])
