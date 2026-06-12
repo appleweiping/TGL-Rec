@@ -63,23 +63,32 @@ def _naive_reference(model, tok, prompt, label_ids):
     return out
 
 
-@pytest.mark.parametrize("suffix_batch", [128, 3])
-def test_batched_scorer_matches_naive_full_forward(suffix_batch):
+def test_cached_scorer_matches_naive_full_forward():
     model = _tiny_model()
     tok = CharTokenizer()
     prompt = "User bought serum and shampoo.\nCandidates:\n[000] serum\n[001] brush\nBest label:"
     labels = [f"[{i:03d}]" for i in range(7)]
 
-    fast = score_label_logprobs(
-        model, tok, prompt, labels, device="cpu", max_ctx=256, suffix_batch=suffix_batch
-    )
+    fast = score_label_logprobs(model, tok, prompt, labels, device="cpu", max_ctx=256)
     ref = _naive_reference(model, tok, prompt, labels)
     assert len(fast) == len(ref) == 7
     for f, r in zip(fast, ref):
         assert abs(f - r) < 1e-4, (f, r)
 
 
-def test_batched_scorer_ranks_consistently_with_variable_label_lengths():
+def test_cached_scorer_is_order_independent():
+    """Reusing+cropping the prompt cache must not let label N contaminate label N+1."""
+    model = _tiny_model()
+    tok = CharTokenizer()
+    prompt = "History: toner, sunscreen.\nBest label:"
+    labels = [f"[{i:03d}]" for i in range(5)]
+    fwd = score_label_logprobs(model, tok, prompt, labels, device="cpu", max_ctx=256)
+    rev = score_label_logprobs(model, tok, prompt, list(reversed(labels)), device="cpu", max_ctx=256)
+    for f, r in zip(fwd, reversed(rev)):
+        assert abs(f - r) < 1e-5
+
+
+def test_cached_scorer_ranks_consistently_with_variable_label_lengths():
     model = _tiny_model()
     tok = CharTokenizer()
     prompt = "History: lipstick, mascara.\nBest label:"
