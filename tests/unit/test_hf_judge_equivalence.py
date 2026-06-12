@@ -80,7 +80,7 @@ def test_cached_scorer_matches_naive_full_forward(suffix_batch):
 
 
 def test_sequential_fallback_matches_batched():
-    """The OOM fallback path (batch-1 + cache crop) must agree with the batched path."""
+    """The OOM fallback path (batch-1) must agree and leave the prompt cache intact."""
     from llm4rec.methods.cc_pace.hf_judge import _score_one_sequential
 
     import torch
@@ -106,8 +106,61 @@ def test_sequential_fallback_matches_batched():
             )
             for label in labels
         ]
+        if hasattr(prefill.past_key_values, "get_seq_length"):
+            assert prefill.past_key_values.get_seq_length() == p_ids.shape[1]
     for b, s in zip(batched, seq_vals):
         assert abs(b - s) < 1e-5
+
+
+def test_adaptive_batch_halving_after_simulated_oom(monkeypatch):
+    """A large suffix batch may OOM; halving must preserve exact label scores."""
+    import llm4rec.methods.cc_pace.hf_judge as hf_judge
+
+    model = _tiny_model()
+    tok = CharTokenizer()
+    prompt = "History: toner, sunscreen.\nBest label:"
+    labels = [f"[{i:03d}]" for i in range(6)]
+    original = hf_judge._score_chunk_batched
+    calls = []
+
+    def flaky_chunk(model, chunk, *args, **kwargs):
+        calls.append(len(chunk))
+        if len(chunk) > 1:
+            raise torch.cuda.OutOfMemoryError("simulated batch OOM")
+        return original(model, chunk, *args, **kwargs)
+
+    monkeypatch.setattr(hf_judge, "_score_chunk_batched", flaky_chunk)
+    fast = hf_judge.score_label_logprobs(
+        model, tok, prompt, labels, device="cpu", max_ctx=256, suffix_batch=4
+    )
+    ref = _naive_reference(model, tok, prompt, labels)
+
+    assert max(calls) == 4
+    assert 1 in calls
+    for f, r in zip(fast, ref):
+        assert abs(f - r) < 1e-4
+
+
+def test_batch_one_oom_uses_sequential_fallback(monkeypatch):
+    """If even batch-1 cache expansion OOMs, sequential scoring is still exact."""
+    import llm4rec.methods.cc_pace.hf_judge as hf_judge
+
+    model = _tiny_model()
+    tok = CharTokenizer()
+    prompt = "History: cleanser, moisturizer.\nBest label:"
+    labels = [f"[{i:03d}]" for i in range(4)]
+
+    def always_oom(*args, **kwargs):
+        raise torch.cuda.OutOfMemoryError("simulated batch-1 OOM")
+
+    monkeypatch.setattr(hf_judge, "_score_chunk_batched", always_oom)
+    fast = hf_judge.score_label_logprobs(
+        model, tok, prompt, labels, device="cpu", max_ctx=256, suffix_batch=1
+    )
+    ref = _naive_reference(model, tok, prompt, labels)
+
+    for f, r in zip(fast, ref):
+        assert abs(f - r) < 1e-4
 
 
 def test_cached_scorer_ranks_consistently_with_variable_label_lengths():

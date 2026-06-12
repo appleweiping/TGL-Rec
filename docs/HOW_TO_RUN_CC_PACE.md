@@ -50,6 +50,31 @@ bash scripts/run_cc_pace_beauty.sh 0        # 0 = all 973 users; small int = san
 This runs `full` + the ablations `text_only`, `no_residualizer`, `no_shrinkage`, `rich_residualizer`
 and writes one JSON each under `outputs/cc_pace_beauty/`.
 
+### Resuming `full` after a GPU OOM
+If `full.json.per_user.jsonl` exists but `full.json`/`go_verdict.json` is missing, do not rerun all
+variants. Sync the latest branch, verify the HF judge equivalence test in the server conda env, then
+resume only `full` from the per-user checkpoint and run the verdict script. The HF judge uses a
+read-only expanded-cache wrapper after the 2026-06-13 KV-cache OOM; it avoids Transformers
+`DynamicCache.update` materializing prompt-sized cache copies while preserving label logprob math.
+
+```bash
+cd /home/ajifang/projects/TGL-Rec
+/home/ajifang/miniconda3/envs/tglrec-lora/bin/python -m pytest tests/unit/test_hf_judge_equivalence.py -q
+
+OUTDIR=/home/ajifang/projects/TGL-Rec/outputs/cc_pace_beauty
+TASK=/home/ajifang/projects/TGL-Rec/outputs/baselines/external_tasks/beauty_supplementary_smallerN_100neg_test_same_candidate/ranking_test.jsonl
+free_mb=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits | head -1)
+[ "$free_mb" -ge 43000 ] || { echo "GPU not clean: ${free_mb} MiB free"; exit 3; }
+cp -a "$OUTDIR/full.json.per_user.jsonl" "$OUTDIR/full.json.per_user.jsonl.pre_resume_$(date +%Y%m%d_%H%M%S)"
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True,max_split_size_mb:128
+/home/ajifang/miniconda3/envs/tglrec-lora/bin/python scripts/cc_pace_beauty.py \
+  --task "$TASK" --out "$OUTDIR/full.json" --limit 0 --variant full \
+  --cf-artifacts "$OUTDIR/cf_artifacts.json" --profiles "$OUTDIR/profiles.json" \
+  > "$OUTDIR/full_resume_safe_$(date +%Y%m%d_%H%M%S).log" 2>&1
+/home/ajifang/miniconda3/envs/tglrec-lora/bin/python scripts/cc_pace_go_verdict.py \
+  --dir "$OUTDIR" --out "$OUTDIR/go_verdict.json"
+```
+
 ### Go / kill (vs SOTA bar 0.1506) — from docs/method_v2_decision_CC-PACE.md
 - **Zero-shot probe** (no training): if the residualized T carries no signal vs popularity → revisit
   before spending GPU on LoRA.

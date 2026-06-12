@@ -10,7 +10,9 @@ This repository is intended to become a top-tier recommendation-systems research
 
 Current status: **Phase 10 — method = CC-PACE (implemented, see `docs/HOW_TO_RUN_CC_PACE.md`);
 eight-domain same-candidate protocol with eight official baselines frozen for comparison
-(`data/pony_official_baselines/`). Beauty-first rollout; no experiments run yet.**
+(`data/pony_official_baselines/`). Beauty-first zero-shot gate in progress: server `text_only`
+finished at NDCG@10 = 0.1108, while `full` is being resumed after an HF judge KV-cache OOM fix
+before `go_verdict.json` decides GO vs KILL_OR_REFRAME.**
 
 Future Codex threads should start from `docs/codex_project_memory.md`. That file is the durable
 memory for the current research direction, senior baseline advice, server collaboration protocol,

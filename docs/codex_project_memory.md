@@ -341,3 +341,22 @@ At the end of every complex task, provide a concise completion note with:
 - Next: when full+text_only finish -> `cc_pace_go_verdict.py`; GO -> LoRA train + adapter
   eval vs 0.1506 (paired bootstrap) + remaining 3 zero-shot ablation variants; NOT GO ->
   3-seat ARIS redesign per CLAUDE.md rule 9. Gate: performance table before any paper text.
+
+## 2026-06-13 — Beauty full OOM diagnosed; HF judge recovery patch prepared
+
+- Server truth: `text_only` completed 973 users with NDCG@10 = 0.1108. `full` resumed only
+  65/973 users, then failed before writing `full.json`; `go_verdict.json` is missing, so the
+  GO/KILL decision has NOT happened and LoRA must NOT start.
+- Failure: Qwen3-8B label scoring OOMed while materializing expanded prompt KV cache in
+  `hf_judge._expand_past`; the old OOM fallback immediately retried singleton scoring with
+  shared `past` and `use_cache=True`, which could append to the shared prompt cache before crop.
+- Local patch: `hf_judge` now uses a read-only expanded-cache wrapper after the first safe-resume
+  attempt still peaked near 48GB. The wrapper avoids Transformers `DynamicCache.update` materializing
+  and retaining prompt-sized cache copies across all decoder layers; the scorer still supports
+  adaptive suffix-batch halving, clears CUDA cache fragments after each panel, and keeps the shared
+  prefill cache immutable. Added CPU/server tests for simulated OOM fallback and a
+  `cc_pace_go_verdict.py` smoke test.
+- Next server gate: sync this branch by git bundle, run
+  `/home/ajifang/miniconda3/envs/tglrec-lora/bin/python -m pytest tests/unit/test_hf_judge_equivalence.py -q`,
+  wait for a clean GPU (>=43GB free), resume only `full` from `full.json.per_user.jsonl`, then run
+  `scripts/cc_pace_go_verdict.py`. GO -> LoRA; KILL_OR_REFRAME -> 3-seat ARIS redesign.

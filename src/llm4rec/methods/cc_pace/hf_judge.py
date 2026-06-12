@@ -15,8 +15,11 @@ class HFForcedChoiceModel:
     length-normalized over the label's tokens.
 
     Cost model: the long panel prompt is prefilled ONCE per call (KV cache);
-    label suffixes are scored in small batched forwards (bounded cache copies)
-    with a sequential batch-1 fallback on OOM. One panel rendering = one
+    label suffixes are scored in small batched forwards (bounded cache copies).
+    If a chunk OOMs, the scorer halves the suffix batch and ultimately falls
+    back to a batch-1 no-cache-output forward. The private cache is a read-only
+    view wrapper, so suffix scoring does not materialize and retain a full copy
+    of the prompt KV cache. One panel rendering = one
     ~10k-token prefill + ceil(101/B) short forwards, instead of 101 full forwards.
     """
 
@@ -27,7 +30,7 @@ class HFForcedChoiceModel:
         dtype: str = "bfloat16",
         device: str = "cuda",
         max_ctx: int = 32768,
-        suffix_batch: int = 8,
+        suffix_batch: int = 4,
     ) -> None:
         import torch  # noqa: F401  (import-time check)
         from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -65,14 +68,18 @@ def score_label_logprobs(
     *,
     device: str = "cuda",
     max_ctx: int = 32768,
-    suffix_batch: int = 8,
+    suffix_batch: int = 4,
 ) -> list[float]:
     """Length-normalized label log-probs after the prompt, via one shared prefill.
 
-    Label suffixes are scored in bounded batches of ``suffix_batch``: each chunk
-    materializes ``suffix_batch`` copies of the prompt KV cache (~1.5GB each for
-    a 10k-token 8B prompt — B=8 is ~12GB, safe on a 48GB card; B=32+ OOMs). On
-    CUDA OOM the chunk falls back to sequential batch-1 scoring transparently.
+    Label suffixes are scored in bounded batches of ``suffix_batch``. Each chunk
+    materializes copies of the prompt KV cache, so the runtime treats the batch
+    size as an upper bound: CUDA OOM halves the active batch size, clears any
+    partially built cache, and eventually falls back to batch-1 scoring. The
+    scorer passes a read-only private view of the shared prompt cache to the
+    model, so even Transformers cache implementations that call ``update`` with
+    ``use_cache=False`` cannot mutate the shared prefill cache or retain a
+    prompt-sized copy across layers.
 
     Module-level (model/tokenizer injected) so the math is testable on CPU with a
     tiny in-memory model against a naive per-label full-forward reference.
@@ -97,19 +104,35 @@ def score_label_logprobs(
         first_logp_row = torch.log_softmax(prefill.logits[0, -1, :].float(), dim=-1)
 
         out: list[float] = [0.0] * len(label_ids)
-        for start in range(0, len(label_tok), max(1, suffix_batch)):
-            chunk = label_tok[start : start + max(1, suffix_batch)]
-            try:
-                vals = _score_chunk_batched(
-                    model, chunk, past, p_len, first_logp_row, pad_id, device
-                )
-            except torch.cuda.OutOfMemoryError:
-                torch.cuda.empty_cache()
-                vals = [
-                    _score_one_sequential(model, t, past, p_len, first_logp_row, device)
-                    for t in chunk
-                ]
+        batch = max(1, int(suffix_batch))
+        start = 0
+        while start < len(label_tok):
+            cur_batch = min(batch, len(label_tok) - start)
+            while True:
+                chunk = label_tok[start : start + cur_batch]
+                try:
+                    vals = _score_chunk_batched(
+                        model, chunk, past, p_len, first_logp_row, pad_id, device
+                    )
+                    break
+                except torch.cuda.OutOfMemoryError:
+                    _clear_cuda_after_oom(torch)
+                    if cur_batch <= 1:
+                        try:
+                            vals = [
+                                _score_one_sequential(
+                                    model, chunk[0], past, p_len, first_logp_row, device
+                                )
+                            ]
+                        except torch.cuda.OutOfMemoryError:
+                            _clear_cuda_after_oom(torch)
+                            raise
+                        break
+                    cur_batch = max(1, cur_batch // 2)
+                    batch = cur_batch
             out[start : start + len(vals)] = vals
+            start += len(vals)
+        _clear_cuda_after_oom(torch)
         return out
 
 
@@ -129,11 +152,18 @@ def _score_chunk_batched(model, chunk, past, p_len, first_logp_row, pad_id, devi
         [torch.ones((bsz, p_len), dtype=torch.long, device=device), attn_suffix.to(device)],
         dim=1,
     )
-    batch_past = _expand_past(past, bsz)  # materialized copy, freed after the chunk
-    logits = model(
-        suffix, attention_mask=attn, past_key_values=batch_past, use_cache=False
-    ).logits  # [bsz, max_len, V]
-    del batch_past
+    batch_past = None
+    try:
+        batch_past = _expand_past(past, bsz)  # materialized copy, freed after the chunk
+        logits = model(
+            suffix, attention_mask=attn, past_key_values=batch_past, use_cache=False
+        ).logits  # [bsz, max_len, V]
+    except torch.cuda.OutOfMemoryError:
+        if batch_past is not None:
+            del batch_past
+        del suffix, attn
+        _clear_cuda_after_oom(torch)
+        raise
     logp = torch.log_softmax(logits.float(), dim=-1)
     vals = []
     for b, t in enumerate(chunk):
@@ -146,52 +176,132 @@ def _score_chunk_batched(model, chunk, past, p_len, first_logp_row, pad_id, devi
             rows = logp[b, : t_len - 1, :]
             lp = lp + rows[torch.arange(t_len - 1), t_dev[1:]].sum()
         vals.append(float(lp.item()) / t_len)  # length-normalized
+    del batch_past, suffix, attn, logits, logp
     return vals
 
 
 def _score_one_sequential(model, t, past, p_len, first_logp_row, device):
-    """Batch-1 fallback reusing (and cropping) the shared prompt cache."""
+    """Batch-1 fallback using a private cache so shared prompt cache stays clean."""
     import torch
 
     t_dev = t.unsqueeze(0).to(device)
     t_len = t.shape[0]
     attn = torch.ones((1, p_len + t_len), dtype=torch.long, device=device)
-    logits = model(t_dev, attention_mask=attn, past_key_values=past, use_cache=True).logits
-    _crop_cache(past, p_len)
+    single_past = None
+    try:
+        single_past = _expand_past(past, 1)
+        logits = model(
+            t_dev, attention_mask=attn, past_key_values=single_past, use_cache=False
+        ).logits
+    except torch.cuda.OutOfMemoryError:
+        if single_past is not None:
+            del single_past
+        del t_dev, attn
+        _clear_cuda_after_oom(torch)
+        raise
     lp = first_logp_row[t_dev[0, 0]]
     if t_len > 1:
         logp = torch.log_softmax(logits[0, : t_len - 1, :].float(), dim=-1)
         lp = lp + logp[torch.arange(t_len - 1), t_dev[0, 1:]].sum()
-    return float(lp.item()) / t_len
+    val = float(lp.item()) / t_len
+    del single_past, t_dev, attn, logits
+    return val
 
 
 def _expand_past(past, batch_size: int):
-    """Build a NEW batch-``batch_size`` cache from a batch-1 cache (materialized).
+    """Build a private batch-``batch_size`` read-only view of a batch-1 cache.
 
     Never mutates ``past`` (DynamicCache.batch_repeat_interleave is IN-PLACE and
-    returns None on transformers 5.x). Memory cost is batch_size x prompt-cache
-    — callers must keep batch_size small (see score_label_logprobs).
+    returns None on transformers 5.x). The returned wrapper's ``update`` method
+    returns per-layer ``past + suffix`` tensors without storing them, avoiding
+    prompt-cache copies that accumulate across all decoder layers.
     """
-    if hasattr(past, "layers"):  # transformers 5.x Cache API
-        from transformers.cache_utils import DynamicCache
+    import torch
 
-        new = DynamicCache()
-        for li, layer in enumerate(past.layers):
-            new.update(
-                layer.keys.expand(batch_size, -1, -1, -1),
-                layer.values.expand(batch_size, -1, -1, -1),
-                li,
+    if hasattr(past, "layers"):  # transformers 5.x Cache API
+        try:
+            return _ReadOnlyExpandedCache(
+                [
+                    _ReadOnlyExpandedLayer(
+                        layer.keys.expand(batch_size, -1, -1, -1),
+                        layer.values.expand(batch_size, -1, -1, -1),
+                    )
+                    for layer in past.layers
+                ]
             )
-        return new
+        except torch.cuda.OutOfMemoryError:
+            _clear_cuda_after_oom(torch)
+            raise
     expanded = tuple(
         tuple(t.expand(batch_size, -1, -1, -1) for t in layer) for layer in past
     )
-    try:
-        from transformers.cache_utils import DynamicCache
+    return _ReadOnlyExpandedCache(
+        [_ReadOnlyExpandedLayer(layer[0], layer[1]) for layer in expanded]
+    )
 
-        return DynamicCache.from_legacy_cache(expanded)
+
+class _ReadOnlyExpandedLayer:
+    """Layer cache view whose update returns K/V for attention without retaining it."""
+
+    def __init__(self, keys, values) -> None:
+        self.keys = keys
+        self.values = values
+        self.is_initialized = True
+
+    def get_seq_length(self) -> int:
+        return self.keys.shape[-2]
+
+    def get_mask_sizes(self, query_length: int) -> tuple[int, int]:
+        return self.get_seq_length() + query_length, 0
+
+    def update(self, key_states, value_states, *args, **kwargs):
+        import torch
+
+        return (
+            torch.cat([self.keys, key_states], dim=-2),
+            torch.cat([self.values, value_states], dim=-2),
+        )
+
+
+class _ReadOnlyExpandedCache:
+    """Minimal Cache-compatible wrapper for Qwen/Llama attention scoring."""
+
+    is_compileable = False
+
+    def __init__(self, layers: list[_ReadOnlyExpandedLayer]) -> None:
+        self.layers = layers
+
+    def __len__(self) -> int:
+        return len(self.layers)
+
+    def get_seq_length(self, layer_idx: int = 0) -> int:
+        return self.layers[layer_idx].get_seq_length()
+
+    def get_mask_sizes(self, query_length: int, layer_idx: int) -> tuple[int, int]:
+        return self.layers[layer_idx].get_mask_sizes(query_length)
+
+    def update(self, key_states, value_states, layer_idx: int, *args, **kwargs):
+        return self.layers[layer_idx].update(
+            key_states,
+            value_states,
+            *args,
+            **kwargs,
+        )
+
+
+def _clear_cuda_after_oom(torch_module) -> None:
+    """Release CUDA cache fragments left by a failed cache expansion."""
+    cuda = getattr(torch_module, "cuda", None)
+    if cuda is None or not cuda.is_available():
+        return
+    import gc
+
+    gc.collect()
+    cuda.empty_cache()
+    try:
+        cuda.ipc_collect()
     except Exception:
-        return expanded
+        pass
 
 
 def _crop_cache(past, length: int) -> None:

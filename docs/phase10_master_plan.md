@@ -278,13 +278,17 @@ replace human judgment; it prevents forgetting import/check/eval order.
 
 ## Current Immediate Server Step
 
-The two fixed-label-mask control adapters have reportedly trained successfully.
-Before spending larger budget:
+The immediate gate is the CC-PACE beauty zero-shot GO/KILL decision from `docs/GOAL.md`:
 
-1. clear unrelated GPU processes;
-2. run `scripts/run_lora_rerank_eval.py --limit 20 --top-m 50`;
-3. run diagnostics only if `predictions.jsonl` exists;
-4. proceed to larger diagnostic only if output behavior is sane.
+1. `text_only` has completed 973 users (server NDCG@10 = 0.1108).
+2. `full` has only 65/973 checkpointed users and previously failed with Qwen3 KV-cache OOM before
+   writing `full.json` or `go_verdict.json`.
+3. Sync the HF judge OOM-recovery patch to the server, run
+   `/home/ajifang/miniconda3/envs/tglrec-lora/bin/python -m pytest tests/unit/test_hf_judge_equivalence.py -q`,
+   then resume only the `full` variant from `outputs/cc_pace_beauty/full.json.per_user.jsonl`.
+4. Run `scripts/cc_pace_go_verdict.py --dir outputs/cc_pace_beauty --out outputs/cc_pace_beauty/go_verdict.json`.
+5. `decision == "GO"` -> train CC-PACE LoRA; `KILL_OR_REFRAME` -> run the 3-seat ARIS redesign
+   before spending GPU on LoRA.
 
 The four-domain generated plan now also includes:
 
