@@ -80,7 +80,13 @@ def load_examples(task_path: str, limit: int | None):
     return rows
 
 
-def evaluate(ranker: CCPaceRanker, rows: list[dict]) -> dict:
+def evaluate(ranker: CCPaceRanker, rows: list[dict], *, partial_path: str = "") -> dict:
+    """Evaluate with per-user checkpointing.
+
+    Per-user metric rows stream to ``partial_path`` (.jsonl) as they complete;
+    on restart, already-scored users are skipped and their rows reused. The
+    per-user rows are also the input for paired-bootstrap significance tests.
+    """
     # index item metadata so the ranker can render schema fields
     item_records = []
     seen = set()
@@ -91,18 +97,45 @@ def evaluate(ranker: CCPaceRanker, rows: list[dict]) -> dict:
                 seen.add(it["item_id"])
     ranker.fit([], item_records)
 
-    n = len(rows)
-    agg = {f"NDCG@{k}": 0.0 for k in (5, 10, 20)}
-    agg.update({f"HR@{k}": 0.0 for k in (5, 10, 20)})
-    agg["MRR"] = 0.0
-    for r in rows:
-        res = ranker.rank(r["example"])
-        tgt = r["example"].target_item
-        for k in (5, 10, 20):
-            agg[f"NDCG@{k}"] += ndcg_at_k(res.items, tgt, k)
-            agg[f"HR@{k}"] += hit_rate_at_k(res.items, tgt, k)
-        agg["MRR"] += mrr_at_k(res.items, tgt, len(res.items))
-    return {k: v / n for k, v in agg.items()}
+    done: dict[str, dict] = {}
+    if partial_path and os.path.exists(partial_path):
+        with open(partial_path, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if line:
+                    d = json.loads(line)
+                    done[d["user_id"]] = d
+        print(f"resuming: {len(done)} users already scored in {partial_path}", flush=True)
+
+    partial_fh = open(partial_path, "a", encoding="utf-8") if partial_path else None
+    per_user: list[dict] = []
+    try:
+        for i, r in enumerate(rows):
+            uid = r["example"].user_id
+            if uid in done:
+                per_user.append(done[uid])
+                continue
+            res = ranker.rank(r["example"])
+            tgt = r["example"].target_item
+            row = {"user_id": uid}
+            for k in (5, 10, 20):
+                row[f"NDCG@{k}"] = ndcg_at_k(res.items, tgt, k)
+                row[f"HR@{k}"] = hit_rate_at_k(res.items, tgt, k)
+            row["MRR"] = mrr_at_k(res.items, tgt, len(res.items))
+            per_user.append(row)
+            if partial_fh:
+                partial_fh.write(json.dumps(row) + "\n")
+                partial_fh.flush()
+            if (i + 1) % 25 == 0:
+                so_far = sum(x["NDCG@10"] for x in per_user) / len(per_user)
+                print(f"[{i + 1}/{len(rows)}] running NDCG@10={so_far:.4f}", flush=True)
+    finally:
+        if partial_fh:
+            partial_fh.close()
+
+    n = max(1, len(per_user))
+    keys = [f"{m}@{k}" for m in ("NDCG", "HR") for k in (5, 10, 20)] + ["MRR"]
+    return {key: sum(x[key] for x in per_user) / n for key in keys}
 
 
 def main():
@@ -179,7 +212,8 @@ def main():
         profiles = payload.get("profiles", payload)
         ranker.set_profiles(profiles)
         print(f"profiles: {len(profiles)} users", flush=True)
-    metrics = evaluate(ranker, rows)
+    partial = args.out + ".per_user.jsonl" if not args.mock else ""
+    metrics = evaluate(ranker, rows, partial_path=partial)
 
     result = {
         "variant": args.variant,
