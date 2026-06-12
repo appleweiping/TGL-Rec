@@ -1,42 +1,34 @@
 # Project Context — TGL-Rec
 
-## Current State (as of 2026-05-21)
+## Current State (as of 2026-06-12)
 
 | Metric | Value |
 |--------|-------|
 | GitHub | https://github.com/appleweiping/TGL-Rec |
-| Commits | 51 |
-| Branch | codex/phase9e-lora-rerank-eval (active) |
-| Stage | Phase 10 — four-domain experiments (implementation started) |
-| Official baselines | 8 completed (all 4 domains, same-candidate protocol) |
-| Datasets | 4 domains (Beauty, Books, Electronics, Movies) |
-| Method | TDIG + graph-to-language evidence + learned need-gate + LoRA reranker |
-| LLM | Qwen3-8B (LoRA/QLoRA fine-tuning) |
+| Branch | main (CC-PACE mainline; phase9e branches are historical) |
+| Stage | Phase 10 — CC-PACE beauty-first run (data seams wired, ready for server) |
+| Official baselines | 8 methods × 8 domains, frozen (`data/pony_official_baselines/`) |
+| Setting | 8 domains, 101-candidate same-candidate, Qwen3-8B; beauty bar = promax NDCG@10 0.1506 |
+| Method | CC-PACE (Collaborative-Conditioned Panel-Anomaly Calibrated Exchangeability reranker) |
+| LLM | Qwen3-8B (frozen judge; LoRA via Plackett-Luce after zero-shot GO) |
 | Python | >=3.10 |
 | License | MIT |
 
-## Research Questions
-1. Do LLM-based recommenders actually use temporal/sequential signals?
-2. Can explicit temporal graph evidence improve LLM recommendation?
-3. Does need-aware gating outperform uniform evidence injection?
-4. How does the approach generalize across domains?
-
-## Phase History
-- Phase 1-4: Infrastructure, data preprocessing, baseline implementation
-- Phase 5-7: TDIG construction, evidence generation, method implementation
-- Phase 8: Diagnostics and ablation design
-- Phase 9: LoRA fine-tuning, evaluation framework
-- Phase 10 (CURRENT): Four-domain same-candidate protocol experiments
+## Research Question
+Do LLM rerankers score candidates by user-conditional relevance, or collapse to
+popularity/semantic similarity? (The old temporal-graph premise is abandoned; see CLAUDE.md.)
 
 ## Key Decisions
-- Same-candidate protocol: all methods rank the same candidate set (no cherry-picking)
-- Pony official baselines reused (shared infrastructure with TRUCE-Rec)
-- Evidence levels enforced: no paper claims without controlled experiments
-- Stage gates prevent premature advancement
+- Same-candidate protocol frozen: all methods rank the same 101 candidates per user
+- CF is a frozen conditioning σ-field (SASRec artifacts), never a score head
+- Evidence levels enforced: no paper claims without controlled experiments + significance
+- 2026-06-12: CF artifacts + profile slots data prep wired locally
+  (`scripts/build_cc_pace_cf_artifacts.py`, `scripts/build_cc_pace_profiles.py`,
+  `methods/cc_pace/text_facets.py`; driver takes `--cf-artifacts/--profiles`); 18 CPU tests green
 
 ## What's Next
-- [ ] Complete four-domain experiments under frozen protocol
-- [ ] Statistical significance testing (paired t-test, bootstrap CI)
-- [ ] Fill paper tables with official results
-- [ ] Write results and analysis sections
-- [ ] Internal review gate before submission
+- [ ] Server: pull main, build CF/profile artifacts, run beauty zero-shot kill test
+      (`scripts/run_cc_pace_beauty.sh 0`; GO = NDCG@10 ≥ 0.13 AND full > text_only)
+- [ ] If GO: LoRA training (Plackett-Luce + dCor), beauty formal eval vs 0.1506
+- [ ] If SOTA: roll out to 7 domains; else re-run 3-seat ARIS redesign
+- [ ] Then: observation / ablation / hyperparameter experiments + overview figure + paper

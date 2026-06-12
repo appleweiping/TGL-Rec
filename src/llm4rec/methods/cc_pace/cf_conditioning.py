@@ -21,7 +21,10 @@ trains collaborative parameters.
 
 from __future__ import annotations
 
+import gzip
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Protocol
 
 import numpy as np
@@ -82,3 +85,35 @@ class NullCFProvider:
 
     def nuisance(self, user_id: str, candidate_ids: list[str]) -> dict[str, np.ndarray]:
         return {}
+
+
+def load_cf_artifacts(path: str | Path) -> dict[str, Any]:
+    """Read a CF-artifact JSON (optionally .gz) written by build_cc_pace_cf_artifacts."""
+    path = Path(path)
+    opener = gzip.open if path.suffix == ".gz" else open
+    with opener(path, "rt", encoding="utf-8") as fh:
+        art = json.load(fh)
+    required = {"user_scores", "item_neighbors", "item_clusters"}
+    missing = required - set(art)
+    if missing:
+        raise ValueError(f"CF artifact {path} missing keys: {sorted(missing)}")
+    return art
+
+
+def provider_from_artifacts(art: dict[str, Any]) -> PrecomputedCFProvider:
+    """Materialize a PrecomputedCFProvider from a loaded artifact dict.
+
+    ``item_neighbors`` is stored once globally (neighbour titles are
+    user-independent); every user shares the same underlying dict, so this is
+    cheap regardless of user count.
+    """
+    user_scores: dict[str, dict[str, float]] = {
+        str(u): {str(i): float(s) for i, s in items.items()}
+        for u, items in art["user_scores"].items()
+    }
+    global_neighbors: dict[str, list[str]] = {
+        str(i): [str(t) for t in titles] for i, titles in art["item_neighbors"].items()
+    }
+    neighbors = {u: global_neighbors for u in user_scores}
+    clusters = {str(i): int(c) for i, c in art["item_clusters"].items()}
+    return PrecomputedCFProvider(scores=user_scores, neighbors=neighbors, clusters=clusters)

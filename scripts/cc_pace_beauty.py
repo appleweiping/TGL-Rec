@@ -113,6 +113,16 @@ def main():
     ap.add_argument("--mock", action="store_true", help="CPU mock judge (plumbing/CI only)")
     ap.add_argument("--adapter", default="", help="path to trained judge LoRA (optional)")
     ap.add_argument(
+        "--cf-artifacts",
+        default="",
+        help="CF artifact JSON from build_cc_pace_cf_artifacts.py (frozen SASRec signal)",
+    )
+    ap.add_argument(
+        "--profiles",
+        default="",
+        help="profiles JSON from build_cc_pace_profiles.py (train-history profile slots)",
+    )
+    ap.add_argument(
         "--variant",
         default="full",
         choices=["full", "text_only", "no_residualizer", "no_shrinkage", "rich_residualizer"],
@@ -136,9 +146,39 @@ def main():
 
         model = HFForcedChoiceModel(args.adapter or cfg.backbone_model)
 
+    cf_provider = None
+    item_pop: dict = {}
+    item_cat: dict = {}
+    if args.cf_artifacts:
+        from llm4rec.methods.cc_pace.cf_conditioning import (
+            load_cf_artifacts,
+            provider_from_artifacts,
+        )
+
+        art = load_cf_artifacts(args.cf_artifacts)
+        cf_provider = provider_from_artifacts(art)
+        item_pop = art.get("item_popularity", {})
+        item_cat = art.get("item_category", {})
+        print(f"CF artifacts: {len(art['user_scores'])} users scored", flush=True)
+
     rows = load_examples(args.task, args.limit or None)
+    # enrich candidate meta so the residualizer's log_pop / facet_bucket are real
+    if item_pop or item_cat:
+        for r in rows:
+            for it in r["items"]:
+                iid = it["item_id"]
+                if item_pop:
+                    it["popularity"] = float(item_pop.get(iid, 0.0))
+                if item_cat:
+                    it["category"] = item_cat.get(iid, "")
     print(f"loaded {len(rows)} beauty examples; variant={args.variant} mock={args.mock}", flush=True)
-    ranker = CCPaceRanker(cfg, model=model)
+    ranker = CCPaceRanker(cfg, model=model, cf_provider=cf_provider)
+    if args.profiles:
+        with open(args.profiles, encoding="utf-8") as fh:
+            payload = json.load(fh)
+        profiles = payload.get("profiles", payload)
+        ranker.set_profiles(profiles)
+        print(f"profiles: {len(profiles)} users", flush=True)
     metrics = evaluate(ranker, rows)
 
     result = {
@@ -148,6 +188,9 @@ def main():
         "sota_bar": SOTA_BAR,
         "beats_sota_ndcg10": metrics["NDCG@10"] >= SOTA_BAR["NDCG@10"],
         "mock": args.mock,
+        "cf_artifacts": bool(args.cf_artifacts),
+        "profiles": bool(args.profiles),
+        "adapter": args.adapter or None,
     }
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w", encoding="utf-8") as fh:

@@ -61,21 +61,26 @@ and writes one JSON each under `outputs/cc_pace_beauty/`.
   `rich_residualizer` and only late-fusion works → reposition as "panel-exchangeable calibration of a
   hybrid score" (honest fallback).
 
-## What still needs wiring before a REAL run (the only open implementation work)
-The method, ranker, scripts, tests, and ablation switches are all implemented and CPU-tested. Two
-pieces need real data plumbing on the server (deliberately left as thin, documented seams):
+## Data-prep seams — WIRED (2026-06-12; nothing left before a real run)
+Both seams are now implemented, tested (`tests/unit/test_cc_pace_artifacts.py`, 8 tests incl. a
+torch end-to-end builder test), and integrated into the driver + server runner:
 
-1. **CF provider artifacts** (`cf_conditioning.PrecomputedCFProvider`): produce, offline, the frozen
-   CF neighbours + scores + clusters per (user, candidate) from an existing collaborative model (the
-   repo already has a SASRec ranker/trainer). Populate the `scores/neighbors/clusters` dicts (or a
-   small loader) and pass the provider into `CCPaceRanker(..., cf_provider=...)`. Until then the ranker
-   uses `NullCFProvider` = text-only PACE (a valid ablation, not the headline method).
-2. **Profile slots** (`CCPaceRanker.set_profiles`): compress each user's TRAIN history into the profile
-   slots (top categories, liked brands, concerns, routine step, ingredient prefs, price band). A simple
-   history-aggregation pass; mandatory for beauty (promax is profile-strong).
+1. **CF provider artifacts** — `scripts/build_cc_pace_cf_artifacts.py` trains the repo's small
+   SASRec on `data/domains/<domain>/train_interactions.jsonl` (TRAIN only; coverage check showed
+   positives 95.1% / negatives 98.5% in-vocab, so no seen-ness leak) and writes one JSON with
+   `user_scores` (panel-z-scored), `item_neighbors` (top-5 CF-embedding cosine neighbour titles),
+   `item_clusters` (KMeans), plus `item_popularity` + `item_category` (title-lexicon facet) so the
+   residualizer's `log_pop`/`facet_bucket` nuisances are real. Load with
+   `cf_conditioning.load_cf_artifacts` + `provider_from_artifacts`.
+2. **Profile slots** — `scripts/build_cc_pace_profiles.py` aggregates each user's TRAIN-history
+   titles via `methods/cc_pace/text_facets.py` (beauty lexicons: category/routine/concern/
+   ingredient + brand heuristic) into the schema's profile slots. `price_band` is omitted (no price
+   data in the task files; the renderer skips empty slots).
 
-Both are pure data-prep from artifacts the project already produces. The `--mock` driver path proves
-the full statistic→metric pipeline end-to-end without them.
+The driver takes `--cf-artifacts` and `--profiles`; `scripts/run_cc_pace_beauty.sh` bootstraps the
+frozen task file from Pony's external_tasks (read-only copy), builds both artifacts on CPU if
+missing, then runs all variants with them attached. `text_only` still ablates CF via config switches
+(zero code-path change — the non-stitch proof is intact).
 
 ## LoRA training (after a GO)
 `llm4rec.trainers.cc_pace_trainer.build_training_plan(cfg)` emits the declarative plan; the loss is
