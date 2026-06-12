@@ -314,3 +314,30 @@ At the end of every complex task, provide a concise completion note with:
 - whether the task is complete or what remains blocked;
 - the next step or plan;
 - the current project/experiment gate toward ending the experimental phase.
+
+## 2026-06-12 — CC-PACE data seams wired; beauty zero-shot GO pair running
+
+- Data seams DONE (branch `feat/cc-pace-data-seams`): `build_cc_pace_cf_artifacts.py`
+  (frozen SASRec -> panel-z scores / neighbour titles / KMeans clusters / train pop /
+  title-lexicon category), `build_cc_pace_profiles.py` + `methods/cc_pace/text_facets.py`,
+  driver `--cf-artifacts/--profiles`, runner bootstraps the frozen task file from Pony.
+  Coverage audit: positives 95.1% / negatives 98.5% in train vocab (no seen-ness leak).
+- `hf_judge.py` rewritten for feasibility: shared prefill + bounded-batch (B=8) label
+  scoring with sequential OOM fallback; 19.5s/user measured (was 71s sequential; the
+  original per-label full-forward was months-infeasible). Equivalence tests (5) green —
+  they caught transformers 5.x `batch_repeat_interleave` returning None (in-place) and a
+  46.8GB cache-materialization OOM. Driver checkpoints per-user metrics (resume + paired
+  bootstrap input).
+- LoRA driver ready: `train_cc_pace_lora.py` (single-digit-token PL surrogate so all 101
+  scores live in one graph; prefix-trained SASRec for train-panel CF — pseudo-positive
+  excluded; fold A/B saved for split-conformal; torch dCor parity-tested). GO verdict
+  script: `cc_pace_go_verdict.py`.
+- RUNNING on server (queue `~/projects/gpu_queue_20260612.sh`): text_only 973 -> full 973
+  (resume) -> then TRUCE-Rec Stage-B (separate project, same GPU, serial). Early running
+  NDCG@10 at 100 users: full ~0.105-0.124 band (noisy; GO bar 0.13 needs full n).
+- Server sync = git bundle over scp (server cannot reach GitHub; TLS reset). Server env:
+  `tglrec-lora` (documented `tglrec` env does not exist). Pushes go to the feature branch
+  (direct main pushes are policy-blocked locally); merge to main via PR/user.
+- Next: when full+text_only finish -> `cc_pace_go_verdict.py`; GO -> LoRA train + adapter
+  eval vs 0.1506 (paired bootstrap) + remaining 3 zero-shot ablation variants; NOT GO ->
+  3-seat ARIS redesign per CLAUDE.md rule 9. Gate: performance table before any paper text.
