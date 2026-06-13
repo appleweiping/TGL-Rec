@@ -81,10 +81,12 @@ if TORCH_AVAILABLE:
                 self.item_embedding.weight[self.padding_idx].fill_(0.0)
 
         def forward(self, item_sequences: Any) -> Any:
-            """Encode left-padded item sequences.
+            """Encode padded item sequences (left- or right-padding supported).
 
             Args:
-                item_sequences: LongTensor with shape [batch, max_seq_len], where 0 is padding.
+                item_sequences: LongTensor with shape [batch, max_seq_len], where
+                    ``padding_idx`` (0) marks padding. ``final_state`` reads the
+                    last non-padding position, so either padding side is valid.
             """
 
             if item_sequences.ndim != 2:
@@ -106,11 +108,31 @@ if TORCH_AVAILABLE:
             return encoded
 
         def final_state(self, item_sequences: Any) -> Any:
-            """Return the last non-padding state for each sequence."""
+            """Return the encoded state at the last non-padding position.
+
+            Robust to BOTH left- and right-padding: it selects the highest index
+            that is not padding. The previous implementation gathered
+            ``ne(pad).sum() - 1`` (= count - 1), which is correct only for
+            right-padded sequences; under left-padding it indexes into the front
+            padding region, which ``forward`` zeroes via ``masked_fill`` --
+            collapsing the state (and therefore every candidate score) to 0. That
+            zeroed state is what pinned the SASRec smoke loss at -log sigma(0)=0.69
+            and produced constant predictions / degenerate CF artifacts. Selecting
+            the last real position works for left-padded trainers
+            (``SASRecSequenceDataset``/``_sasrec_predictions``) and the right-padded
+            CF builder (commit 754e13c) alike.
+            """
 
             encoded = self.forward(item_sequences)
-            lengths = item_sequences.ne(self.padding_idx).sum(dim=1).clamp(min=1)
-            gather_index = (lengths - 1).view(-1, 1, 1).expand(-1, 1, encoded.size(-1))
+            mask = item_sequences.ne(self.padding_idx)
+            seq_len = item_sequences.size(1)
+            # First non-padding position counting from the right => last real index.
+            rev_first = torch.flip(mask, dims=[1]).to(torch.float32).argmax(dim=1)
+            last_index = (seq_len - 1) - rev_first
+            # All-padding (empty) rows have no real item; map to index 0, whose
+            # encoded state is the zeroed padding vector ("no signal").
+            last_index = torch.where(mask.any(dim=1), last_index, torch.zeros_like(last_index))
+            gather_index = last_index.view(-1, 1, 1).expand(-1, 1, encoded.size(-1))
             return encoded.gather(dim=1, index=gather_index).squeeze(1)
 
         def score_items(self, item_sequences: Any, item_indices: Any) -> Any:
