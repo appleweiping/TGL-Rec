@@ -144,6 +144,12 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--mock", action="store_true", help="CPU mock judge (plumbing/CI only)")
+    ap.add_argument(
+        "--judge",
+        choices=["hf", "vllm"],
+        default="hf",
+        help="forced-choice judge backend for non-mock runs",
+    )
     ap.add_argument("--adapter", default="", help="path to trained judge LoRA (optional)")
     ap.add_argument(
         "--cf-artifacts",
@@ -175,9 +181,14 @@ def main():
 
     model = None
     if not args.mock:
-        from llm4rec.methods.cc_pace.hf_judge import HFForcedChoiceModel
+        if args.judge == "hf":
+            from llm4rec.methods.cc_pace.hf_judge import HFForcedChoiceModel
 
-        model = HFForcedChoiceModel(args.adapter or cfg.backbone_model)
+            model = HFForcedChoiceModel(args.adapter or cfg.backbone_model)
+        else:
+            from llm4rec.methods.cc_pace.vllm_judge import VLLMForcedChoiceModel
+
+            model = VLLMForcedChoiceModel(args.adapter or cfg.backbone_model)
 
     cf_provider = None
     item_pop: dict = {}
@@ -204,7 +215,11 @@ def main():
                     it["popularity"] = float(item_pop.get(iid, 0.0))
                 if item_cat:
                     it["category"] = item_cat.get(iid, "")
-    print(f"loaded {len(rows)} beauty examples; variant={args.variant} mock={args.mock}", flush=True)
+    print(
+        f"loaded {len(rows)} beauty examples; variant={args.variant} "
+        f"mock={args.mock} judge={args.judge}",
+        flush=True,
+    )
     ranker = CCPaceRanker(cfg, model=model, cf_provider=cf_provider)
     if args.profiles:
         with open(args.profiles, encoding="utf-8") as fh:
@@ -222,6 +237,7 @@ def main():
         "sota_bar": SOTA_BAR,
         "beats_sota_ndcg10": metrics["NDCG@10"] >= SOTA_BAR["NDCG@10"],
         "mock": args.mock,
+        "judge": args.judge if not args.mock else "mock",
         "cf_artifacts": bool(args.cf_artifacts),
         "profiles": bool(args.profiles),
         "adapter": args.adapter or None,

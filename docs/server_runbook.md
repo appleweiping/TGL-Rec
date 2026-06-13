@@ -28,6 +28,28 @@ git pull
 conda activate qwen_vllm
 ```
 
+## 1.5 Verify CC-PACE vLLM Judge Backend
+
+Before replacing the HF CC-PACE judge in a long beauty run, verify the vLLM
+environment and HF/vLLM scoring equivalence on synthetic panels:
+
+```bash
+cd ~/projects/TGL-Rec
+ls -1 ~/miniconda3/envs
+~/miniconda3/envs/qwen_vllm/bin/python -c 'import vllm; print("vllm", vllm.__version__)'
+
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate qwen_vllm
+export PYTHONPATH="$PWD/src"
+CUDA_VISIBLE_DEVICES=0 \
+CC_PACE_JUDGE_MODEL=/home/ajifang/models/Qwen/Qwen3-8B \
+python -m pytest tests/unit/test_vllm_hf_judge_equivalence.py -q -s
+```
+
+If the equivalence test passes, the beauty driver can use the vLLM judge by
+adding `--judge vllm`; omit the flag or pass `--judge hf` to keep the original
+Transformers judge.
+
 ## 2. Verify Immediate Phase 10 Diagnostic State Inherited From Phase 9E
 
 The fixed-label-mask control adapters have reportedly trained successfully:
