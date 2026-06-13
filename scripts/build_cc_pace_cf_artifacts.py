@@ -57,6 +57,21 @@ def read_jsonl(path: str) -> list[dict]:
     return rows
 
 
+def right_pad(values: list[int], max_seq_len: int) -> list[int]:
+    """Right-pad with 0 so real items occupy the FIRST positions.
+
+    SASRecModel.final_state reads the last *non-padding* item by gathering index
+    ``ne(0).sum(dim=1) - 1``, which only points at the true last item when the
+    sequence is RIGHT-padded. The repo's ``left_pad`` (real items at the end)
+    makes that index land inside the left-padding region, whose state is masked to
+    zero -> the SASRec final state is 0 -> every candidate scores 0 -> z-scoring a
+    constant panel yields all-zero / NaN. Right-padding here aligns the builder
+    with the model's contract and is the actual cause of the degenerate artifact.
+    """
+    clipped = list(values)[-int(max_seq_len):]
+    return clipped + [0] * (int(max_seq_len) - len(clipped))
+
+
 def collect_titles(task_rows: list[dict]) -> dict[str, str]:
     """item_id -> title, mined from every titled field in the task file."""
     titles: dict[str, str] = {}
@@ -100,6 +115,18 @@ def train_sasrec(train_rows: list[dict], args) -> tuple:
         num_negatives=args.num_negatives,
         seed=args.seed,
     )
+    # SASRecSequenceDataset left-pads each example's input (real items at the end),
+    # but SASRecModel.final_state expects RIGHT-padding (see right_pad docstring). Left
+    # padding makes the final state zero, so the model trains on a 0-signal target and
+    # the loss is stuck at -log sigma(0) ~ 0.69. Re-pack every example with right_pad to
+    # train against the real final-state contract (final_train_loss then drops < 0.05).
+    from dataclasses import replace as _dc_replace
+
+    dataset.examples = [
+        _dc_replace(ex, input_indices=right_pad(
+            [t for t in ex.input_indices if t != 0], args.max_seq_len))
+        for ex in dataset.examples
+    ]
     model = SASRecModel(
         num_items=len(item_to_idx),
         hidden_dim=args.hidden_dim,
@@ -141,7 +168,7 @@ def main(argv=None) -> str:
     ap.add_argument("--task", required=True, help="same-candidate ranking jsonl (full schema)")
     ap.add_argument("--out", required=True)
     ap.add_argument("--domain", default="beauty")
-    ap.add_argument("--epochs", type=int, default=30)
+    ap.add_argument("--epochs", type=int, default=50)
     ap.add_argument("--hidden-dim", type=int, default=64)
     ap.add_argument("--num-layers", type=int, default=2)
     ap.add_argument("--num-heads", type=int, default=2)
@@ -158,7 +185,7 @@ def main(argv=None) -> str:
 
     import torch
 
-    from llm4rec.trainers.sasrec import build_user_sequences, left_pad
+    from llm4rec.trainers.sasrec import build_user_sequences
 
     train_rows = read_jsonl(args.train_interactions)
     task_rows = read_jsonl(args.task)
@@ -170,9 +197,16 @@ def main(argv=None) -> str:
     vocab_size = len(item_to_idx)
 
     # --- per-user panel scores (z-scored within each user's in-vocab candidates) ---
+    # A user's CF panel is emitted ONLY if its raw SASRec affinities are non-degenerate
+    # (finite + std above DEGENERATE_STD). Degenerate users are deliberately OMITTED from
+    # user_scores: PrecomputedCFProvider.evidence_tokens/nuisance treat a missing user as
+    # CF-ABSENT and degrade that user to text-only PACE -- which is correct, vs emitting an
+    # all-zero / NaN panel that renders as semantic noise in the judge prompt.
+    DEGENERATE_STD = 1e-3
     sequences = build_user_sequences(train_rows)
     user_scores: dict[str, dict[str, float]] = {}
     skipped_users = 0
+    degenerate_users = 0
     for d in task_rows:
         user_id = str(d.get("user_id"))
         cands = [str(c) for c in parse_listish(d.get("candidate_item_ids"))]
@@ -180,7 +214,7 @@ def main(argv=None) -> str:
         if not seq_items or not cands:
             skipped_users += 1
             continue
-        seq = torch.tensor([left_pad(seq_items, args.max_seq_len)], dtype=torch.long)
+        seq = torch.tensor([right_pad(seq_items, args.max_seq_len)], dtype=torch.long)
         in_vocab = [(j, item_to_idx[c]) for j, c in enumerate(cands) if c in item_to_idx]
         if not in_vocab:
             skipped_users += 1
@@ -188,8 +222,13 @@ def main(argv=None) -> str:
         idx_tensor = torch.tensor([[ix for _, ix in in_vocab]], dtype=torch.long)
         with torch.no_grad():
             raw = model.score_items(seq, idx_tensor).squeeze(0).numpy().astype(float)
+        raw = np.nan_to_num(raw, nan=0.0, posinf=0.0, neginf=0.0)
         mu, sd = float(raw.mean()), float(raw.std())
-        z = (raw - mu) / sd if sd > 1e-8 else raw * 0.0
+        if not np.isfinite(sd) or sd <= DEGENERATE_STD:
+            # degenerate panel -> mark CF ABSENT for this user (omit, do not emit zeros)
+            degenerate_users += 1
+            continue
+        z = np.nan_to_num((raw - mu) / sd, nan=0.0, posinf=0.0, neginf=0.0)
         user_scores[user_id] = {cands[j]: round(float(z[k]), 4) for k, (j, _) in enumerate(in_vocab)}
 
     # --- item embedding geometry: clusters + nearest-neighbour titles ---
@@ -236,7 +275,9 @@ def main(argv=None) -> str:
             "final_train_loss": final_loss,
             "scored_users": len(user_scores),
             "skipped_users": skipped_users,
-            "score_normalization": "z-score within each user's in-vocab panel",
+            "degenerate_users": degenerate_users,
+            "score_normalization": "z-score within each user's in-vocab panel "
+            "(degenerate/NaN panels omitted -> CF absent)",
             "hyperparams": {
                 "epochs": args.epochs, "hidden_dim": args.hidden_dim,
                 "num_layers": args.num_layers, "num_heads": args.num_heads,
@@ -252,12 +293,54 @@ def main(argv=None) -> str:
         "item_popularity": pop,
         "item_category": item_category,
     }
+
+    # --- validation guard: fail loudly on an undertrained / degenerate artifact ---
+    # Emitted panels are recomputed here (post-z) to verify health independently of the
+    # build path. n_panel_users is the number of users we attempted to emit a panel for
+    # (emitted + degenerate); skipped users had no usable history/candidates at all.
+    n_panel_users = len(user_scores) + degenerate_users
+    n_allzero = 0
+    n_nan = 0
+    n_healthy = 0
+    for panel in user_scores.values():
+        vals = np.asarray(list(panel.values()), dtype=float)
+        if vals.size == 0 or np.isnan(vals).any():
+            n_nan += 1
+            continue
+        if np.allclose(vals, 0.0):
+            n_allzero += 1
+        if float(np.std(vals)) > 1e-3:
+            n_healthy += 1
+    # degenerate users are intentionally absent, but count them against the panel budget
+    degenerate_frac = (degenerate_users + n_allzero + n_nan) / max(n_panel_users, 1)
+    healthy_frac = n_healthy / max(n_panel_users, 1)
+    print(
+        "[validate] final_train_loss={loss}  panel_users={pu}  emitted={em}  "
+        "absent_degenerate={dg}  healthy(std>1e-3)={hh} ({hp:.1%})  "
+        "allzero={az}  nan={nn}  degenerate_frac={df:.1%}".format(
+            loss=final_loss, pu=n_panel_users, em=len(user_scores),
+            dg=degenerate_users, hh=n_healthy, hp=healthy_frac,
+            az=n_allzero, nn=n_nan, df=degenerate_frac,
+        ),
+        flush=True,
+    )
+    problems = []
+    if final_loss is not None and final_loss >= 0.4:
+        problems.append(f"final_train_loss={final_loss:.4f} >= 0.4 (SASRec undertrained)")
+    if n_nan > 0:
+        problems.append(f"{n_nan} emitted panels still contain NaN")
+    if degenerate_frac > 0.20:
+        problems.append(f"{degenerate_frac:.1%} of panels degenerate (>20% threshold)")
+    if problems:
+        print("[validate] FAILED:\n  - " + "\n  - ".join(problems), file=sys.stderr, flush=True)
+        sys.exit(2)
+
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
     with open(args.out, "w", encoding="utf-8") as fh:
         json.dump(artifact, fh)
     print(
         f"wrote {args.out}: users={len(user_scores)} vocab={vocab_size} "
-        f"clusters={k} skipped={skipped_users}"
+        f"clusters={k} skipped={skipped_users} degenerate={degenerate_users}"
     )
     return args.out
 
