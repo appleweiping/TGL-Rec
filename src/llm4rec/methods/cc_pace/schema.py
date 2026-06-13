@@ -82,6 +82,7 @@ def render_panel(
     cf_evidence: list[str] | None,
     cfg: CCPaceConfig,
     rng: random.Random,
+    label_vocab: list[str] | None = None,
 ) -> RenderedPanel:
     """Render the full panel with a fresh label permutation.
 
@@ -89,13 +90,24 @@ def render_panel(
     if given, is aligned to original order. The returned panel is in shuffled
     PRESENTATION order with randomized labels; ``presentation_to_original`` lets
     the caller map judge outputs back to original candidate indices.
+
+    ``label_vocab``: optional explicit list of label strings (>= n). Defaults to
+    the spec'd ``[NNN]`` bracketed ids (inference path / equivalence-tested). The
+    LoRA trainer passes single-token labels so all n scores can be read from ONE
+    prompt forward (the 32k-token panel only fits one forward+backward on a 4090);
+    this only changes the answer tokens, not the candidate evidence or profile.
     """
     n = len(candidates)
     order = list(range(n))
     if cfg.randomize_label_ids:
         rng.shuffle(order)
 
-    labels = [f"[{i:03d}]" for i in range(n)]
+    if label_vocab is not None:
+        if len(label_vocab) < n:
+            raise ValueError(f"label_vocab has {len(label_vocab)} < n={n} labels")
+        labels = list(label_vocab[:n])
+    else:
+        labels = [f"[{i:03d}]" for i in range(n)]
     blocks: list[str] = []
     label_ids: list[str] = []
     original_to_label: dict[int, str] = {}

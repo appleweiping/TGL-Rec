@@ -84,6 +84,32 @@ def torch_dcor(a, b):
     return dcov2.sqrt() / denom.sqrt()
 
 
+def _build_single_token_labels(tok, n: int) -> list[str]:
+    """Return n label strings that each tokenize to a UNIQUE single token.
+
+    Needed because the panel only fits one forward, so every candidate's score
+    is read at one position. Pool: A-Z, a-z, then two-letter BPE merges (AA, AB,
+    ...), keeping only strings that are a single, vocab-unique token. Raises if
+    the pool cannot cover n (it covers >=200 for Qwen3, vs n_panel=101).
+    """
+    import string
+    import itertools
+
+    candidates: list[str] = list(string.ascii_uppercase) + list(string.ascii_lowercase)
+    candidates += [a + b for a, b in itertools.product(string.ascii_uppercase, repeat=2)]
+    out: list[str] = []
+    seen_ids: set[int] = set()
+    for s in candidates:
+        ids = tok(s, add_special_tokens=False).input_ids
+        if len(ids) != 1 or ids[0] in seen_ids:
+            continue
+        seen_ids.add(ids[0])
+        out.append(s)
+        if len(out) >= n:
+            return out
+    raise RuntimeError(f"only found {len(out)} single-token labels < n={n}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--train-interactions", required=True)
@@ -211,17 +237,24 @@ def main() -> None:
     plan = build_training_plan(cfg)
     print(json.dumps(plan.__dict__, default=str), flush=True)
 
-    # label tokenization invariants for the single-token surrogate
+    # Single-token label surrogate.
+    # The spec'd [NNN] labels tokenize to 5 tokens each (Qwen splits every digit),
+    # and NO single token position is unique across 101 labels (the old
+    # "digit tokens must be unique" assertion is FALSE for n>10). A 26-27k-token
+    # panel only fits ONE forward+backward on the 4090 (~50GB peak; replicating
+    # the prompt per-label OOMs), so all n scores MUST be read from one forward.
+    # Fix: use n single-token, vocab-unique label strings (A,B,...,AA,AB,...) so
+    # the score for each presented candidate is the log-prob of its one label
+    # token at the prompt's final position. Inference (hf_judge.py) keeps the
+    # spec'd full-[NNN] length-normalized scoring (untouched, equivalence-tested);
+    # this is the train-time PL surrogate the design doc anticipates.
     n_panel = 1 + args.n_neg
-    labels = [f"[{i:03d}]" for i in range(n_panel)]
-    lab_ids = [tok(l, add_special_tokens=False).input_ids for l in labels]
-    prefix_ids = lab_ids[0][:1]
-    assert all(l[:1] == prefix_ids for l in lab_ids), "label '[' prefix must be shared"
-    digit_ids = [l[1] for l in lab_ids]
-    assert len(set(digit_ids)) == len(digit_ids), "digit tokens must be unique per label"
+    label_vocab = _build_single_token_labels(tok, n_panel)
+    label_token_ids = [tok(l, add_special_tokens=False).input_ids[0] for l in label_vocab]
+    assert len({l for l in label_token_ids}) == n_panel, "label tokens must be unique"
 
     total_steps = epochs * len(fold_a)
-    step, accum = 0, 0
+    step, accum, skipped = 0, 0, 0
     log_rows = []
     t_hi, t_lo = plan.temperature_schedule
     for epoch in range(epochs):
@@ -240,28 +273,44 @@ def main() -> None:
                 candidates=cand_dicts, history_titles=prefix_titles, profile=profile,
                 cf_evidence=provider.evidence_tokens(user, cands) if cfg.use_cf_tokens else None,
                 cfg=cfg, rng=random.Random(rng.randrange(1 << 30)),
+                label_vocab=label_vocab,
             )
             prompt = schema_mod.build_prompt(panel, n_panel)
-            enc = tok(prompt, return_tensors="pt", truncation=True,
-                      max_length=cfg.max_context_tokens).input_ids
-            inp = torch.cat([enc, torch.tensor([prefix_ids])], dim=1).to(args.device)
-            logits = model(inp).logits[0, -1, :].float()
-            logp = torch.log_softmax(logits, dim=-1)
-            # presented position -> score; positive's PRESENTED position via original idx
-            s = logp[torch.tensor(digit_ids[: len(cands)], device=logits.device)]
-            pos_presented = panel.presentation_to_original.index(pos_idx)
-            frac = step / max(1, total_steps - 1)
-            temperature = t_hi + (t_lo - t_hi) * frac
-            s_t = s / max(temperature, 1e-6)
-            loss = torch.logsumexp(s_t, dim=0) - s_t[pos_presented]
-            if cfg.use_dcor_penalty:
-                lp = torch.tensor(
-                    [np.log1p(max(pop.get(c, 0.0), 0.0)) for c in
-                     (cands[i] for i in panel.presentation_to_original)],
-                    device=s.device, dtype=s.dtype,
-                )
-                loss = loss + cfg.dcor_weight * torch_dcor(s, lp)
-            (loss / args.grad_accum).backward()
+            # single forward; the next token after "Best label:" IS the (single-token)
+            # label, so all n candidate scores are the last-position log-probs.
+            # Panels are ~26-27k tokens and peak ~48GB on a 48.5GB card; a rare
+            # oversized panel can OOM. Skip-on-OOM (do NOT trim fidelity) so the
+            # full run survives instead of crashing 1500+ steps in.
+            try:
+                inp = tok(prompt, return_tensors="pt", truncation=True,
+                          max_length=cfg.max_context_tokens).input_ids.to(args.device)
+                logits = model(inp).logits[0, -1, :].float()
+                logp = torch.log_softmax(logits, dim=-1)
+                # presented pos -> score (label_vocab[present_pos] is presented block's label)
+                s = logp[torch.tensor(label_token_ids[: len(cands)], device=logits.device)]
+                pos_presented = panel.presentation_to_original.index(pos_idx)
+                frac = step / max(1, total_steps - 1)
+                temperature = t_hi + (t_lo - t_hi) * frac
+                s_t = s / max(temperature, 1e-6)
+                loss = torch.logsumexp(s_t, dim=0) - s_t[pos_presented]
+                if cfg.use_dcor_penalty:
+                    lp = torch.tensor(
+                        [np.log1p(max(pop.get(c, 0.0), 0.0)) for c in
+                         (cands[i] for i in panel.presentation_to_original)],
+                        device=s.device, dtype=s.dtype,
+                    )
+                    loss = loss + cfg.dcor_weight * torch_dcor(s, lp)
+                (loss / args.grad_accum).backward()
+            except torch.cuda.OutOfMemoryError:
+                skipped += 1
+                print(json.dumps({"oom_skip_user": user, "step": step, "skipped": skipped}),
+                      flush=True)
+                opt.zero_grad(set_to_none=True)
+                accum = 0
+                import gc as _gc
+                _gc.collect(); torch.cuda.empty_cache()
+                step += 1
+                continue
             accum += 1
             if accum >= args.grad_accum:
                 torch.nn.utils.clip_grad_norm_(
@@ -280,9 +329,10 @@ def main() -> None:
     model.save_pretrained(args.out)
     meta = {
         "plan": plan.__dict__,
-        "surrogate": "single-digit-token PL (inference keeps full-label scoring)",
+        "surrogate": "single-token-label PL (one fwd; inference keeps full-[NNN] length-norm scoring)",
+        "label_scheme": "single_token_unique",
         "n_fold_a": len(fold_a), "n_fold_b": len(fold_b),
-        "epochs": epochs, "steps": step, "seed": args.seed,
+        "epochs": epochs, "steps": step, "oom_skipped": skipped, "seed": args.seed,
         "prefix_sasrec": "trained on per-user prefixes (pseudo-positive excluded)",
         "args": {k: v for k, v in vars(args).items()},
     }
