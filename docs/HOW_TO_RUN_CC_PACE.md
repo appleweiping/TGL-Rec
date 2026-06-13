@@ -75,6 +75,20 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True,max_split_size_mb:128
   --dir "$OUTDIR" --out "$OUTDIR/go_verdict.json"
 ```
 
+For long resumes on a memory-fragmenting GPU, prefer chunked limits over one monolithic 973-user
+process. The driver skips users already present in `full.json.per_user.jsonl`, so limits can advance
+monotonically (for example `125, 150, ..., 950, 973`) and each Python process releases GPU memory
+before the next chunk:
+
+```bash
+for limit in $(seq 125 25 950) 973; do
+  python scripts/cc_pace_beauty.py \
+    --task "$TASK" --out "$OUTDIR/full.json" --limit "$limit" --variant full \
+    --cf-artifacts "$OUTDIR/cf_artifacts.json" --profiles "$OUTDIR/profiles.json"
+done
+python scripts/cc_pace_go_verdict.py --dir "$OUTDIR" --out "$OUTDIR/go_verdict.json"
+```
+
 ### Go / kill (vs SOTA bar 0.1506) — from docs/method_v2_decision_CC-PACE.md
 - **Zero-shot probe** (no training): if the residualized T carries no signal vs popularity → revisit
   before spending GPU on LoRA.

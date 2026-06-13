@@ -359,4 +359,6 @@ At the end of every complex task, provide a concise completion note with:
 - Next server gate: sync this branch by git bundle, run
   `/home/ajifang/miniconda3/envs/tglrec-lora/bin/python -m pytest tests/unit/test_hf_judge_equivalence.py -q`,
   wait for a clean GPU (>=43GB free), resume only `full` from `full.json.per_user.jsonl`, then run
-  `scripts/cc_pace_go_verdict.py`. GO -> LoRA; KILL_OR_REFRAME -> 3-seat ARIS redesign.
+  `scripts/cc_pace_go_verdict.py`. In practice, use chunked limits (`125,150,...,950,973`) so each
+  Python process exits and releases GPU memory; the driver skips already-scored users from the
+  per-user checkpoint. GO -> LoRA; KILL_OR_REFRAME -> 3-seat ARIS redesign.

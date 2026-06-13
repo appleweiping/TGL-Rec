@@ -286,6 +286,8 @@ The immediate gate is the CC-PACE beauty zero-shot GO/KILL decision from `docs/G
 3. Sync the HF judge OOM-recovery patch to the server, run
    `/home/ajifang/miniconda3/envs/tglrec-lora/bin/python -m pytest tests/unit/test_hf_judge_equivalence.py -q`,
    then resume only the `full` variant from `outputs/cc_pace_beauty/full.json.per_user.jsonl`.
+   Prefer chunked limits (`125,150,...,950,973`) so each Python process releases GPU memory before
+   the next chunk.
 4. Run `scripts/cc_pace_go_verdict.py --dir outputs/cc_pace_beauty --out outputs/cc_pace_beauty/go_verdict.json`.
 5. `decision == "GO"` -> train CC-PACE LoRA; `KILL_OR_REFRAME` -> run the 3-seat ARIS redesign
    before spending GPU on LoRA.
