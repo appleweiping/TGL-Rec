@@ -1,0 +1,24 @@
+You are the CROSS-MODEL REVIEWER (GPT-5.5) in the ARIS research-refine gate for an ML/RecSys paper redesign. Review the proposed method below for NOVELTY and FEASIBILITY. You have NO shell access and need none — everything is inline; do not call any tool/ssh. Be adversarial, concrete, and decisive.
+
+## Background
+Project TGL-Rec. Prior method CC-PACE (listwise 32k-token LLM panel judge, Qwen3-8B) FAILED: beauty NDCG@10 zero-shot 0.1108, LoRA-trained ~0.086, both below the strongest-baseline bar (ProEx 0.1506); also slow (vLLM-non-viable at 32k tokens). A sibling project (pony-rec) already OWNS the pointwise LLM relevance posterior (prompt once per candidate for P(relevant|history,candidate), rank by raw prob; #1 in 6/8 domains). The redesign must be novel + distinct from BOTH, strong (beat per-domain bar: beauty 0.1506, others LLMEmb 0.094–0.274 NDCG@10), and FAST (vLLM-batchable, full-scale: 8 domains, 10k users/beauty 973, 101 candidates, 8 official baselines, paired Holm-bootstrap). No A+B stitching.
+
+## Proposed method: PaRC (Pairwise-Relational Calibration via low-rank Bradley–Terry field)
+- Short vLLM-batchable PAIRWISE prompt: "given history H, is item A or B more likely the next interaction?" → symmetrized logit s_ij = ½(logit(A,B) − logit(B,A)).
+- Model preferences as a Bradley–Terry field s_ij ≈ θ_i − θ_j + ε_ij; decompose θ_i = α·(pony pointwise posterior_i) + β_i. HEADLINE OBJECT = β (the comparative correction that exists only under forced comparison) — claimed to be the part of the ordering INVISIBLE to any pointwise scorer.
+- Recover the full order from O(K log K) ADAPTIVE duels (dueling-bandit/merge-sort schedule concentrated near the pony-induced top-k boundary), anchoring θ at pony's posterior. ~600–1300 short prompts/user (fewer total tokens than CC-PACE).
+- Floor = pony's score (via α-anchor); claim: anchor + comparative correction ≥ anchor.
+- RESEARCH QUESTION: does a frozen LLM's forced pairwise comparison carry ranking info PROVABLY ABSENT from its pointwise posterior (measurable as significant cyclic INTRANSITIVITY / non-BT residual), recoverable from O(K log K) duels to lift top-k NDCG at fixed compute?
+- KILL-GATE (run FIRST, 1 domain): proceed only if pairwise order beats pointwise NDCG@10 by ≥+0.005 abs AND β explains ≥10% of order variance AND intransitivity is statistically significant; else kill/pivot.
+- Authors' own kill-argument: "LLM 'A or B' just computes two absolute scores and subtracts → BT-transitive → ∃ pointwise utility reproducing it → PaRC = better-calibrated pony at O(K log K)× cost." Their rebuttal: if symmetrized prefs show significant cyclic intransitivity, by the BT representation theorem no pointwise utility reproduces the order ⇒ comparative signal provably not in any pointwise posterior; falsified cheaply in Phase-1.
+
+## Your review — deliver:
+1. NOVELTY assessment vs CC-PACE and vs pony's pointwise posterior — is the β/intransitivity contribution genuinely new and non-obvious, or incremental/stitched? Cite the closest prior work you know (LLM-as-pairwise-ranker, RankGPT/pairwise LLM reranking, Bradley–Terry/dueling bandits for ranking, LLM intransitivity studies) and whether PaRC is differentiated from them.
+2. FEASIBILITY assessment — is the kill-gate sound? Is the O(K log K) adaptive-duel + BT-MLE pipeline implementable and vLLM-fast at this scale? Will the floor=pony anchor actually clear the bar? Any fatal flaw?
+3. The single strongest reason this redesign fails or gets rejected, and whether it's answerable.
+4. Concrete improvements that would strengthen it before committing 8-domain compute.
+
+END with exactly two lines:
+NOVELTY: X/10
+FEASIBILITY: Y/10
+(gate = both ≥7 to proceed to experiment-plan)
