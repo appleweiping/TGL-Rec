@@ -1,0 +1,139 @@
+Reading prompt from stdin...
+2026-06-17T19:34:46.490971Z ERROR codex_core::session::session: failed to load skill D:\devtools\codex\home\skills\vipin\chrome-automation\SKILL.md: failed to read file: invalid utf-8 sequence of 2 bytes from index 1706
+2026-06-17T19:34:46.491163Z ERROR codex_core::session::session: failed to load skill D:\devtools\codex\home\skills\vipin\readme-blueprint-generator\SKILL.md: missing YAML frontmatter delimited by ---
+2026-06-17T19:34:46.491204Z ERROR codex_core::session::session: failed to load skill D:\AGENT_RESOURCE\skills\ecc\skills\flox-environments\SKILL.md: invalid description: exceeds maximum length of 1024 characters
+2026-06-17T19:34:46.491708Z ERROR codex_core::session::session: failed to load skill D:\devtools\codex\home\skills\standalone\anbeime-skill\projects\companion-skill\SKILL.md: missing YAML frontmatter delimited by ---
+2026-06-17T19:34:46.491795Z ERROR codex_core::session::session: failed to load skill D:\devtools\codex\home\skills\standalone\anbeime-skill\skills\icon-generator\SKILL.md: missing YAML frontmatter delimited by ---
+2026-06-17T19:34:46.491821Z ERROR codex_core::session::session: failed to load skill D:\devtools\codex\home\skills\standalone\anbeime-skill\skills\obsidian-skills-integrated\SKILL.md: missing YAML frontmatter delimited by ---
+2026-06-17T19:34:46.491842Z ERROR codex_core::session::session: failed to load skill D:\devtools\codex\home\plugins\cache\openai-curated\heygen\43313cc9\skills\heygen-avatar\SKILL.md: invalid description: exceeds maximum length of 1024 characters
+2026-06-17T19:34:46.491863Z ERROR codex_core::session::session: failed to load skill D:\devtools\codex\home\plugins\cache\openai-curated\heygen\43313cc9\skills\heygen-video\SKILL.md: invalid description: exceeds maximum length of 1024 characters
+OpenAI Codex v0.140.0-alpha.19
+--------
+workdir: D:\Research\TGL-Rec
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR] (network access enabled)
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019ed713-bcf7-7100-b7e3-09c3c5fecfcb
+--------
+user
+You are a top-tier ML/RecSys conference reviewer acting as the ARIS experiment-plan gate. Review the EXPERIMENT PLAN below (for method PaRC, whose research-refine already passed at NOVELTY 8 / FEASIBILITY 7). Judge whether this plan is rigorous and decisive enough to execute. You have NO shell access and need none — everything is inline. Do NOT call any tool.
+
+METHOD (one paragraph): PaRC = anchored comparative-residual calibration. score_i = pony_i + λ·β_i, λ≥0 chosen on validation (λ=0 ⇒ floor = pony's pointwise LLM relevance posterior). β_i = comparative correction from a frozen Qwen3-8B's symmetrized pairwise duels, fit as a low-rank Bradley–Terry field θ_i = α·pony_i + β_i over O(K log K) adaptive duels (vLLM-batched, short prompts). Sibling project "pony" owns the pointwise posterior; PaRC's lane is the between-candidate comparative structure invisible to pointwise scoring. Same frozen LLM + 101-candidate same-candidate protocol as 8 official baselines.
+
+Score each dimension 1–10 and give concrete, uncompromising blockers:
+- EVIDENCE (will the blocks produce publishable evidence?)
+- RIGOR (significance, seeds≥20, fair baselines, leakage, evidence labels)
+- GATES (are the M0 kill-gate + pre-registered kill criteria falsifiable and correctly chosen?)
+- FEASIBILITY (compute on 1×RTX4090, timeline, prompt counts)
+- PAPER-POTENTIAL (does the result, including the modest-gain / intransitivity-only outcomes, make a top-venue paper?)
+
+END WITH exactly:
+EVIDENCE: X/10
+RIGOR: X/10
+GATES: X/10
+FEASIBILITY: X/10
+PAPER_POTENTIAL: X/10
+VERDICT: <PASS if all ≥6, else the single most important fix>
+
+=================== EXPERIMENT PLAN ===================
+# TGL-Rec ARIS experiment-plan — PaRC (Pairwise-Relational Calibration) — 2026-06-17
+
+**Gate context:** research-refine PASSED (Codex GPT-5.5 xhigh 8/7; artifact `RESEARCH_REFINE_PaRC_2026-06-17.md`). This plan awaits the ARIS experiment-plan gate: Codex ≥6 on Evidence / Rigor / Gates / Feasibility / Paper-potential.
+
+## Headline (v2-reframed)
+**Anchored comparative-residual calibration for LLM4Rec.** Final score `score_i = pony_i + λ·β_i`, λ≥0 selected on validation (λ=0 allowed ⇒ floor = pony's pointwise posterior). `β_i` is the comparative correction a frozen Qwen3-8B makes only under forced pairwise comparison, estimated via a low-rank Bradley–Terry (BT) field over O(K log K) cheap, vLLM-batchable duels anchored at pony's posterior. Question: does that comparative residual carry top-k ranking signal **not captured by this pointwise posterior (same frozen LLM + prompt family)**, lifting NDCG@10 at fixed compute? Plus a scientific sub-finding: is the LLM's pairwise preference field non-BT (significant cyclic intransitivity)?
+
+## Frozen protocol (shared with pony/truce — non-negotiable, full-scale)
+8 Amazon domains, 10k users (beauty 973), 101 same candidates/event (1 pos + 100 popularity-matched neg), Qwen3-8B, metrics HR@5/10/20 + NDCG@5/10/20 + MRR, paired Holm-corrected bootstrap. 8 official baselines frozen in `data/pony_official_baselines/`. PaRC reuses the **existing pony Qwen pointwise scores** (`outputs/<dom>_*_ccrp_v3/scores.csv`) as the α-anchor — never re-derives pony.
+
+## Pilot domain (M0): **toys** (backup: tools)
+Chosen per Codex rule "winning domain, clear margin + top-k headroom, NOT beauty": toys Qwen NDCG@10 = 0.2708 vs strongest baseline LLMEmb 0.2049 (+32% margin ⇒ floor clears comfortably) and has top-k re-ordering headroom (HR@20 0.506 ≫ NDCG@10 ⇒ relevant items present but mis-ordered). Beauty excluded (ProEx 0.1506 high; all 3 backbones underperform there).
+
+## Experiment blocks
+
+### Block 0 — M0 PHENOMENON + KILL-GATE (pilot=toys, run FIRST; GPU)
+- **Pairwise duel scorer**: short prompt (~300–600 tok) "given history H, is A or B the more likely next interaction?"; symmetrized `s_ij = ½(logit(A,B) − logit(B,A))` (A/B-swap; also yields a position-bias diagnostic). vLLM-batched + guided-decoding (reuse pony `run_ccrp_v3` vLLM patterns).
+- **BT field**: fit `θ_i = α·pony_i + β_i` by symmetrized BT MLE; select **λ on the validation split** for `score_i = pony_i + λ·β_i` (λ=0 allowed).
+- **Phenomenon measurements** (on a phenomenon sub-sample with near-full O(K²) duels): Kendall-τ(pony order, pairwise order); Var(β) / fraction of order-variance explained by β; significant **cyclic intransitivity** rate vs a BT-noise null; whether intransitivity predicts the per-event lift.
+- **PROCEED iff** PaRC NDCG@10 beats pony by **≥ +0.005 absolute with significant paired bootstrap** on toys TEST. **Pre-registered KILL** if validation λ → ~0, OR β explains order-variance but yields no significant NDCG lift. (Three signals reported separately: BT-transitive utility improvement / β-residual-over-pony / non-BT cyclic structure.)
+
+### Block 1 — Ablation (pilot)
+pony-only vs BT-only θ (no α-anchor) vs α·pony+β (full PaRC); full O(K²) duels vs adaptive O(K log K) merge-sort/dueling-bandit (target ≤2% NDCG loss at ≤15% of comparisons); symmetrized vs one-directional s_ij (position-bias cost); λ-sweep curve. Each vs pony, paired bootstrap.
+
+### Block 2 — Comparison (8 domains, 10k users; GPU)
+PaRC vs **pony pointwise posterior + 8 official baselines + RankGPT-style pairwise rerank + short-context listwise rerank** (≥11 comparison methods). Paired Holm-bootstrap; target: PaRC ≥ pony everywhere (floor) AND beats the strongest baseline in ≥6/8 domains (matching pony's footprint) with the comparative lift concentrated where β is non-trivial. Losses reported honestly.
+
+### Block 3 — Mechanism
+β concentrates on near-tie candidate pairs; NDCG gains localize at the top-k boundary; decompose lift into "better-calibrated BT utility" vs "non-BT cyclic structure"; per-event correlation of intransitivity with lift.
+
+### Block 4 — Compute-normalized evaluation (defuses "expensive calibration layer")
+Report NDCG@10 lift **per 1k prompts** and **per GPU-hour** for PaRC vs pony vs RankGPT-pairwise vs short-listwise. Acceptance: headline stands on **strong lift OR compute-normalized value OR the intransitivity scientific finding** (any one suffices; all three reported).
+
+### Block 5 — Robustness / reproducibility
+Position-bias controls (symmetrized + neutral labels + title-truncation + repeated-duel CIs on s_ij); **≥20 seeds** on the stochastic parts (duel sampling schedule + λ selection) for paper-result rows; optional backbone transfer reusing pony's Mistral/Llama scores as anchors.
+
+## Baselines (≥8 satisfied)
+8 official (ELMRec, IRLLRec, LLM2Rec, LLMEmb, LLM-ESR, ProEx, ProMax, RLMRec) + pony pointwise + RankGPT-pairwise + short-listwise = 11.
+
+## Milestones + decision gates
+- **M0** (toys kill-gate): proceed/kill. ~6–12 GPU-h (short prompts, adaptive duels, 10k users + phenomenon sub-sample).
+- **M1** (8-domain comparison): ≥6/8 beat strongest baseline + PaRC ≥ pony everywhere.
+- **M2** (ablation + mechanism + compute-normalized + robustness, ≥20 seeds): paper-ready evidence, all evidence-labeled.
+- **M3** (paper-write → auto-review-loop ≥8 → citation-audit → paper-claim-audit).
+
+## Compute & timeline (1×RTX4090, GPU-queued behind pony's 3-backbone run, then truce)
+Pairwise duels are short + vLLM-batched ⇒ far fewer total tokens than CC-PACE's 32k listwise panels. M0 ~6–12 GPU-h; full 8-domain ~3–5 GPU-days. CPU/design (this plan, scorer code, BT MLE, analysis) proceeds now in parallel.
+
+## Evidence discipline
+Labels smoke→pilot→diagnostic→controlled→official→paper-result; only paper-result rows enter the paper; significance required for every claim; configs+seeds committed; large artifacts server-side with manifests; light evidence to git.
+
+## Pre-registered KILL (repeat)
+If toys M0 shows validation λ→~0 OR no significant NDCG lift over pony → **KILL PaRC, do not scale to 8 domains**; document as a second characterized negative result and escalate to a fresh ARIS research-refine round.
+
+warning: Exceeded skills context budget of 2%. All skill descriptions were removed and 676 additional skills were not included in the model-visible skills list.
+codex
+This plan is close to executable, but I would not treat it as fully paper-decisive without tightening the gate/test protocol.
+
+The main blocker is **test-set decision leakage**: M0 uses toys TEST to decide whether to scale, and toys is also part of the official 8-domain comparison. That makes later paper claims post-selected unless toys is either excluded from final headline statistics, labeled pilot-only, or M0 is moved to validation/held-out pilot users with the official test untouched.
+
+Other hard issues:
+
+- The “λ=0 floor” only holds on validation, not on test. If λ is selected on validation, PaRC can still underperform pony on test. The plan should use non-inferiority criteria against pony, not assert guaranteed dominance.
+- The kill criteria conflict with Block 4. M0 says kill if no significant NDCG lift over pony; Block 4 says compute-normalized value or intransitivity alone can save the headline. Those must be separated into method-success vs scientific-negative/diagnostic paper paths.
+- “≥20 seeds” is good, but the plan must specify what is seeded and what is averaged. If LLM outputs are deterministic under vLLM, the meaningful stochasticity is duel subsampling/scheduling, λ-selection bootstrap, and possibly prompt perturbations, not model randomness.
+- The intransitivity claim needs a stricter null model: cyclicity must be tested against BT plus heteroskedastic/noisy LLM comparison uncertainty, not just a generic BT-noise null, or it may overclaim.
+- RankGPT/listwise baselines must be compute-matched or separately budget-normalized; otherwise PaRC can win by spending more comparisons.
+
+Scores: strong evidence structure, strong baseline coverage, and good compute realism. The weakest dimension is gates because the current M0 design contaminates the official test and has inconsistent success criteria.
+
+EVIDENCE: 8/10
+RIGOR: 7/10
+GATES: 5/10
+FEASIBILITY: 8/10
+PAPER_POTENTIAL: 7/10
+VERDICT: Fix M0 so proceed/kill decisions use validation or a disjoint pilot set, leaving official test untouched and separating method-success from diagnostic-negative paper criteria
+tokens used
+24,997
+This plan is close to executable, but I would not treat it as fully paper-decisive without tightening the gate/test protocol.
+
+The main blocker is **test-set decision leakage**: M0 uses toys TEST to decide whether to scale, and toys is also part of the official 8-domain comparison. That makes later paper claims post-selected unless toys is either excluded from final headline statistics, labeled pilot-only, or M0 is moved to validation/held-out pilot users with the official test untouched.
+
+Other hard issues:
+
+- The “λ=0 floor” only holds on validation, not on test. If λ is selected on validation, PaRC can still underperform pony on test. The plan should use non-inferiority criteria against pony, not assert guaranteed dominance.
+- The kill criteria conflict with Block 4. M0 says kill if no significant NDCG lift over pony; Block 4 says compute-normalized value or intransitivity alone can save the headline. Those must be separated into method-success vs scientific-negative/diagnostic paper paths.
+- “≥20 seeds” is good, but the plan must specify what is seeded and what is averaged. If LLM outputs are deterministic under vLLM, the meaningful stochasticity is duel subsampling/scheduling, λ-selection bootstrap, and possibly prompt perturbations, not model randomness.
+- The intransitivity claim needs a stricter null model: cyclicity must be tested against BT plus heteroskedastic/noisy LLM comparison uncertainty, not just a generic BT-noise null, or it may overclaim.
+- RankGPT/listwise baselines must be compute-matched or separately budget-normalized; otherwise PaRC can win by spending more comparisons.
+
+Scores: strong evidence structure, strong baseline coverage, and good compute realism. The weakest dimension is gates because the current M0 design contaminates the official test and has inconsistent success criteria.
+
+EVIDENCE: 8/10
+RIGOR: 7/10
+GATES: 5/10
+FEASIBILITY: 8/10
+PAPER_POTENTIAL: 7/10
+VERDICT: Fix M0 so proceed/kill decisions use validation or a disjoint pilot set, leaving official test untouched and separating method-success from diagnostic-negative paper criteria

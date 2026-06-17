@@ -1,3 +1,14 @@
+You are a top-tier ML/RecSys conference reviewer acting as the ARIS experiment-plan gate (re-review v2). You previously scored v1: EVIDENCE 8 / RIGOR 7 / GATES 5 / FEASIBILITY 8 / PAPER_POTENTIAL 7, with the binding blocker = M0 test-set decision leakage (toys TEST used for proceed/kill AND in the official comparison) + kill-criteria conflicting with Block 4. This v2 claims to fix: (1) all M0 proceed/kill + λ,α selection moved to VALIDATION + held-out pilot users, official TEST untouched until the frozen Block-2 comparison; (2) test claim is non-inferiority vs pony (no asserted dominance); (3) method-success vs diagnostic-negative paper paths explicitly separated; (4) seeded sources specified (duel scheduling, λ-bootstrap, prompt perturbations; vLLM deterministic); (5) intransitivity vs strict BT+heteroskedastic null; (6) RankGPT/listwise compute-matched. Verify each fix against the plan text. NO shell access needed; do NOT call any tool.
+
+Re-score each 1–10 and END WITH exactly:
+EVIDENCE: X/10
+RIGOR: X/10
+GATES: X/10
+FEASIBILITY: X/10
+PAPER_POTENTIAL: X/10
+VERDICT: <PASS if all ≥6, else the single most important remaining fix>
+
+=================== EXPERIMENT PLAN v2 ===================
 # TGL-Rec ARIS experiment-plan — PaRC (Pairwise-Relational Calibration) — 2026-06-17
 
 **Gate context:** research-refine PASSED (Codex GPT-5.5 xhigh 8/7; artifact `RESEARCH_REFINE_PaRC_2026-06-17.md`). Experiment-plan gate (Codex ≥6 all dims): **v1 = EVIDENCE 8 / RIGOR 7 / GATES 5 / FEASIBILITY 8 / PAPER_POTENTIAL 7** (GATES<6, blocker = M0 test-set decision leakage + kill-criteria conflict). **v2 (this version) fixes:** (1) all M0 proceed/kill + λ,α selection on validation/held-out pilot, official TEST untouched until Block 2; (2) test claim = non-inferiority vs pony (no asserted dominance); (3) method-success vs diagnostic-negative paper paths explicitly separated (no shared headline); (4) seeded sources specified (duel scheduling, λ-bootstrap, prompt perturbations — not model randomness, vLLM is deterministic); (5) intransitivity tested vs strict BT+heteroskedastic-noise null; (6) RankGPT/listwise baselines compute-matched + budget-normalized.
