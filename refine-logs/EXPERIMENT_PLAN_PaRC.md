@@ -1,0 +1,53 @@
+# TGL-Rec ARIS experiment-plan — PaRC (Pairwise-Relational Calibration) — 2026-06-17
+
+**Gate context:** research-refine PASSED (Codex GPT-5.5 xhigh 8/7; artifact `RESEARCH_REFINE_PaRC_2026-06-17.md`). This plan awaits the ARIS experiment-plan gate: Codex ≥6 on Evidence / Rigor / Gates / Feasibility / Paper-potential.
+
+## Headline (v2-reframed)
+**Anchored comparative-residual calibration for LLM4Rec.** Final score `score_i = pony_i + λ·β_i`, λ≥0 selected on validation (λ=0 allowed ⇒ floor = pony's pointwise posterior). `β_i` is the comparative correction a frozen Qwen3-8B makes only under forced pairwise comparison, estimated via a low-rank Bradley–Terry (BT) field over O(K log K) cheap, vLLM-batchable duels anchored at pony's posterior. Question: does that comparative residual carry top-k ranking signal **not captured by this pointwise posterior (same frozen LLM + prompt family)**, lifting NDCG@10 at fixed compute? Plus a scientific sub-finding: is the LLM's pairwise preference field non-BT (significant cyclic intransitivity)?
+
+## Frozen protocol (shared with pony/truce — non-negotiable, full-scale)
+8 Amazon domains, 10k users (beauty 973), 101 same candidates/event (1 pos + 100 popularity-matched neg), Qwen3-8B, metrics HR@5/10/20 + NDCG@5/10/20 + MRR, paired Holm-corrected bootstrap. 8 official baselines frozen in `data/pony_official_baselines/`. PaRC reuses the **existing pony Qwen pointwise scores** (`outputs/<dom>_*_ccrp_v3/scores.csv`) as the α-anchor — never re-derives pony.
+
+## Pilot domain (M0): **toys** (backup: tools)
+Chosen per Codex rule "winning domain, clear margin + top-k headroom, NOT beauty": toys Qwen NDCG@10 = 0.2708 vs strongest baseline LLMEmb 0.2049 (+32% margin ⇒ floor clears comfortably) and has top-k re-ordering headroom (HR@20 0.506 ≫ NDCG@10 ⇒ relevant items present but mis-ordered). Beauty excluded (ProEx 0.1506 high; all 3 backbones underperform there).
+
+## Experiment blocks
+
+### Block 0 — M0 PHENOMENON + KILL-GATE (pilot=toys, run FIRST; GPU)
+- **Pairwise duel scorer**: short prompt (~300–600 tok) "given history H, is A or B the more likely next interaction?"; symmetrized `s_ij = ½(logit(A,B) − logit(B,A))` (A/B-swap; also yields a position-bias diagnostic). vLLM-batched + guided-decoding (reuse pony `run_ccrp_v3` vLLM patterns).
+- **BT field**: fit `θ_i = α·pony_i + β_i` by symmetrized BT MLE; select **λ on the validation split** for `score_i = pony_i + λ·β_i` (λ=0 allowed).
+- **Phenomenon measurements** (on a phenomenon sub-sample with near-full O(K²) duels): Kendall-τ(pony order, pairwise order); Var(β) / fraction of order-variance explained by β; significant **cyclic intransitivity** rate vs a BT-noise null; whether intransitivity predicts the per-event lift.
+- **PROCEED iff** PaRC NDCG@10 beats pony by **≥ +0.005 absolute with significant paired bootstrap** on toys TEST. **Pre-registered KILL** if validation λ → ~0, OR β explains order-variance but yields no significant NDCG lift. (Three signals reported separately: BT-transitive utility improvement / β-residual-over-pony / non-BT cyclic structure.)
+
+### Block 1 — Ablation (pilot)
+pony-only vs BT-only θ (no α-anchor) vs α·pony+β (full PaRC); full O(K²) duels vs adaptive O(K log K) merge-sort/dueling-bandit (target ≤2% NDCG loss at ≤15% of comparisons); symmetrized vs one-directional s_ij (position-bias cost); λ-sweep curve. Each vs pony, paired bootstrap.
+
+### Block 2 — Comparison (8 domains, 10k users; GPU)
+PaRC vs **pony pointwise posterior + 8 official baselines + RankGPT-style pairwise rerank + short-context listwise rerank** (≥11 comparison methods). Paired Holm-bootstrap; target: PaRC ≥ pony everywhere (floor) AND beats the strongest baseline in ≥6/8 domains (matching pony's footprint) with the comparative lift concentrated where β is non-trivial. Losses reported honestly.
+
+### Block 3 — Mechanism
+β concentrates on near-tie candidate pairs; NDCG gains localize at the top-k boundary; decompose lift into "better-calibrated BT utility" vs "non-BT cyclic structure"; per-event correlation of intransitivity with lift.
+
+### Block 4 — Compute-normalized evaluation (defuses "expensive calibration layer")
+Report NDCG@10 lift **per 1k prompts** and **per GPU-hour** for PaRC vs pony vs RankGPT-pairwise vs short-listwise. Acceptance: headline stands on **strong lift OR compute-normalized value OR the intransitivity scientific finding** (any one suffices; all three reported).
+
+### Block 5 — Robustness / reproducibility
+Position-bias controls (symmetrized + neutral labels + title-truncation + repeated-duel CIs on s_ij); **≥20 seeds** on the stochastic parts (duel sampling schedule + λ selection) for paper-result rows; optional backbone transfer reusing pony's Mistral/Llama scores as anchors.
+
+## Baselines (≥8 satisfied)
+8 official (ELMRec, IRLLRec, LLM2Rec, LLMEmb, LLM-ESR, ProEx, ProMax, RLMRec) + pony pointwise + RankGPT-pairwise + short-listwise = 11.
+
+## Milestones + decision gates
+- **M0** (toys kill-gate): proceed/kill. ~6–12 GPU-h (short prompts, adaptive duels, 10k users + phenomenon sub-sample).
+- **M1** (8-domain comparison): ≥6/8 beat strongest baseline + PaRC ≥ pony everywhere.
+- **M2** (ablation + mechanism + compute-normalized + robustness, ≥20 seeds): paper-ready evidence, all evidence-labeled.
+- **M3** (paper-write → auto-review-loop ≥8 → citation-audit → paper-claim-audit).
+
+## Compute & timeline (1×RTX4090, GPU-queued behind pony's 3-backbone run, then truce)
+Pairwise duels are short + vLLM-batched ⇒ far fewer total tokens than CC-PACE's 32k listwise panels. M0 ~6–12 GPU-h; full 8-domain ~3–5 GPU-days. CPU/design (this plan, scorer code, BT MLE, analysis) proceeds now in parallel.
+
+## Evidence discipline
+Labels smoke→pilot→diagnostic→controlled→official→paper-result; only paper-result rows enter the paper; significance required for every claim; configs+seeds committed; large artifacts server-side with manifests; light evidence to git.
+
+## Pre-registered KILL (repeat)
+If toys M0 shows validation λ→~0 OR no significant NDCG lift over pony → **KILL PaRC, do not scale to 8 domains**; document as a second characterized negative result and escalate to a fresh ARIS research-refine round.
