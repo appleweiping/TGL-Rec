@@ -50,7 +50,11 @@ from llm4rec.methods.parc.pairwise_prompt import (
     symmetrized_duel,
     truncate_title,
 )
-from llm4rec.methods.parc.ranker import PaRCRanker
+# NOTE: PaRCRanker is intentionally NOT imported here (mirrors cc_pace): the
+# package __init__ stays lightweight so importing a leaf module (bt_field, etc.)
+# never pulls in rankers.base -> rankers/__init__ -> rankers.parc, which would be
+# a circular import. The ranker is reached via `llm4rec.rankers.parc` (registry
+# shim) or `llm4rec.methods.parc.ranker` directly.
 
 __all__ = [
     "PaRCConfig",
@@ -74,5 +78,4 @@ __all__ = [
     "ndcg_at_k",
     "cyclic_triple_rate",
     "intransitivity_test",
-    "PaRCRanker",
 ]
