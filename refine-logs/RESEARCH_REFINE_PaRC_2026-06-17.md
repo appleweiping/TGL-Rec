@@ -42,6 +42,10 @@ Codex's binding objections: (i) "floor = pony" is FALSE without an explicit vali
 6. **Pilot domain = a WINNING domain with clear margin + top-k headroom (NOT beauty** — ProEx 0.1506 high + prior LLM attempts failed there). Pick e.g. a domain where pony beats the bar comfortably so the floor clears and there's room to improve the top-k order.
 7. **Pre-registered kill**: if validation λ→~0, OR β explains order-variance but yields no significant NDCG lift, KILL the method (do not push to 8 domains).
 
-## Next ARIS steps
-- Re-run Codex cross-review on PaRC v2 (expect feasibility ≥7 given the λ-floor + two-path gate + compute-normalized framing) — record verdict here. Gate: both ≥7.
-- On pass → ARIS experiment-plan: formalize the two-path Phase-1 gate as milestone M0 on the chosen pilot domain; baselines incl. pony, RankGPT-pairwise, short-context listwise; pre-registered kill criteria; compute-normalized metrics. → experiment-bridge (short pairwise vLLM scorer reusing pony's run_ccrp_v3 vLLM patterns + symmetrized BT MLE + adaptive merge-sort duels + validation-gated λ) → run M0 (GPU, queued behind pony) → gate decision.
+## Codex GPT-5.5 xhigh cross-review v2 (2026-06-17): NOVELTY 8/10, FEASIBILITY 7/10 → BOTH ≥7, GATE PASSED ✅
+The λ-mixture floor + two-path gate + compute-normalized framing + reframed claim resolved the v1 feasibility-6 objections. PaRC clears the ARIS research-refine gate → proceed to experiment-plan.
+
+## Next ARIS steps (active)
+- **experiment-plan** (next, CPU — parallel to pony's GPU run): formalize the two-path Phase-1 kill-gate as milestone M0 on a pilot domain (winning domain, clear margin + top-k headroom, NOT beauty); baselines incl. pony pointwise posterior, RankGPT-style pairwise rerank, short-context listwise rerank; pre-registered kill (λ→~0 or β no-lift); compute-normalized metrics (NDCG@10 lift per 1k prompts / GPU-hr). Codex review gate (≥6 all dims).
+- **experiment-bridge**: short pairwise vLLM scorer (reuse pony run_ccrp_v3 vLLM + guided-decoding) + symmetrized BT MLE + O(K log K) adaptive merge-sort duels + validation-gated λ-mixture.
+- **run M0** (GPU, queued behind pony's 3-backbone run) → gate decision → if pass: 8-domain + ablations + paper-write + auto-review-loop + citation/claim audits.
