@@ -371,8 +371,9 @@ At the end of every complex task, provide a concise completion note with:
   Per the kill-rule it triggered the ARIS redesign, which produced **PaRC (Pairwise-Relational
   Calibration)**: `score_i = pony_i + λ·β_i`, λ≥0 validation-selected (λ=0 ⇒ pony pointwise floor);
   `β_i` = comparative residual a frozen Qwen3-8B reveals only under forced pairwise comparison,
-  estimated via a low-rank Bradley–Terry field over O(K log K) cheap vLLM-batchable symmetrized duels
-  anchored at pony's posterior. Faster (short ~300–600 tok duels, vLLM-batched, not 32k listwise) and
+  estimated via a ridge-regularized (L2-penalized, mean-centered) Bradley–Terry field over O(K log K)
+  cheap vLLM-batchable symmetrized duels anchored at pony's posterior (impl: bt_field.py; "low-rank" in
+  the 06-17 refine-log was the design term — the realized + tested regularizer is ridge/L2). Faster (short ~300–600 tok duels, vLLM-batched, not 32k listwise) and
   stronger-by-construction (anchored floor). Plus a scientific sub-finding: is the LLM pairwise field
   non-BT (significant cyclic intransitivity)?
 - **ARIS gates PASSED (Codex GPT-5.5 xhigh):** research-refine v2 NOVELTY 8/FEAS 7 ("proceed to
