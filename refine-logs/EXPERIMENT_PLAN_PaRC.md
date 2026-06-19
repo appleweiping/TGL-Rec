@@ -42,7 +42,7 @@ Position-bias controls (symmetrized + neutral labels + title-truncation + repeat
 
 ## Milestones + decision gates
 - **M0** (toys kill-gate): proceed/kill. ~6–12 GPU-h (short prompts, adaptive duels, 10k users + phenomenon sub-sample).
-- **M1** (8-domain comparison): ≥6/8 beat strongest baseline + PaRC ≥ pony everywhere.
+- **M1** (8-domain comparison): ≥6/8 beat strongest baseline + PaRC **non-inferior to pony everywhere** (≥ pony − ε, ε = 0.002 abs NDCG@10, the same pre-set margin as Block 2 — we do NOT assert guaranteed test dominance), with the comparative lift concentrated where β is non-trivial.
 - **M2** (ablation + mechanism + compute-normalized + robustness, ≥20 seeds): paper-ready evidence, all evidence-labeled.
 - **M3** (paper-write → auto-review-loop ≥8 → citation-audit → paper-claim-audit).
 
