@@ -1,0 +1,73 @@
+% ============================================================================
+% TGL-Rec / PaRC — verified related-work references (positioning, results-independent)
+% ----------------------------------------------------------------------------
+% These back the by-category prose in related_work_parc.md. EVERY entry was
+% bibliographically verified (authors, year, venue) before inclusion — none
+% fabricated. They cover the STABLE positioning axes (pointwise/pairwise/listwise
+% LLM ranking, Bradley-Terry pairwise aggregation, LLM-as-judge) that hold
+% regardless of the M0 kill-gate outcome. Baseline/empirical citations are added
+% only once the results block exists (verify each the same way).
+% Verification date: 2026-06-20.
+% ============================================================================
+
+% --- LLM rerankers: listwise (RankGPT) and pairwise (PRP) ---
+@inproceedings{sun2023rankgpt,
+  title     = {Is {ChatGPT} Good at Search? Investigating Large Language
+               Models as Re-Ranking Agents},
+  author    = {Sun, Weiwei and Yan, Lingyong and Ma, Xinyu and Wang, Shuaiqiang
+               and Ren, Pengjie and Chen, Zhumin and Yin, Dawei and Ren, Zhaochun},
+  booktitle = {Proceedings of the 2023 Conference on Empirical Methods in
+               Natural Language Processing (EMNLP)},
+  pages     = {14918--14937},
+  year      = {2023},
+  note      = {Outstanding Paper Award; arXiv:2304.09542}
+}
+
+@inproceedings{qin2024prp,
+  title     = {Large Language Models are Effective Text Rankers with
+               Pairwise Ranking Prompting},
+  author    = {Qin, Zhen and Jagerman, Rolf and Hui, Kai and Zhuang, Honglei
+               and Wu, Junru and Yan, Le and Shen, Jiaming and Liu, Tianqi
+               and Liu, Jialu and Metzler, Donald and Wang, Xuanhui and
+               Bendersky, Michael},
+  booktitle = {Findings of the Association for Computational Linguistics: NAACL 2024},
+  pages     = {1504--1518},
+  year      = {2024},
+  note      = {arXiv:2306.17563}
+}
+
+% --- Bradley-Terry / Thurstone pairwise preference aggregation ---
+@article{bradley1952rank,
+  title   = {Rank Analysis of Incomplete Block Designs: I.
+             The Method of Paired Comparisons},
+  author  = {Bradley, Ralph Allan and Terry, Milton E.},
+  journal = {Biometrika},
+  volume  = {39},
+  number  = {3/4},
+  pages   = {324--345},
+  year    = {1952},
+  publisher = {Oxford University Press}
+}
+
+@article{thurstone1927law,
+  title   = {A Law of Comparative Judgment},
+  author  = {Thurstone, Louis L.},
+  journal = {Psychological Review},
+  volume  = {34},
+  number  = {4},
+  pages   = {273--286},
+  year    = {1927}
+}
+
+% --- LLM-as-judge / pairwise comparison signals (position bias, intransitivity) ---
+@inproceedings{zheng2023judging,
+  title     = {Judging {LLM}-as-a-Judge with {MT-Bench} and Chatbot Arena},
+  author    = {Zheng, Lianmin and Chiang, Wei-Lin and Sheng, Ying and
+               Zhuang, Siyuan and Wu, Zhanghao and Zhuang, Yonghao and
+               Lin, Zi and Li, Zhuohan and Li, Dacheng and Xing, Eric P.
+               and Zhang, Hao and Gonzalez, Joseph E. and Stoica, Ion},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS),
+               Datasets and Benchmarks Track},
+  year      = {2023},
+  note      = {arXiv:2306.05685}
+}
