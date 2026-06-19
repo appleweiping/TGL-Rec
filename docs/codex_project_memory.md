@@ -362,3 +362,34 @@ At the end of every complex task, provide a concise completion note with:
   `scripts/cc_pace_go_verdict.py`. In practice, use chunked limits (`125,150,...,950,973`) so each
   Python process exits and releases GPU memory; the driver skips already-scored users from the
   per-user checkpoint. GO -> LoRA; KILL_OR_REFRAME -> 3-seat ARIS redesign.
+
+## 2026-06-20 — CC-PACE REFRAMED -> PaRC (new method); ARIS gates + citation-audit
+
+- **Method pivot (durable memory was STALE — everything above is CC-PACE, now SUPERSEDED as the
+  headline).** CC-PACE's listwise 32k-token HF judge was both weak (beauty text_only 0.1108 < bar
+  0.1506; trained-LoRA eval ~0.086 worse than zero-shot) and slow (~16h/973 vs pony vLLM ~9h/1.01M).
+  Per the kill-rule it triggered the ARIS redesign, which produced **PaRC (Pairwise-Relational
+  Calibration)**: `score_i = pony_i + λ·β_i`, λ≥0 validation-selected (λ=0 ⇒ pony pointwise floor);
+  `β_i` = comparative residual a frozen Qwen3-8B reveals only under forced pairwise comparison,
+  estimated via a low-rank Bradley–Terry field over O(K log K) cheap vLLM-batchable symmetrized duels
+  anchored at pony's posterior. Faster (short ~300–600 tok duels, vLLM-batched, not 32k listwise) and
+  stronger-by-construction (anchored floor). Plus a scientific sub-finding: is the LLM pairwise field
+  non-BT (significant cyclic intransitivity)?
+- **ARIS gates PASSED (Codex GPT-5.5 xhigh):** research-refine v2 NOVELTY 8/FEAS 7 ("proceed to
+  experiment-plan, one domain only"); experiment-plan v2 EVIDENCE 8/RIGOR 8/GATES 7/FEAS 7/PAPER 8 =
+  PASS. Canonical PaRC docs: `refine-logs/RESEARCH_REFINE_PaRC_2026-06-17.md`,
+  `refine-logs/EXPERIMENT_PLAN_PaRC.md` (+ codex_review_PaRC_v2.out / exp_plan_codex_review_v2.out),
+  `paper/method_parc.md`, `paper/related_work_parc.md`. Bridge code: `src/llm4rec/methods/parc/
+  vllm_duel_model.py` + `scripts/run_parc_m0_toys.py`.
+- **Pre-registered M0 KILL-GATE (toys, GPU-queued behind pony+truce):** all proceed/kill + λ,α,
+  duel-budget decisions on toys VALIDATION + 1k disjoint held-out pilot (seed 20260506); official TEST
+  untouched until Block 2; ε=0.002 abs NDCG@10 non-inferiority margin pre-set; O(K²) phenomenon capped
+  at 300-user sub-sample. PROCEED if validation lift ≥+0.005 NDCG@10 (sig) AND λ≁0, else KILL (8-domain
+  scale-up blocked) and the pairwise-field characterization becomes a separate honest negative result.
+- **This session (2026-06-20, CPU work while GPU is pony's):** (1) fixed M1 milestone wording to
+  non-inferiority (resolved last Codex v2 nit) @3b3ea3f; (2) ARIS citation-audit — `paper/refs/
+  parc_related.bib` = 5 bibliographically-VERIFIED entries (RankGPT EMNLP'23; Pairwise Ranking Prompting
+  NAACL-Findings'24; Bradley-Terry Biometrika 1952; Thurstone 1927; LLM-as-a-Judge/MT-Bench NeurIPS'23),
+  related_work_parc.md keyed to \citep — none fabricated; results-independent so survive M0 either way
+  @fb5109d. Both on branch `feat/cc-pace-vllm-judge`. PENDING (results phase): 8 official-baseline +
+  PaRC empirical cites (verify each, don't fabricate).
