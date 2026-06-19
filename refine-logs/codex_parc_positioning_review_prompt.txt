@@ -1,0 +1,48 @@
+You are an adversarial top-conference reviewer (RecSys/SIGIR/KDD/NeurIPS level). Review ONLY the
+PaRC RELATED-WORK / POSITIONING below for (a) the strength of its incrementality defense and
+(b) citation accuracy/appropriateness. This is results-independent positioning (the method's
+empirical wins are gated by a pre-registered M0 kill-gate) — do NOT ask for experiments. Be
+skeptical and specific.
+
+PaRC in one line: final score = pony_i + lambda*beta_i, lambda>=0 validation-selected (lambda=0
+recovers a frozen pointwise LLM relevance posterior = "pony", the floor). beta_i is the comparative
+residual a frozen Qwen3-8B reveals only under FORCED PAIRWISE comparison, estimated via a low-rank
+Bradley-Terry field over O(K log K) cheap, vLLM-batchable, symmetrized duels anchored at the
+pointwise posterior. Claim: the comparative residual carries top-k ranking signal NOT captured by
+THIS pointwise posterior (same frozen LLM + prompt family), lifting NDCG@10 at fixed compute. Plus a
+scientific sub-finding: is the LLM pairwise preference field non-BT (significant cyclic intransitivity)?
+
+Focus your critique, each answered concretely:
+1. Is the incrementality defense convincing vs the obvious neighbors (RankGPT-style listwise rerank;
+   Pairwise Ranking Prompting / PRP; Bradley-Terry/Thurstone preference aggregation; LLM-as-judge)?
+   Could a reviewer collapse PaRC to "just PRP" or "just BT on LLM duels"? Name the single strongest
+   reviewer objection and whether the text already rebuts it.
+2. Are any cited works MIS-positioned, or is any obvious neighbor MISSING (e.g. LLM pairwise/listwise
+   reranking for RECOMMENDATION specifically, residual/boosting-over-a-base-ranker work, learning-to-
+   rank-from-pairwise-comparisons, intransitivity-of-LLM-preference work) that a reviewer would demand?
+3. Is the novelty framed as a genuine contribution (anchored comparative residual + compute-bounded
+   duel schedule + intransitivity diagnostic) or does it overclaim?
+
+End with: SCORE_POSITIONING: X/10 and the single most important fix. Keep under 380 words.
+
+=== RELATED-WORK / POSITIONING TEXT UNDER REVIEW ===
+# Related Work — positioning PaRC
+
+> **Scope note.** This section positions PaRC against prior art; it is results-independent (it does not assert PaRC's empirical wins, which are gated by the pre-registered M0 kill-gate — see Method). Claims here are about *where the method sits*, not *that it succeeds*. Consistent with `method_parc.md`.
+
+## Pointwise LLM relevance scoring
+A frozen LLM can score each candidate's absolute relevance `P(relevant | history, candidate)` and rank by that pointwise posterior (the lane of the sibling pointwise-posterior reranker we anchor on). Such a scorer is, by construction, blind to **between-candidate** structure: it never compares two candidates head-to-head. PaRC takes this pointwise posterior as a frozen **anchor** and adds only the comparative correction `β` that a forced pairwise comparison reveals — `score_i = pony_i + λ·β_i`, with `λ ≥ 0` validation-selected and `λ = 0` recovering the pointwise order exactly. We claim the residual is not captured by **this** pointwise posterior under the **same** frozen LLM and prompt family — deliberately *not* the stronger and unprovable "absent from any conceivable pointwise scorer."
+
+## LLM rerankers (pairwise / listwise), incl. RankGPT-style
+A large body of work prompts an LLM to rerank candidates directly — pointwise, pairwise, or listwise (e.g. RankGPT-style sliding-window listwise ranking \citep{sun2023rankgpt} and pairwise ranking prompting \citep{qin2024prp}). PaRC differs on three axes: (i) it does **not** output a ranking directly; it estimates a comparative *residual over an existing pointwise posterior*, decomposed in a Bradley–Terry field, so the LLM's comparative signal is isolated rather than entangled with its absolute scoring; (ii) it is **anchored and validation-gated** (the mixture floor is the pointwise posterior, so it cannot underperform the anchor by construction — the honest inequality), whereas direct LLM rerankers have no such floor; (iii) it is **compute-bounded** by an `O(K log K)` adaptive duel schedule with short (~300–600 token) symmetrized prompts, in contrast to listwise panels that scale poorly and defeat batched inference. We compute-match RankGPT-style and short-listwise rerankers in the comparison so a win cannot be attributed merely to spending more LLM calls.
+
+## Bradley–Terry models and pairwise preference aggregation
+Bradley–Terry (BT) \citep{bradley1952rank} and Thurstone \citep{thurstone1927law} models recover latent item strengths from pairwise comparisons and are classical in ranking-from-comparisons. PaRC's novelty is not BT estimation per se but the **anchored decomposition** `θ_i = α·pony_i + β_i`, which separates the part of the comparative order already explained by the pointwise posterior (`α·pony`) from the genuinely new comparative residual (`β`). On top of this we add (i) **symmetrization** `s_ij = ½(logit(A,B) − logit(B,A))` to cancel the LLM's position bias (with the discarded antisymmetric part retained as a bias diagnostic), and (ii) a test for **non-BT cyclic intransitivity**: if the symmetrized preference field exhibits statistically significant cyclic structure beyond a BT + heteroskedastic-noise null, then by the BT representation theorem no pointwise utility reproduces the order — a scientific sub-finding about LLM pairwise judgments, claimed only where significant and predictive of the lift (never assumed).
+
+## LLM-as-judge and pairwise comparison signals
+Using LLMs as pairwise judges is well established (preference modeling, RLHF data, evaluation) \citep{zheng2023judging}, and LLM pairwise judgments are documented to be order- and context-sensitive and sometimes intransitive \citep{qin2024prp,zheng2023judging}. PaRC repurposes forced pairwise comparison as a *recommendation ranking* signal source, and treats the known position/intransitivity pathologies head-on — symmetrizing to remove position bias and measuring intransitivity as a diagnostic rather than ignoring it.
+
+## Efficiency of LLM-based reranking
+Listwise LLM rerankers that present a large candidate panel in one prompt (the design of our own superseded predecessor, CC-PACE) are slow and batch-unfriendly: one long prompt per user drives effective batch size toward one and forfeits continuous batching, and the long context diffuses per-candidate signal. PaRC's short, symmetrized, `O(K log K)` duels are individually cheap and vLLM-batchable, targeting fewer total tokens than a listwise panel while concentrating comparisons at the top-`k` boundary where ranking errors cost. Efficiency is reported on a compute-normalized axis (lift per 1k prompts / per GPU-hour) so the contribution is not an "expensive calibration layer."
+
+> **Citation status (citation-audit, 2026-06-20):** the stable positioning axes are now keyed to concrete, bibliographically-verified references in `refs/parc_related.bib` (RankGPT, EMNLP 2023; Pairwise Ranking Prompting, NAACL-Findings 2024; Bradley–Terry, Biometrika 1952; Thurstone, 1927; LLM-as-a-Judge / MT-Bench, NeurIPS 2023). Each entry's authors/year/venue were verified before inclusion — none fabricated. These survive the M0 kill-gate either way (the section is results-independent by construction). **Pending the results phase:** the 8 official-baseline citations and any PaRC empirical-claim references are added once the experiment block exists; verify each new entry the same way.

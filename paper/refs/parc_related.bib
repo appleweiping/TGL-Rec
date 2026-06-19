@@ -59,6 +59,61 @@
   year    = {1927}
 }
 
+% --- Rec-specific LLM ranking / reranking (RankGPT/PRP are IR, not recommendation) ---
+@inproceedings{hou2024llmrank,
+  title     = {Large Language Models are Zero-Shot Rankers for Recommender Systems},
+  author    = {Hou, Yupeng and Zhang, Junjie and Lin, Zihan and Lu, Hongyu and
+               Xie, Ruobing and McAuley, Julian and Zhao, Wayne Xin},
+  booktitle = {Proceedings of the 46th European Conference on Information
+               Retrieval (ECIR)},
+  year      = {2024},
+  note      = {arXiv:2305.08845}
+}
+
+@article{gao2024llm4rerank,
+  title   = {LLM4Rerank: LLM-based Auto-Reranking Framework for Recommendations},
+  author  = {Gao, Jingtong and Chen, Bo and Zhao, Xiangyu and Liu, Weiwen and others},
+  journal = {arXiv preprint arXiv:2406.12433},
+  year    = {2024}
+}
+
+% --- Ranking-from-comparisons beyond Bradley-Terry (Plackett-Luce, Elo) ---
+@article{plackett1975permutations,
+  title   = {The Analysis of Permutations},
+  author  = {Plackett, Robin L.},
+  journal = {Journal of the Royal Statistical Society: Series C (Applied Statistics)},
+  volume  = {24},
+  number  = {2},
+  pages   = {193--202},
+  year    = {1975}
+}
+
+@book{luce1959choice,
+  title     = {Individual Choice Behavior: A Theoretical Analysis},
+  author    = {Luce, R. Duncan},
+  year      = {1959},
+  publisher = {Wiley},
+  address   = {New York}
+}
+
+@book{elo1978rating,
+  title     = {The Rating of Chessplayers, Past and Present},
+  author    = {Elo, Arpad E.},
+  year      = {1978},
+  publisher = {Arco}
+}
+
+% --- Intransitivity of preferences (social-choice grounding for the non-BT cyclic finding) ---
+@article{tversky1969intransitivity,
+  title   = {Intransitivity of Preferences},
+  author  = {Tversky, Amos},
+  journal = {Psychological Review},
+  volume  = {76},
+  number  = {1},
+  pages   = {31--48},
+  year    = {1969}
+}
+
 % --- LLM-as-judge / pairwise comparison signals (position bias, intransitivity) ---
 @inproceedings{zheng2023judging,
   title     = {Judging {LLM}-as-a-Judge with {MT-Bench} and Chatbot Arena},
